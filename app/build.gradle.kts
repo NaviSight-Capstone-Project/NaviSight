@@ -39,18 +39,6 @@ android {
     }
 
 
-    productFlavors {
-        create("viu") {
-            dimension = "role"
-            resValue("string", "app_name", "NaviSight VIU")
-        }
-        create("caregiver") {
-            dimension = "role"
-            resValue("string", "app_name", "NaviSight Caregiver")
-        }
-    }
-    flavorDimensions += "role"
-
     buildFeatures {
         compose = true
         viewBinding = true
