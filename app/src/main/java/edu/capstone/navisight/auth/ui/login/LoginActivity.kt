@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import edu.capstone.navisight.auth.ui.signup.RoleSelectionActivity
 import edu.capstone.navisight.viu.ui.ViuHomeActivity
 import edu.capstone.navisight.caregiver.ui.CaregiverHomeActivity
 
@@ -38,7 +39,7 @@ class LoginActivity : ComponentActivity() {
             LoginScreen(
                 viewModel = viewModel,
                 onSignUp = {
-                    //NAVIGATE TO SIGN UP ACTIVITY
+                    startActivity(Intent(this@LoginActivity, RoleSelectionActivity::class.java))
                 }
             )
         }

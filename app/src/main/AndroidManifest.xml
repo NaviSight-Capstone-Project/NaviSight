@@ -27,6 +27,22 @@
         <activity android:name=".viu.ui.ViuHomeActivity" />
         <activity android:name=".caregiver.ui.CaregiverHomeActivity" />
 
+        <activity
+            android:name=".auth.ui.signup.caregiver.CaregiverSignupActivity"
+            android:exported="false"
+            android:label="Sign Up"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+        <activity
+            android:name=".auth.ui.signup.RoleSelectionActivity"
+            android:exported="false"
+            android:label="Select Role" />
+
     </application>
 
 </manifest>
