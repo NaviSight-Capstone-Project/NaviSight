@@ -1,4 +1,6 @@
 package edu.capstone.navisight.auth.model
 
-class LoginRequest {
-}
+data class LoginRequest(
+    val uid: String = "",
+    val email: String = ""
+)

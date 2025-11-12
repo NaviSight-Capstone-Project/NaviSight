@@ -11,6 +11,6 @@ class MainActivity : ComponentActivity() {
 
 
         startActivity(Intent(this, edu.capstone.navisight.auth.ui.login.LoginActivity::class.java))
-        finish() // Optional: Close MainActivity so user can't go back
+        finish()
     }
 }
