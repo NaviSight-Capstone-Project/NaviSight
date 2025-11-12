@@ -16,7 +16,7 @@ class LoginViewModel(
     private val loginUseCase: LoginUseCase = LoginUseCase()
 ) : ViewModel() {
 
-    private val _loginState = MutableStateFlow<LoginRequest?>(null)
+     private val _loginState = MutableStateFlow<LoginRequest?>(null)
     val loginState: StateFlow<LoginRequest?> = _loginState
 
     private val _error = MutableStateFlow<String?>(null)
@@ -25,19 +25,31 @@ class LoginViewModel(
     private val _userCollection = MutableStateFlow<String?>(null)
     val userCollection: StateFlow<String?> = _userCollection
 
+    private val _showCaptchaDialog = MutableStateFlow(false)
+    val showCaptchaDialog: StateFlow<Boolean> = _showCaptchaDialog
+
     private val captchaHandler = CaptchaHandler()
     val captchaState: StateFlow<CaptchaState> = captchaHandler.captchaState
 
     private var loginFailedAttempts = 0
     private var loginLockoutEndTime: Long = 0
 
-    // The UI will now only call this function AFTER the CAPTCHA is solved.
     fun login(email: String, password: String) {
         viewModelScope.launch {
+            _error.value = null
 
             val validationError = validateInput(email, password)
             if (validationError != null) {
                 _error.value = validationError
+                return@launch
+            }
+
+            val captchaIsRequired = loginFailedAttempts >= 1
+            val captchaIsSolved = captchaState.value.solved
+
+            if (captchaIsRequired && !captchaIsSolved) {
+                _error.value = "Please solve the CAPTCHA to continue."
+                _showCaptchaDialog.value = true
                 return@launch
             }
 
@@ -47,6 +59,8 @@ class LoginViewModel(
                     // Login Success
                     _loginState.value = user
                     loginFailedAttempts = 0 // Reset failed attempts
+                    captchaHandler.resetCaptcha() // Reset captcha for next session
+
                     val collection = loginUseCase.getUserCollection(user.uid)
                     if (collection != null) {
                         _userCollection.value = collection
@@ -54,11 +68,11 @@ class LoginViewModel(
                         _error.value = "User not found in any collection."
                     }
                 } else {
-                    // --- Login Failed (Wrong credentials) ---
+                    // Login Failed (Wrong credentials)
                     handleFailedLoginAttempt("Invalid email or password.")
                 }
             } catch (e: Exception) {
-                // --- Login Failed (Exception) ---
+                // Login Failed (Exception)
                 handleFailedLoginAttempt("An error occurred: ${e.message}")
             }
         }
@@ -67,18 +81,18 @@ class LoginViewModel(
     fun submitCaptcha(input: String) {
         captchaHandler.submitCaptcha(input)
     }
+    fun dismissCaptchaDialog() {
+        _showCaptchaDialog.value = false
+    }
 
     fun generateNewCaptcha() {
         captchaHandler.generateNewCaptcha()
     }
 
-    // This is for when the user dismisses the dialog.
     fun resetCaptcha() {
         captchaHandler.resetCaptcha()
     }
 
-
-    // --- Private Helper Functions ---
     private fun handleFailedLoginAttempt(errorMessage: String) {
         loginFailedAttempts++
         if (loginFailedAttempts >= 5) {
@@ -87,7 +101,7 @@ class LoginViewModel(
         } else {
             _error.value = errorMessage
         }
-        // Force user to re-solve CAPTCHA
+
         captchaHandler.resetCaptcha(keepRefreshCount = true)
     }
 

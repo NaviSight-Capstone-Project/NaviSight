@@ -5,6 +5,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import edu.capstone.navisight.viu.ui.ViuHomeActivity
 import edu.capstone.navisight.caregiver.ui.CaregiverHomeActivity
 
@@ -16,15 +19,26 @@ class LoginActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
+            val userCollection by viewModel.userCollection.collectAsState()
+
+            LaunchedEffect(userCollection) {
+                when (userCollection) {
+                    "vius" -> {
+                        startActivity(Intent(this@LoginActivity, ViuHomeActivity::class.java))
+                        finish()
+                    }
+                    "caregivers" -> {
+                        startActivity(Intent(this@LoginActivity, CaregiverHomeActivity::class.java))
+                        finish()
+                    }
+                }
+            }
+
+            // Call the new LoginScreen
             LoginScreen(
                 viewModel = viewModel,
-                onNavigateToViuHome = {
-                    startActivity(Intent(this, ViuHomeActivity::class.java))
-                    finish()
-                },
-                onNavigateToCaregiverHome = {
-                    startActivity(Intent(this, CaregiverHomeActivity::class.java))
-                    finish()
+                onSignUp = {
+                    //NAVIGATE TO SIGN UP ACTIVITY
                 }
             )
         }
