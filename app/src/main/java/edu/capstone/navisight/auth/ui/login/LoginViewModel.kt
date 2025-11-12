@@ -31,6 +31,9 @@ class LoginViewModel(
     private val captchaHandler = CaptchaHandler()
     val captchaState: StateFlow<CaptchaState> = captchaHandler.captchaState
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
     private var loginFailedAttempts = 0
     private var loginLockoutEndTime: Long = 0
 
@@ -54,6 +57,9 @@ class LoginViewModel(
             }
 
             try {
+
+                _isLoading.value = true
+
                 val user = loginUseCase(email, password)
                 if (user != null) {
                     // Login Success
@@ -74,6 +80,8 @@ class LoginViewModel(
             } catch (e: Exception) {
                 // Login Failed (Exception)
                 handleFailedLoginAttempt("An error occurred: ${e.message}")
+            } finally {
+                _isLoading.value = false
             }
         }
     }

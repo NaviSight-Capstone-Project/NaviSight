@@ -50,6 +50,8 @@ fun LoginScreen(
     val captchaState by viewModel.captchaState.collectAsState()
 
     val showCaptcha by viewModel.showCaptchaDialog.collectAsState()
+
+    val isLoading by viewModel.isLoading.collectAsState()
     var showCaptchaDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(showCaptcha) {
@@ -313,6 +315,10 @@ fun LoginScreen(
                     }
                 }
             }
+        }
+
+        if (isLoading) {
+            LoadingScreen()
         }
     }
 }
