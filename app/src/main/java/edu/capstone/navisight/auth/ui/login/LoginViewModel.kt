@@ -2,8 +2,8 @@ package edu.capstone.navisight.auth.ui.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import edu.capstone.navisight.auth.model.LoginRequest
 import edu.capstone.navisight.auth.domain.LoginUseCase
+import edu.capstone.navisight.auth.model.LoginResult
 import edu.capstone.navisight.auth.util.CaptchaHandler
 import edu.capstone.navisight.auth.util.CaptchaState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,9 +15,6 @@ private const val LOGIN_LOCKOUT_DURATION_MS = 5 * 60 * 1000L // 5 minutes
 class LoginViewModel(
     private val loginUseCase: LoginUseCase = LoginUseCase()
 ) : ViewModel() {
-
-     private val _loginState = MutableStateFlow<LoginRequest?>(null)
-    val loginState: StateFlow<LoginRequest?> = _loginState
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
@@ -37,58 +34,76 @@ class LoginViewModel(
     private var loginFailedAttempts = 0
     private var loginLockoutEndTime: Long = 0
 
+
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _error.value = null
 
-            val validationError = validateInput(email, password)
-            if (validationError != null) {
-                _error.value = validationError
+            if (!checkLoginRequirements(email, password)) {
                 return@launch
             }
-
-            val captchaIsRequired = loginFailedAttempts >= 1
-            val captchaIsSolved = captchaState.value.solved
-
-            if (captchaIsRequired && !captchaIsSolved) {
-                _error.value = "Please solve the CAPTCHA to continue."
-                _showCaptchaDialog.value = true
-                return@launch
-            }
-
+            _isLoading.value = true
             try {
-
-                _isLoading.value = true
-
-                val user = loginUseCase(email, password)
-                if (user != null) {
-                    // Login Success
-                    _loginState.value = user
-                    loginFailedAttempts = 0 // Reset failed attempts
-                    captchaHandler.resetCaptcha() // Reset captcha for next session
-
-                    val collection = loginUseCase.getUserCollection(user.uid)
-                    if (collection != null) {
-                        _userCollection.value = collection
-                    } else {
-                        _error.value = "User not found in any collection."
-                    }
-                } else {
-                    // Login Failed (Wrong credentials)
-                    handleFailedLoginAttempt("Invalid email or password.")
-                }
-            } catch (e: Exception) {
-                // Login Failed (Exception)
-                handleFailedLoginAttempt("An error occurred: ${e.message}")
+                checkNetwork(email, password)
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
+
+    private suspend fun checkNetwork(email: String, password: String) {
+        val genericErrorMessage = "Invalid email or password."
+
+        try {
+            when (val result = loginUseCase(email, password)) {
+                is LoginResult.Success -> {
+                    _userCollection.value = result.collection
+                    loginFailedAttempts = 0
+                    captchaHandler.resetCaptcha()
+                }
+
+                is LoginResult.Error -> {
+                    if (result.message.contains("No internet connection")) {
+                        _error.value = result.message
+                    } else {
+                        handleFailedLoginAttempt(genericErrorMessage)
+                    }
+                }
+
+                is LoginResult.InvalidCredentials,
+                is LoginResult.UserNotFoundInCollection -> {
+                    handleFailedLoginAttempt(genericErrorMessage)
+                }
+            }
+        } catch (e: Exception) {
+            handleFailedLoginAttempt(genericErrorMessage)
+        }
+    }
+
+
+    private fun checkLoginRequirements(email: String, password: String): Boolean {
+        val validationError = validateInput(email, password)
+        if (validationError != null) {
+            _error.value = validationError
+            return false
+        }
+        val captchaIsRequired = loginFailedAttempts >= 1
+        val captchaIsSolved = captchaState.value.solved
+        if (captchaIsRequired && !captchaIsSolved) {
+            _error.value = "Please solve the CAPTCHA to continue."
+            _showCaptchaDialog.value = true
+            return false
+        }
+
+        return true 
+    }
+
+
     fun submitCaptcha(input: String) {
         captchaHandler.submitCaptcha(input)
     }
+
     fun dismissCaptchaDialog() {
         _showCaptchaDialog.value = false
     }
@@ -109,7 +124,6 @@ class LoginViewModel(
         } else {
             _error.value = errorMessage
         }
-
         captchaHandler.resetCaptcha(keepRefreshCount = true)
     }
 
