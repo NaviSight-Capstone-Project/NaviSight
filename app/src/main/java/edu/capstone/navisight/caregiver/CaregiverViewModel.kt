@@ -12,11 +12,11 @@ class CaregiverHomeViewModel : ViewModel() {
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
-    // --- Session Management ---
+    // Session Management
     private val _isSessionValid = MutableStateFlow(true)
     val isSessionValid: StateFlow<Boolean> = _isSessionValid.asStateFlow()
 
-    // --- Navigation State ---
+    //  Navigation State
     private val _currentScreenIndex = MutableStateFlow(0) // Default to index 0 (Track)
     val currentScreenIndex: StateFlow<Int> = _currentScreenIndex.asStateFlow()
 

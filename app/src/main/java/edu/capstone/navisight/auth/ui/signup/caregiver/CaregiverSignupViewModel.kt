@@ -31,7 +31,6 @@ data class CaregiverSignupUiState(
 
 class CaregiverSignupViewModel : ViewModel() {
 
-    // Instantiates its own dependencies (from DOMAIN)
     private val signupCaregiverUseCase: SignupCaregiverUseCase = SignupCaregiverUseCase()
     private val verifySignupOtpUseCase: VerifySignupOtpUseCase = VerifySignupOtpUseCase()
     private val resendSignupOtpUseCase: ResendSignupOtpUseCase = ResendSignupOtpUseCase()

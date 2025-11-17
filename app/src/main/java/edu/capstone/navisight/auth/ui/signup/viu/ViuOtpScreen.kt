@@ -33,14 +33,14 @@ fun ViuOtpScreen(
     val context = LocalContext.current
     var otpValue by remember { mutableStateOf("") }
 
-    // --- Custom Colors ---
+    //  Custom Colors
     val gradientStart = Color(0xFF78E4EF)
     val gradientEnd = Color(0xFF6342ED)
     val gradientStartButton = Color(0xFFAA41E5)
     val focusedColor = Color(0xFF6641EC)
     val unfocusedColor = Color.Black
 
-    // --- Custom TextField Colors ---
+    //  Custom TextField Colors
     val customTextFieldColors = TextFieldDefaults.colors(
         focusedContainerColor = Color.White,
         unfocusedContainerColor = Color.White,
@@ -163,9 +163,9 @@ fun ViuOtpScreen(
 
             TextButton(
                 onClick = {
-                    val caregiverUid = uiState.createdCaregiverId // <-- Get Caregiver UID
+                    val caregiverUid = uiState.createdCaregiverId // Get Caregiver UID
                     if (caregiverUid != null) {
-                        viewModel.resendOtp(context, caregiverUid) // <-- Pass Caregiver UID
+                        viewModel.resendOtp(context, caregiverUid) // Pass Caregiver UID
                     }
                 },
                 enabled = !isTimerActive && !uiState.isLoading

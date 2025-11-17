@@ -43,7 +43,7 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ViuSignupScreen(
-    viewModel: ViuSignupViewModel, // <-- Changed
+    viewModel: ViuSignupViewModel,
     onSelectImageClick: () -> Unit,
     onSignupSuccess: (uid: String) -> Unit,
     onBackClick: () -> Unit
@@ -51,7 +51,7 @@ fun ViuSignupScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    // --- State for fields (Simpler) ---
+    //  State for fields (Simpler)
     var firstName by remember { mutableStateOf("") }
     var middleName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
@@ -63,7 +63,7 @@ fun ViuSignupScreen(
     var status by remember { mutableStateOf("") }
     var caregiverEmail by remember { mutableStateOf("") }
 
-    // --- State for validation ---
+    //  State for validation
     var isEmailValid by remember { mutableStateOf(true) }
     var isPasswordValid by remember { mutableStateOf(true) }
     var isRePasswordValid by remember { mutableStateOf(true) }
@@ -72,7 +72,7 @@ fun ViuSignupScreen(
     var isPhoneValid by remember { mutableStateOf(true) }
     var isCaregiverEmailValid by remember { mutableStateOf(true) }
 
-    // --- Custom Colors ---
+    //  Custom Colors
     val gradientStart = Color(0xFF78E4EF)
     val gradientEnd = Color(0xFF6342ED)
     val gradientStartButton = Color(0xFFAA41E5)
@@ -81,7 +81,7 @@ fun ViuSignupScreen(
     val sectionHeaderColor = Color(0xFF8E41E8)
     val fieldLabelColor = Color(0xFF8E41E8)
 
-    // --- Custom TextField Colors ---
+    //  Custom TextField Colors
     val customTextFieldColors = TextFieldDefaults.colors(
         focusedContainerColor = Color.White,
         unfocusedContainerColor = Color.White,
@@ -249,16 +249,16 @@ fun ViuSignupScreen(
                 Button(
                     onClick = {
                         isRePasswordValid = password == rePassword
-                        // --- MODIFIED VALIDATION ---
+                        //   VALIDATION
                         val allFieldsValid = isEmailValid && isPasswordValid && isRePasswordValid && isPhoneValid &&
-                                isCaregiverEmailValid && // <-- ADDED
+                                isCaregiverEmailValid &&
                                 firstName.isNotBlank() && lastName.isNotBlank() && email.isNotBlank() &&
                                 password.isNotBlank() && rePassword.isNotBlank() && phone.isNotBlank() &&
                                 address.isNotBlank() && status.isNotBlank() &&
-                                caregiverEmail.isNotBlank() // <-- ADDED
+                                caregiverEmail.isNotBlank()
 
                         if (allFieldsValid) {
-                            // --- MODIFIED VIEWMODEL CALL ---
+                            //  VIEWMODEL CALL
                             viewModel.signup(
                                 context = context, email = email, password = password,
                                 firstName = firstName.trim(), middleName = middleName.trim(), lastName = lastName.trim(),

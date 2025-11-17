@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
-// Renamed State
+
 data class ViuSignupUiState(
     val isLoading: Boolean = false,
     val signupSuccess: Boolean = false,
@@ -44,7 +44,7 @@ class ViuSignupViewModel : ViewModel() {
 
     private var resendTimerJob: Job? = null
 
-    // --- Timer logic is identical to Caregiver's ---
+    //  Timer logic is identical to Caregiver's
     private fun startResendTimer(durationSeconds: Int = 60) {
         resendTimerJob?.cancel()
         resendTimerJob = viewModelScope.launch {
@@ -66,7 +66,7 @@ class ViuSignupViewModel : ViewModel() {
         _uiState.value = _uiState.value.copy(profileImageUri = croppedUri)
     }
 
-    // --- Simplified Signup function ---
+    //  Simplified Signup function
     fun signup(
         context: Context,
         email: String,
@@ -97,12 +97,12 @@ class ViuSignupViewModel : ViewModel() {
             )
 
             result.fold(
-                onSuccess = { (viu, caregiverUid) -> // <-- Destructure the Pair
+                onSuccess = { (viu, caregiverUid) -> // Destructure the Pair
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         signupSuccess = true,
                         createdUserId = viu.uid,
-                        createdCaregiverId = caregiverUid // <-- Store Caregiver UID
+                        createdCaregiverId = caregiverUid // Store Caregiver UID
                     )
                     startResendTimer(60)
                 },
@@ -184,7 +184,7 @@ class ViuSignupViewModel : ViewModel() {
         }
     }
 
-    fun cancelSignup(viuUid: String) { // <-- Modified
+    fun cancelSignup(viuUid: String) { // Modified
         viewModelScope.launch {
             deleteUnverifiedViuUserUseCase(viuUid)
             stopResendTimer()
