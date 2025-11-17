@@ -25,10 +25,16 @@
 
         <activity android:name=".auth.ui.login.LoginActivity" />
         <activity android:name=".viu.ui.ViuHomeActivity" />
-        <activity android:name=".caregiver.ui.CaregiverHomeActivity" />
+        <activity android:name=".caregiver.CaregiverHomeActivity" />
 
         <activity
             android:name=".auth.ui.signup.caregiver.CaregiverSignupActivity"
+            android:exported="false"
+            android:label="Sign Up"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".auth.ui.signup.viu.ViuSignupActivity"
             android:exported="false"
             android:label="Sign Up"
             android:windowSoftInputMode="adjustResize" />
