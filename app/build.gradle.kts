@@ -89,6 +89,9 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.material)
 
+    //fragment
+    implementation("androidx.fragment:fragment-ktx:1.7.1")
+
     // Compose
     implementation(platform("androidx.compose:compose-bom:2025.01.00"))
     implementation("androidx.compose.ui:ui")
