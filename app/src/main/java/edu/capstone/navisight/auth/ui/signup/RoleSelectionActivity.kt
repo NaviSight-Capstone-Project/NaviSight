@@ -5,7 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import edu.capstone.navisight.auth.ui.signup.caregiver.CaregiverSignupActivity
-// import edu.capstone.navisight.auth.ui.signup.viu.ViuSignupActivity // <-- For when you build the VIU flow
+import edu.capstone.navisight.auth.ui.signup.viu.ViuSignupActivity
 
 class RoleSelectionActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,8 +18,7 @@ class RoleSelectionActivity : ComponentActivity() {
                     startActivity(Intent(this, CaregiverSignupActivity::class.java))
                 },
                 onViuClicked = {
-                    // TODO: Launch the VIU signup activity
-                    // startActivity(Intent(this, ViuSignupActivity::class.java))
+                    startActivity(Intent(this, ViuSignupActivity::class.java))
                 },
                 onBackToLogin = {
                     finish() // Simply closes this activity and returns to Login

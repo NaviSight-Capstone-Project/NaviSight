@@ -87,6 +87,15 @@ class OtpDataSource(
             cooldownField = "passwordCooldownUntil"
         ),
 
+        VIU_SIGNUP_VERIFICATION(
+            collection = "vius",
+            otpField = "otp",
+            timestampField = "otpTimestamp",
+            attemptCountField = "otpAttemptCount",
+            resendCountField = "otpResendCount",
+            cooldownField = "otpCooldownUntil"
+        ),
+
         VIU_EMAIL_CHANGE(
             collection = "vius",
             otpField = "otp",
@@ -213,7 +222,8 @@ class OtpDataSource(
                 OtpType.VIU_EMAIL_CHANGE -> "NaviSight Security Verification"
                 OtpType.VIU_PROFILE_UPDATE -> "NaviSight Security Verification"
                 OtpType.SIGNUP_VERIFICATION -> "NaviSight Signup Verification"
-                OtpType.VIU_CREATION -> "NaviSight Security Verification"
+                OtpType.VIU_CREATION -> "NaviSight New VIU Link Request"
+                OtpType.VIU_SIGNUP_VERIFICATION -> "NaviSight Signup Verification"
             }
             val body = when (type) {
                 OtpType.EMAIL_CHANGE -> "Your verification code is: $otp\n\nIt expires in 5 minutes."
@@ -221,7 +231,8 @@ class OtpDataSource(
                 OtpType.VIU_EMAIL_CHANGE -> "You requested to change a VIU's contact email. Your verification code is: $otp\n\nIt expires in 5 minutes."
                 OtpType.VIU_PROFILE_UPDATE -> "Your verification code to update VIU details is: $otp\n\nIt expires in 5 minutes."
                 OtpType.SIGNUP_VERIFICATION -> "Your verification code is: $otp\n\nIt expires in 5 minutes."
-                OtpType.VIU_CREATION -> "Your verification code to create a new VIU is: $otp\n\nIt expires in 5 minutes."
+                OtpType.VIU_CREATION -> "A new Visually Impaired User is trying to link to your account. Your verification code is: $otp\n\nIt expires in 5 minutes."
+                OtpType.VIU_SIGNUP_VERIFICATION -> "Your verification code is: $otp\n\nIt expires in 5 minutes."
             }
 
             EmailSender.sendVerificationEmail(
