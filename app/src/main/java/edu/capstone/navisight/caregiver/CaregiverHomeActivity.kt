@@ -49,7 +49,6 @@ class CaregiverHomeActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            // Session Check
             viewModel.isSessionValid.collect { isValid ->
                 if (!isValid) {
                     startActivity(Intent(this@CaregiverHomeActivity, LoginActivity::class.java))
@@ -59,7 +58,6 @@ class CaregiverHomeActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            // Navigation Controller
             viewModel.currentScreenIndex.collect { index ->
                 when (index) {
                     0 -> showFragment(mapFragment)
@@ -72,26 +70,19 @@ class CaregiverHomeActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Swaps the currently visible fragment in the container.
-     * This hides all other fragments to preserve their state.
-     */
     private fun showFragment(fragment: Fragment) {
         val transaction = supportFragmentManager.beginTransaction()
 
-        // If the fragment hasn't been added yet, add it
         if (!fragment.isAdded) {
             transaction.add(R.id.fragment_container, fragment)
         }
 
-        // Hide all fragments
         supportFragmentManager.fragments.forEach {
             if (it.id == R.id.fragment_container) {
                 transaction.hide(it)
             }
         }
 
-        // Show the one we want
         transaction.show(fragment)
         transaction.commit()
     }

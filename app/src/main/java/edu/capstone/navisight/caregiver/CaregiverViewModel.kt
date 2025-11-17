@@ -1,46 +1,40 @@
 package edu.capstone.navisight.caregiver
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 class CaregiverHomeViewModel : ViewModel() {
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val authStateListener: FirebaseAuth.AuthStateListener
 
-    // Session Management
-    private val _isSessionValid = MutableStateFlow(true)
+    private val _isSessionValid = MutableStateFlow(auth.currentUser != null)
     val isSessionValid: StateFlow<Boolean> = _isSessionValid.asStateFlow()
 
-    //  Navigation State
-    private val _currentScreenIndex = MutableStateFlow(0) // Default to index 0 (Track)
+    private val _currentScreenIndex = MutableStateFlow(0)
     val currentScreenIndex: StateFlow<Int> = _currentScreenIndex.asStateFlow()
 
     init {
-        checkSession()
-    }
-
-    private fun checkSession() {
-        viewModelScope.launch {
-            if (auth.currentUser == null) {
-                _isSessionValid.value = false
-            }
+        authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+            val user = firebaseAuth.currentUser
+            _isSessionValid.value = (user != null)
         }
+        auth.addAuthStateListener(authStateListener)
     }
 
     fun logout() {
         auth.signOut()
-        _isSessionValid.value = false
     }
 
-    /**
-     * Called by the BottomNavigationBar when a new item is selected.
-     */
     fun onScreenSelected(index: Int) {
         _currentScreenIndex.value = index
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        auth.removeAuthStateListener(authStateListener)
     }
 }
