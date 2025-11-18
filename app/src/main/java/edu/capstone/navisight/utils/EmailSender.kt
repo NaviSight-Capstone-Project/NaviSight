@@ -18,9 +18,6 @@ object EmailSender {
     private var senderEmail: String? = null
     private var senderPassword: String? = null
 
-    /**
-     * Load SMTP credentials from assets/smtp.properties
-     */
     private fun loadCredentials(context: Context) {
         try {
             val props = Properties()
@@ -36,9 +33,7 @@ object EmailSender {
         }
     }
 
-    /**
-     * Sends a custom email (can be OTP, verification link, etc.)
-     */
+
     suspend fun sendVerificationEmail(
         context: Context,
         to: String,

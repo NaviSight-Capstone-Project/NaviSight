@@ -10,8 +10,7 @@ import kotlinx.coroutines.flow.callbackFlow
 class ConnectionDataSource(
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
-    private var viuListener: ListenerRegistration? = null
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 
 ) {
 
@@ -25,36 +24,35 @@ class ConnectionDataSource(
             return@callbackFlow
         }
 
-        val relationshipsRef = firestore.collection("relationships")
+        var viuListener: ListenerRegistration? = null
+
+        val relationshipListener = firestore.collection("relationships")
             .whereEqualTo("caregiverUid", currentUid)
-
-        val relationshipListener = relationshipsRef.addSnapshotListener { snapshot, error ->
-            if (error != null) {
-                trySend(emptyList())
-                return@addSnapshotListener
-            }
-
-            val viuUids = snapshot?.documents?.mapNotNull { it.getString("viuUid") } ?: emptyList()
-
-            if (viuUids.isEmpty()) {
-                trySend(emptyList())
-                return@addSnapshotListener
-            }
-
-            viuListener?.remove()
-
-            viuListener = firestore.collection("vius")
-                .whereIn("uid", viuUids)
-                .addSnapshotListener { viuSnap, viuErr ->
-                    if (viuErr != null) {
-                        trySend(emptyList())
-                        return@addSnapshotListener
-                    }
-
-                    val viuList = viuSnap?.toObjects(Viu::class.java) ?: emptyList()
-                    trySend(viuList)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
                 }
-        }
+
+                val viuUids = snapshot?.documents?.mapNotNull { it.getString("viuUid") } ?: emptyList()
+
+                viuListener?.remove()
+
+                if (viuUids.isEmpty()) {
+                    trySend(emptyList())
+                } else {
+                    viuListener = firestore.collection("vius")
+                        .whereIn("uid", viuUids)
+                        .addSnapshotListener { viuSnap, viuErr ->
+                            if (viuErr != null) {
+                                trySend(emptyList())
+                                return@addSnapshotListener
+                            }
+                            val viuList = viuSnap?.toObjects(Viu::class.java) ?: emptyList()
+                            trySend(viuList)
+                        }
+                }
+            }
 
         awaitClose {
             relationshipListener.remove()

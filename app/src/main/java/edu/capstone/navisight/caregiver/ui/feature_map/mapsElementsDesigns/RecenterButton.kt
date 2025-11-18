@@ -1,10 +1,10 @@
-package edu.capstone.navisight.caregiver.ui.feature_map
+package edu.capstone.navisight.caregiver.ui.feature_map.mapsElementsDesigns
 
+import edu.capstone.navisight.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
@@ -19,36 +19,23 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import edu.capstone.navisight.R
 
 
-// Dimensions
-private val ButtonSize = 56.dp
-private val IconSize = 36.dp
-private val BottomPadding = 2.dp
-private val EndPadding = 4.dp
-private val ShadowElevation = 20.dp
+private val ButtonSize = 50.dp
+private val ShadowElevation = 8.dp
+private val ShadowColor = Color(0xFF6041EC)
+private val ShadowAmbientAlpha = 0.3f
+private val ShadowSpotAlpha = 0.5f
+private val OuterGlowColor = Color(0x406041EC)
+private val OuterGlowRadius = 100f
 
-// Colors
-private val ShadowColor = Color(0xFF000000)
-private val GradientColorTop = Color(0xFFE15BFF)
-private val GradientColorBottom = Color(0xFF7A49F2)
+private val GradientLeftColor = Color(0xFFB644F1)
+private val GradientRightColor = Color(0xFF6041EC)
+private val RippleColor = Color(0xFF6041EC)
+private val InnerGlowColor = Color(0x106041EC)
+private val InnerGlowRadius = 60f
 private val IconTintColor = Color.White
-private val RippleColor = Color.White.copy(alpha = 0.3f)
-
-// Outer Glow
-private val OuterGlowColor = Color.White.copy(alpha = 0.25f)
-private const val OuterGlowRadius = 90f
-
-// Inner Glow
-private val InnerGlowColor = Color.White.copy(alpha = 0.10f)
-private const val InnerGlowRadius = 60f
-
-// Shadow
-private const val ShadowAmbientAlpha = 0.25f
-private const val ShadowSpotAlpha = 0.35f
-
-
+private val IconSize = 24.dp
 
 @Composable
 fun RecenterButton(
@@ -59,7 +46,6 @@ fun RecenterButton(
 
     Box(
         modifier = modifier
-            .padding(bottom = BottomPadding, end = EndPadding)
             .size(ButtonSize)
             .shadow(
                 elevation = ShadowElevation,
@@ -75,8 +61,8 @@ fun RecenterButton(
                 )
             )
             .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(GradientColorTop, GradientColorBottom)
+                brush = Brush.horizontalGradient(
+                    colors = listOf(GradientLeftColor, GradientRightColor)
                 )
             )
             .clickable(
@@ -90,7 +76,6 @@ fun RecenterButton(
         RecenterIcon()
     }
 }
-
 
 @Composable
 private fun ButtonGlowOverlay(modifier: Modifier = Modifier) {

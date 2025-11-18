@@ -32,7 +32,7 @@ class GeofenceDataSource (
         val query = FirebaseFirestore.getInstance()
             .collection("geofences")
             .whereEqualTo("viuUid", viuUid)
-            .whereEqualTo("active", true)
+
 
         val listener = query.addSnapshotListener { snapshot, error ->
             if (error != null) {

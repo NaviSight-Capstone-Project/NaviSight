@@ -6,7 +6,6 @@ data class Geofence(
     val id: String = "",
     val viuUid: String = "",
     val name: String = "",
-    val active: Boolean = false,
     val location: GeoPoint? = null,
     val radius: Double = 0.0
 )

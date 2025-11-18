@@ -1,4 +1,5 @@
-package edu.capstone.navisight.caregiver.ui.feature_map
+package edu.capstone.navisight.caregiver.ui.feature_map.mapsElementsDesigns
+
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -15,11 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -29,7 +26,7 @@ import androidx.compose.ui.unit.sp
 import edu.capstone.navisight.caregiver.model.Viu
 
 @Composable
-fun MapScreen(
+fun ViuSelector(
     vius: List<Viu>,
     selectedViu: Viu?,
     onViuSelected: (String) -> Unit
@@ -37,13 +34,13 @@ fun MapScreen(
     var expanded by remember { mutableStateOf(false) }
 
     val heightAnim by animateDpAsState(
-        targetValue = if (expanded) 180.dp else 35.dp,
+        targetValue = if (expanded) 180.dp else 38.dp,
         animationSpec = tween(300),
         label = "heightAnim"
     )
 
     val alphaAnim by animateFloatAsState(
-        targetValue = if (expanded) 1f else 0.7f,
+        targetValue = if (expanded) 1f else 0.9f,
         animationSpec = tween(250),
         label = "alphaAnim"
     )
@@ -57,7 +54,7 @@ fun MapScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(start = 2.dp, bottom = 0.dp),
+            .padding(start = 16.dp, bottom = 0.dp),
         contentAlignment = Alignment.BottomStart
     ) {
         CapsuleContainer(
@@ -84,7 +81,7 @@ fun MapScreen(
 }
 
 @Composable
-fun CapsuleContainer(
+private fun CapsuleContainer(
     expanded: Boolean,
     height: Dp,
     width: Dp,
@@ -123,12 +120,12 @@ fun CapsuleContainer(
 }
 
 @Composable
-fun CollapsedCapsule(selectedViu: Viu?) {
+private fun CollapsedCapsule(selectedViu: Viu?) {
     Box(modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center) {
         Text(
             text = selectedViu?.let { "${it.firstName} ${it.lastName}" } ?: "Select VIU",
-            fontSize = 12.sp,
+            fontSize = 14.sp,
             color = Color(0xFF6041EC),
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
@@ -137,7 +134,7 @@ fun CollapsedCapsule(selectedViu: Viu?) {
 }
 
 @Composable
-fun ExpandedCapsule(
+private fun ExpandedCapsule(
     vius: List<Viu>,
     selectedViu: Viu?,
     onViuSelected: (String) -> Unit
@@ -160,10 +157,7 @@ fun ExpandedCapsule(
             textAlign = TextAlign.Center
         )
         Box(
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .height(1.dp)
-                .background(Color(0x206041EC))
+            modifier = Modifier.fillMaxWidth(0.8f).height(1.dp).background(Color(0x206041EC))
         )
         vius.forEach { viu ->
             Text(
@@ -181,36 +175,9 @@ fun ExpandedCapsule(
     }
 }
 
-fun calculateCapsuleWidth(selectedViu: Viu?): Dp {
+private fun calculateCapsuleWidth(selectedViu: Viu?): Dp {
     val name = selectedViu?.let { "${it.firstName} ${it.lastName}" } ?: "Select VIU"
     val length = name.length
-    val calculated = (length * 8).dp
+    val calculated = (length * 9).dp
     return calculated.coerceIn(160.dp, 220.dp)
 }
-
-fun Modifier.blurShadow(
-    color: Color = Color.Black,
-    blur: Float = 45f,
-    cornerRadius: Float = 50f
-): Modifier = this.then(
-    Modifier.drawBehind {
-        drawIntoCanvas { canvas ->
-            val paint = Paint().apply {
-                this.color = color
-                this.asFrameworkPaint().maskFilter =
-                    android.graphics.BlurMaskFilter(blur, android.graphics.BlurMaskFilter.Blur.NORMAL)
-            }
-            withTransform({ translate(0f, 0f) }) {
-                canvas.drawRoundRect(
-                    0f,
-                    0f,
-                    size.width,
-                    size.height,
-                    cornerRadius,
-                    cornerRadius,
-                    paint
-                )
-            }
-        }
-    }
-)
