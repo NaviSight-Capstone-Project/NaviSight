@@ -1,8 +1,17 @@
+import java.util.Properties
+
 plugins {
+
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.gms.google-services")
+}
+
+val properties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    properties.load(localPropertiesFile.inputStream())
 }
 
 android {
@@ -20,7 +29,7 @@ android {
         buildConfigField(
             "String",
             "MAPTILER_API_KEY",
-            "\"\""
+            properties.getProperty("MAPTILER_API_KEY", "\"\"")
         )
 
 //        ndk {

@@ -1,5 +1,6 @@
 package edu.capstone.navisight.caregiver.ui.feature_map
 
+import edu.capstone.navisight.BuildConfig
 import android.graphics.PointF
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -158,8 +159,9 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
     override fun onMapReady(map: MapLibreMap) {
         this.map = map
+        val apiKey = BuildConfig.MAPTILER_API_KEY
         val styleUrl =
-
+            "https://api.maptiler.com/maps/satellite/style.json?key=$apiKey"
 
         map.setStyle(styleUrl) {
             viewLifecycleOwner.lifecycleScope.launch {
