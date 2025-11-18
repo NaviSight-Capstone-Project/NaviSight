@@ -7,10 +7,15 @@ import edu.capstone.navisight.caregiver.model.Viu
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 
-class ConnectionDataSource() {
-    private val auth = FirebaseAuth.getInstance()
-    private val firestore = FirebaseFirestore.getInstance()
+class ConnectionDataSource(
+
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private var viuListener: ListenerRegistration? = null
+
+) {
+
+
 
     fun getAllPairedVius() = callbackFlow<List<Viu>> {
         val currentUid = auth.currentUser?.uid
