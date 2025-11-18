@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.combine
 
 class ViuDataSource(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
-    private val rtdb: FirebaseDatabase
+    private val rtdb: FirebaseDatabase = FirebaseDatabase.getInstance()
 ) {
 
     private val TAG = "FirebaseDataSource"

@@ -11,6 +11,7 @@ import edu.capstone.navisight.auth.ui.login.LoginActivity
 import edu.capstone.navisight.caregiver.CaregiverHomeActivity
 import edu.capstone.navisight.viu.ui.ViuHomeActivity
 import kotlinx.coroutines.launch
+import org.maplibre.android.MapLibre
 
 class MainActivity : ComponentActivity() {
 
@@ -20,6 +21,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+
+        MapLibre.getInstance(this)
         CloudinaryDataSource.init(this)
         auth = FirebaseAuth.getInstance()
         getUserCollectionUseCase = GetUserCollectionUseCase()
