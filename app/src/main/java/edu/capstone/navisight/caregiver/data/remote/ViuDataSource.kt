@@ -1,13 +1,11 @@
 package edu.capstone.navisight.caregiver.data.remote
 
 import android.util.Log
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
 import edu.capstone.navisight.caregiver.model.Viu
 import edu.capstone.navisight.caregiver.model.ViuLocation
 import kotlinx.coroutines.channels.awaitClose
@@ -16,11 +14,18 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 
 class ViuDataSource(
-    private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val rtdb: FirebaseDatabase
 ) {
 
     private val TAG = "FirebaseDataSource"
-    private val database = FirebaseDatabase.getInstance()
+
+    companion object {
+        private const val VIUS_COLLECTION = "vius"
+        private const val VIU_LOCATION_REF = "viu_location"
+        private const val VIU_LOCATION_FIELD = "location"
+    }
+
 
     fun getViuByUid(uid: String): Flow<Viu?> {
         val staticDataFlow = getViuStaticDataFirestore(uid)
@@ -28,14 +33,13 @@ class ViuDataSource(
 
         return staticDataFlow.combine(locationDataFlow) { viu, location ->
             val updatedViu = viu?.copy(location = location)
-            // vvv ADD THIS LOG vvv
             Log.d(TAG, "Combine: VIU name: ${updatedViu?.firstName}, Location: ${updatedViu?.location}")
             updatedViu
         }
     }
 
     private fun getViuStaticDataFirestore(uid: String): Flow<Viu?> = callbackFlow {
-        val firestoreRef = db.collection("vius").document(uid)
+        val firestoreRef = firestore.collection(VIUS_COLLECTION).document(uid)
 
         val firestoreListener = firestoreRef.addSnapshotListener { snapshot, error ->
             if (error != null || snapshot == null || !snapshot.exists()) {
@@ -50,7 +54,7 @@ class ViuDataSource(
     }
 
     private fun getViuLocationRtdb(uid: String): Flow<ViuLocation?> = callbackFlow {
-        val rtdbRef = database.getReference("viu_location").child(uid).child("location")
+        val rtdbRef = rtdb.getReference(VIU_LOCATION_REF).child(uid).child(VIU_LOCATION_FIELD)
 
         Log.d(TAG, "RTDB: Attaching listener to $uid")
 
