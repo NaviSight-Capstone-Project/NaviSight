@@ -6,6 +6,7 @@ import edu.capstone.navisight.caregiver.model.Geofence
 import edu.capstone.navisight.caregiver.model.Viu
 import edu.capstone.navisight.caregiver.domain.viuUseCase.GetViuByUidUseCase
 import edu.capstone.navisight.caregiver.domain.connectionUseCase.GetAllPairedViusUseCase
+import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,9 +16,10 @@ import org.maplibre.android.geometry.LatLng
 class MapViewModel(
 
     private val getAllPairedViusUseCase: GetAllPairedViusUseCase = GetAllPairedViusUseCase(),
-    private val getViuByUidUseCase: GetViuByUidUseCase = GetViuByUidUseCase()
-
+    private val getViuByUidUseCase: GetViuByUidUseCase = GetViuByUidUseCase(),
+    private val getCurrentUserUidUseCase: GetCurrentUserUidUseCase = GetCurrentUserUidUseCase()
 ) : ViewModel() {
+
 
     private val _vius = MutableStateFlow<List<Viu>>(emptyList())
     val vius: StateFlow<List<Viu>> = _vius
@@ -38,8 +40,15 @@ class MapViewModel(
     }
 
     private fun observeViusList() {
+
+        val currentUid = getCurrentUserUidUseCase()
+        if (currentUid == null) {
+            _vius.value = emptyList() // Default muna di ko na kaya mag think
+            return
+        }
+
         viewModelScope.launch {
-            getAllPairedViusUseCase().collect { list ->
+            getAllPairedViusUseCase(currentUid).collect { list ->
                 _vius.value = list
 
                 if (_selectedViu.value == null && list.isNotEmpty()) {

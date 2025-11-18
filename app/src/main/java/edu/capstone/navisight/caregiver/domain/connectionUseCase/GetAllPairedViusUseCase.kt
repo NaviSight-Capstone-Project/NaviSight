@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.Flow
 class GetAllPairedViusUseCase(
     private val connectionRepository: ConnectionRepository = ConnectionRepository()
 ) {
-    operator fun invoke(): Flow<List<Viu>> {
-        return connectionRepository.getAllPairedVius()
+    operator fun invoke(caregiverUid: String): Flow<List<Viu>> {
+        return connectionRepository.getAllPairedVius(caregiverUid)
     }
 }
