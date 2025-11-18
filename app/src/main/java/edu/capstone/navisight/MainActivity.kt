@@ -9,6 +9,7 @@ import edu.capstone.navisight.auth.data.remote.CloudinaryDataSource
 import edu.capstone.navisight.auth.domain.GetUserCollectionUseCase
 import edu.capstone.navisight.auth.ui.login.LoginActivity
 import edu.capstone.navisight.caregiver.CaregiverHomeActivity
+import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
 import edu.capstone.navisight.viu.ui.ViuHomeActivity
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
@@ -17,6 +18,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var auth: FirebaseAuth
     private lateinit var getUserCollectionUseCase: GetUserCollectionUseCase
+    private val getCurrentUserUidUseCase = GetCurrentUserUidUseCase()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,13 +30,13 @@ class MainActivity : ComponentActivity() {
         getUserCollectionUseCase = GetUserCollectionUseCase()
 
         lifecycleScope.launch {
-            val currentUser = auth.currentUser
+            val currentUser = getCurrentUserUidUseCase()
 
             if (currentUser == null) {
                 navigateTo(LoginActivity::class.java)
             } else {
                 try {
-                    val collection = getUserCollectionUseCase(currentUser.uid)
+                    val collection = getUserCollectionUseCase(currentUser)
                     when (collection) {
                         "vius" -> navigateTo(ViuHomeActivity::class.java)
                         "caregivers" -> navigateTo(CaregiverHomeActivity::class.java)
