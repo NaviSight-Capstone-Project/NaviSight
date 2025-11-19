@@ -59,7 +59,7 @@ fun LoginScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
 
-    // --- 1. INIT VOICE HANDLER ---
+    // INIT VOICE HANDLER
     // We use remember to keep the instance alive, and DisposableEffect to clean it up
     val voiceHandler = remember { VoiceHandler(context) }
 
@@ -70,7 +70,7 @@ fun LoginScreen(
     // Observe listening state for UI animations
     val isListening by voiceHandler.isListening.collectAsState()
 
-    // --- DATA STATE ---
+    // DATA STATE
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -91,7 +91,7 @@ fun LoginScreen(
         else voiceHandler.speak("Microphone permission is needed.")
     }
 
-    // --- VOICE ACTION FUNCTIONS ---
+    // VOICE ACTION FUNCTIONS
     fun startVoiceInput() {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
@@ -127,7 +127,7 @@ fun LoginScreen(
         voiceHandler.speak("Welcome to Navi Sight. Hold the bottom button to speak your email.")
     }
 
-    // --- UI SETUP (Animations & Layout) ---
+    // UI SETUP (Animations & Layout)
     var emailFocused by remember { mutableStateOf(false) }
     var passwordFocused by remember { mutableStateOf(false) }
     val anyFieldFocused = emailFocused || passwordFocused
@@ -170,7 +170,7 @@ fun LoginScreen(
     ) {
         Box(modifier = Modifier.fillMaxSize().scale(scaleFactor).blur(blurRadius).background(gradientTeal).background(gradientPurple))
 
-        // --- TOP ACTION BUTTONS ---
+        // TOP ACTION BUTTONS
         // Reset Button (Top Left)
         FloatingActionButton(
             onClick = {
