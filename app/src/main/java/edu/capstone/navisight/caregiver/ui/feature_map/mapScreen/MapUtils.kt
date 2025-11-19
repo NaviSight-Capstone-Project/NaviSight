@@ -1,4 +1,4 @@
-package edu.capstone.navisight.caregiver.ui.feature_map.mapsElementsDesigns
+package edu.capstone.navisight.caregiver.ui.feature_map.mapScreen
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind

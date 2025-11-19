@@ -1,4 +1,4 @@
-package edu.capstone.navisight.caregiver.ui.feature_map.mapsElementsDesigns
+package edu.capstone.navisight.caregiver.ui.feature_map.mapScreen
 
 import edu.capstone.navisight.R
 import androidx.compose.foundation.background

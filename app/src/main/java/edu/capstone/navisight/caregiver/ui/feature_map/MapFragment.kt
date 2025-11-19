@@ -17,7 +17,7 @@ import edu.capstone.navisight.R
 import edu.capstone.navisight.caregiver.model.Viu
 import edu.capstone.navisight.caregiver.ui.feature_geofence.GeofenceViewModel
 // Import the new Granular Design File
-import edu.capstone.navisight.caregiver.ui.feature_map.mapsElementsDesigns.MapScreen
+import edu.capstone.navisight.caregiver.ui.feature_map.mapScreen.MapScreen
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch

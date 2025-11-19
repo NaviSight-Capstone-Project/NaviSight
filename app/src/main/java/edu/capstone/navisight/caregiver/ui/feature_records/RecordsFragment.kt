@@ -1,51 +1,64 @@
 package edu.capstone.navisight.caregiver.ui.feature_records
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-
+import edu.capstone.navisight.R
 
 class RecordsFragment : Fragment() {
 
     private val viewModel: RecordsViewModel by viewModels()
+
+    private var navigationListener: OnViuClickedListener? = null
+
+    interface OnViuClickedListener {
+        fun onViuClicked(viuUid: String)
+    }
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        if (context is OnViuClickedListener) {
+            navigationListener = context
+        } else {
+            throw RuntimeException("$context must implement OnViuClickedListener")
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        return inflater.inflate(R.layout.fragment_records, container, false)
+    }
 
-        return ComposeView(requireContext()).apply {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-            setContent {
 
-                RecordsScreenContent(viewModel)
-            }
+        val composeView = view.findViewById<ComposeView>(R.id.composeRecords)
+        composeView.setContent {
+            RecordsScreen(
+                viewModel = viewModel,
+                onViuClicked = { viuUid ->
+                    navigationListener?.onViuClicked(viuUid)
+                }
+            )
+        }
+
+
+        val overlayView = view.findViewById<ComposeView>(R.id.records_compose_overlay)
+        overlayView.setContent {
+            RecordsOverlayButtons(viewModel)
         }
     }
-}
-
-@Composable
-fun RecordsScreenContent(viewModel: RecordsViewModel) {
-
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "Records Screen",
-            fontSize = 24.sp
-        )
+    override fun onDetach() {
+        super.onDetach()
+        navigationListener = null
     }
 }

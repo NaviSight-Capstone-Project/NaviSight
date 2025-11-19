@@ -2,8 +2,9 @@ package edu.capstone.navisight.caregiver
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
@@ -11,16 +12,16 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import edu.capstone.navisight.R
 import edu.capstone.navisight.auth.ui.login.LoginActivity
-import edu.capstone.navisight.caregiver.ui.navigation.BottomNavigationBar
 import edu.capstone.navisight.caregiver.ui.feature_map.MapFragment
 import edu.capstone.navisight.caregiver.ui.feature_notification.NotificationFragment
 import edu.capstone.navisight.caregiver.ui.feature_records.RecordsFragment
+import edu.capstone.navisight.caregiver.ui.feature_records.RecordsFragment.OnViuClickedListener
 import edu.capstone.navisight.caregiver.ui.feature_settings.SettingsFragment
 import edu.capstone.navisight.caregiver.ui.feature_stream.StreamFragment
+import edu.capstone.navisight.caregiver.ui.navigation.BottomNavigationBar
 import kotlinx.coroutines.launch
-import androidx.appcompat.app.AppCompatActivity
 
-class CaregiverHomeActivity : AppCompatActivity() {
+class CaregiverHomeActivity : AppCompatActivity(), OnViuClickedListener {
 
     private val viewModel: CaregiverHomeViewModel by viewModels()
 
@@ -32,12 +33,16 @@ class CaregiverHomeActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContentView(R.layout.activity_caregiver_home)
 
+        setupBottomNavigation()
+        observeSession()
+        observeNavigation()
+    }
+
+    private fun setupBottomNavigation() {
         val bottomNavView = findViewById<ComposeView>(R.id.bottom_nav_compose_view)
         bottomNavView.setContent {
-
             val currentIndex by viewModel.currentScreenIndex.collectAsState()
 
             BottomNavigationBar(
@@ -47,7 +52,9 @@ class CaregiverHomeActivity : AppCompatActivity() {
                 }
             )
         }
+    }
 
+    private fun observeSession() {
         lifecycleScope.launch {
             viewModel.isSessionValid.collect { isValid ->
                 if (!isValid) {
@@ -56,34 +63,47 @@ class CaregiverHomeActivity : AppCompatActivity() {
                 }
             }
         }
+    }
 
+    private fun observeNavigation() {
         lifecycleScope.launch {
             viewModel.currentScreenIndex.collect { index ->
+
                 when (index) {
-                    0 -> showFragment(mapFragment)
-                    1 -> showFragment(recordsFragment)
-                    2 -> showFragment(streamFragment)
-                    3 -> showFragment(notificationsFragment)
-                    4 -> showFragment(settingsFragment)
+                    0 -> showFragment(mapFragment, "TAG_MAP")
+                    1 -> showFragment(recordsFragment, "TAG_RECORDS")
+                    2 -> showFragment(streamFragment, "TAG_STREAM")
+                    3 -> showFragment(notificationsFragment, "TAG_NOTIFICATIONS")
+                    4 -> showFragment(settingsFragment, "TAG_SETTINGS")
                 }
             }
         }
     }
 
-    private fun showFragment(fragment: Fragment) {
+
+    private fun showFragment(fragmentInstance: Fragment, tag: String) {
         val transaction = supportFragmentManager.beginTransaction()
 
-        if (!fragment.isAdded) {
-            transaction.add(R.id.fragment_container, fragment)
-        }
-
         supportFragmentManager.fragments.forEach {
-            if (it.id == R.id.fragment_container) {
-                transaction.hide(it)
-            }
+            transaction.hide(it)
         }
 
-        transaction.show(fragment)
+        val existingFragment = supportFragmentManager.findFragmentByTag(tag)
+
+        if (existingFragment != null) {
+            transaction.show(existingFragment)
+        } else {
+            transaction.add(R.id.fragment_container, fragmentInstance, tag)
+        }
+
         transaction.commit()
+    }
+
+
+    override fun onViuClicked(viuUid: String) {
+        // Navigation to edit ui profile
+        Toast.makeText(this, "Clicked VIU: $viuUid", Toast.LENGTH_SHORT).show()
+
+
     }
 }
