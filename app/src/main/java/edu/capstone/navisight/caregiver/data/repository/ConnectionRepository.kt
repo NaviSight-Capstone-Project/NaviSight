@@ -11,4 +11,8 @@ class ConnectionRepository(
     fun getAllPairedVius(caregiverUid: String): Flow<List<Viu>> {
         return connectionDataSource.getAllPairedVius(caregiverUid)
     }
+
+    fun isPrimaryCaregiver(caregiverUid: String, viuUid: String): Flow<Boolean> {
+        return connectionDataSource.isPrimaryCaregiver(caregiverUid, viuUid)
+    }
 }
