@@ -16,7 +16,6 @@ import edu.capstone.navisight.BuildConfig
 import edu.capstone.navisight.R
 import edu.capstone.navisight.caregiver.model.Viu
 import edu.capstone.navisight.caregiver.ui.feature_geofence.GeofenceViewModel
-// Import the new Granular Design File
 import edu.capstone.navisight.caregiver.ui.feature_map.mapScreen.MapScreen
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -71,10 +70,12 @@ class MapFragment : Fragment(), OnMapReadyCallback {
             setContent {
                 val vius by mapViewModel.vius.collectAsState()
                 val selectedViu by mapViewModel.selectedViu.collectAsState()
+
+                val isPrimary by mapViewModel.isPrimary.collectAsState()
+
                 val geofences by geofenceViewModel.geofences.collectAsState()
                 val longPressedLatLng by mapViewModel.longPressedLatLng.collectAsState()
                 val selectedGeofence by mapViewModel.selectedGeofence.collectAsState()
-
 
                 LaunchedEffect(selectedViu?.uid) {
                     val uid = selectedViu?.uid
@@ -91,6 +92,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                     vius = vius,
                     selectedViu = selectedViu,
                     geofences = geofences,
+                    isPrimary = isPrimary,
                     map = map,
                     mapView = mapView,
 
@@ -102,9 +104,11 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
                     onDismissAddDialog = { mapViewModel.dismissAddGeofenceDialog() },
                     onAddGeofence = { name, location, radius ->
-                        selectedViu?.uid?.let { viuUid ->
-                            val geoPoint = com.google.firebase.firestore.GeoPoint(location.latitude, location.longitude)
-                            geofenceViewModel.addGeofence(viuUid, name, geoPoint, radius)
+                        if (isPrimary) {
+                            selectedViu?.uid?.let { viuUid ->
+                                val geoPoint = com.google.firebase.firestore.GeoPoint(location.latitude, location.longitude)
+                                geofenceViewModel.addGeofence(viuUid, name, geoPoint, radius)
+                            }
                         }
                         mapViewModel.dismissAddGeofenceDialog()
                     },
@@ -112,7 +116,9 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                     onGeofenceSelected = { mapViewModel.selectGeofence(it) },
                     onDismissDetailsDialog = { mapViewModel.dismissGeofenceDetailsDialog() },
                     onDeleteGeofence = { id ->
-                        geofenceViewModel.deleteGeofence(id)
+                        if(isPrimary) {
+                            geofenceViewModel.deleteGeofence(id)
+                        }
                         mapViewModel.dismissGeofenceDetailsDialog()
                     }
                 )

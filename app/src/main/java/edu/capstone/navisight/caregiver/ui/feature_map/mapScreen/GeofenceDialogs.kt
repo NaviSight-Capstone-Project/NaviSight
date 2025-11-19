@@ -60,6 +60,7 @@ fun AddGeofenceDialog(
 @Composable
 fun GeofenceDetailsDialog(
     geofence: Geofence,
+    canEdit: Boolean,
     onDismiss: () -> Unit,
     onDelete: (String) -> Unit
 ) {
@@ -76,13 +77,17 @@ fun GeofenceDetailsDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = { onDelete(geofence.id) },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) { Text("Delete") }
+            if (canEdit) {
+                Button(
+                    onClick = { onDelete(geofence.id) },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Delete") }
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) {
+                Text(if (canEdit) "Cancel" else "Close")
+            }
         }
     )
 }

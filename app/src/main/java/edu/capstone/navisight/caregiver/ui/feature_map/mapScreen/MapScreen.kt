@@ -17,6 +17,7 @@ fun MapScreen(
     vius: List<Viu>,
     selectedViu: Viu?,
     geofences: List<Geofence>,
+    isPrimary: Boolean,
     map: MapLibreMap?,
     mapView: MapView?,
     longPressedLatLng: LatLng?,
@@ -76,6 +77,7 @@ fun MapScreen(
             if (selectedGeofence != null) {
                 GeofenceDetailsDialog(
                     geofence = selectedGeofence,
+                    canEdit = isPrimary,
                     onDismiss = onDismissDetailsDialog,
                     onDelete = onDeleteGeofence
                 )

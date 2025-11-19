@@ -6,6 +6,7 @@ import edu.capstone.navisight.caregiver.model.Geofence
 import edu.capstone.navisight.caregiver.model.Viu
 import edu.capstone.navisight.caregiver.domain.viuUseCase.GetViuByUidUseCase
 import edu.capstone.navisight.caregiver.domain.connectionUseCase.GetAllPairedViusUseCase
+import edu.capstone.navisight.caregiver.domain.connectionUseCase.IsPrimaryCaregiverUseCase
 import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +18,8 @@ class MapViewModel(
 
     private val getAllPairedViusUseCase: GetAllPairedViusUseCase = GetAllPairedViusUseCase(),
     private val getViuByUidUseCase: GetViuByUidUseCase = GetViuByUidUseCase(),
-    private val getCurrentUserUidUseCase: GetCurrentUserUidUseCase = GetCurrentUserUidUseCase()
+    private val getCurrentUserUidUseCase: GetCurrentUserUidUseCase = GetCurrentUserUidUseCase(),
+    private val isPrimaryCaregiverUseCase: IsPrimaryCaregiverUseCase = IsPrimaryCaregiverUseCase()
 ) : ViewModel() {
 
 
@@ -27,7 +29,13 @@ class MapViewModel(
     private val _selectedViu = MutableStateFlow<Viu?>(null)
     val selectedViu: StateFlow<Viu?> = _selectedViu
 
+
+    private val _isPrimary = MutableStateFlow(false)
+    val isPrimary: StateFlow<Boolean> = _isPrimary
+
+
     private var viuJob: Job? = null
+    private var permissionJob: Job? = null
 
     private val _longPressedLatLng = MutableStateFlow<LatLng?>(null)
     val longPressedLatLng: StateFlow<LatLng?> = _longPressedLatLng
@@ -66,10 +74,21 @@ class MapViewModel(
     fun selectViu(uid: String?) {
 
         viuJob?.cancel()
+        permissionJob?.cancel()
 
         if (uid == null) {
             _selectedViu.value = null
             return
+        }
+
+        val currentCaregiverUid = getCurrentUserUidUseCase()
+
+        if (currentCaregiverUid != null) {
+            permissionJob = viewModelScope.launch {
+                isPrimaryCaregiverUseCase(currentCaregiverUid, uid).collect { isPrimary ->
+                    _isPrimary.value = isPrimary
+                }
+            }
         }
 
         viuJob = viewModelScope.launch {
@@ -80,7 +99,11 @@ class MapViewModel(
     }
 
     fun onMapLongPress(latLng: LatLng) {
-        _longPressedLatLng.value = latLng
+        if (_isPrimary.value) {
+            _longPressedLatLng.value = latLng
+        } else {
+            _longPressedLatLng.value = null
+        }
     }
 
     fun selectGeofence(geofence: Geofence) {
