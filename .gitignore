@@ -49,13 +49,13 @@ captures/
 .idea/gradle.xml
 .idea/modules.xml
 .idea/vcs.xml
+.idea/misc.xml
 .idea/assetWizardSettings.xml
 .idea/codeStyles/
 .idea/dictionaries/
 .idea/deploymentTargetDropDown.xml
 .idea/dynamic.xml
 .idea/jarRepositories.xml
-.idea/misc.xml
 .idea/render.xml
 .idea/runConfigurations/
 .idea/tasks.xml
@@ -79,8 +79,7 @@ gradlew.bat
 Thumbs.db # Windows specific
 
 # Android Studio specific ignores
-.idea/
-misc.xml
+.idea/*.xml
 
 # NDK/C++ related ignores
 # Compiled object files

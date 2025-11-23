@@ -25,7 +25,7 @@
         </activity>
 
         <activity android:name=".auth.ui.login.LoginActivity" />
-        <activity android:name=".viu.ui.ViuHomeActivity" />
+        <activity android:name=".viu.ViuHomeActivity" />
         <activity android:name=".caregiver.CaregiverHomeActivity" />
 
         <activity

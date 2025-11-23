@@ -10,7 +10,7 @@ import edu.capstone.navisight.auth.domain.GetUserCollectionUseCase
 import edu.capstone.navisight.auth.ui.login.LoginActivity
 import edu.capstone.navisight.caregiver.CaregiverHomeActivity
 import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
-import edu.capstone.navisight.viu.ui.ViuHomeActivity
+import edu.capstone.navisight.viu.ViuHomeActivity
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 

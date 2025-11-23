@@ -10,7 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import edu.capstone.navisight.auth.ui.signup.RoleSelectionActivity
 import edu.capstone.navisight.caregiver.CaregiverHomeActivity
-import edu.capstone.navisight.viu.ui.ViuHomeActivity
+import edu.capstone.navisight.viu.ViuHomeActivity
 
 class LoginActivity : ComponentActivity() {
 
