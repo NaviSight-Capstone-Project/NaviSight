@@ -3,6 +3,7 @@ package edu.capstone.navisight.caregiver.data.repository
 import edu.capstone.navisight.caregiver.data.remote.ConnectionDataSource
 import edu.capstone.navisight.caregiver.model.QRModel
 import edu.capstone.navisight.caregiver.model.RequestStatus
+import edu.capstone.navisight.caregiver.model.SecondaryPairingRequest
 import edu.capstone.navisight.caregiver.model.Viu
 import kotlinx.coroutines.flow.Flow
 
@@ -29,4 +30,13 @@ class ConnectionRepository(
     ): RequestStatus {
         return connectionDataSource.sendSecondaryPairingRequest(requesterUid, viuUid, viuName)
     }
+
+    fun getSecondaryPendingRequests(caregiverUid: String) =
+        connectionDataSource.getSecondaryPendingRequestsForCaregiver(caregiverUid)
+    suspend fun approveSecondaryRequest(request: SecondaryPairingRequest): RequestStatus =
+        connectionDataSource.approveSecondaryRequest(request)
+
+
+    suspend fun denySecondaryRequest(requestId: String): RequestStatus =
+        connectionDataSource.denySecondaryRequest(requestId)
 }

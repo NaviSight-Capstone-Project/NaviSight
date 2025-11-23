@@ -3,7 +3,7 @@ package edu.capstone.navisight.caregiver.ui.feature_scanqr
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import edu.capstone.navisight.caregiver.domain.connectionUseCase.GetQrCodeUseCase
-import edu.capstone.navisight.caregiver.domain.connectionUseCase.SendSecondaryPairingRequestUseCase
+import edu.capstone.navisight.caregiver.domain.connectionUseCase.SecondaryConnectionUseCase
 import edu.capstone.navisight.caregiver.model.RequestStatus
 import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 
 class ScanQrViewModel(
     private val getQrCodeUseCase: GetQrCodeUseCase = GetQrCodeUseCase(),
-    private val sendSecondaryPairingUseCase: SendSecondaryPairingRequestUseCase = SendSecondaryPairingRequestUseCase(),
+    private val secondaryConnectionUseCase: SecondaryConnectionUseCase = SecondaryConnectionUseCase(),
     private val getCurrentUserUidUseCase: GetCurrentUserUidUseCase = GetCurrentUserUidUseCase()
 ) : ViewModel() {
 
@@ -49,7 +49,7 @@ class ScanQrViewModel(
                 val qrData = getQrCodeUseCase(cleanQrUid)
 
                 if (qrData != null) {
-                    val result = sendSecondaryPairingUseCase(
+                    val result = secondaryConnectionUseCase.sendRequest(
                         requesterUid = currentUserUid,
                         viuUid = qrData.viuUid,
                         viuName = qrData.name

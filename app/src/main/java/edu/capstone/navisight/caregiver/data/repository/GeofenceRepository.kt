@@ -2,6 +2,7 @@ package edu.capstone.navisight.caregiver.data.repository
 
 import edu.capstone.navisight.caregiver.data.remote.GeofenceDataSource
 import edu.capstone.navisight.caregiver.model.Geofence
+import kotlinx.coroutines.flow.Flow
 
 class GeofenceRepository (
     private val geofenceDataSource: GeofenceDataSource = GeofenceDataSource()
@@ -17,3 +18,4 @@ class GeofenceRepository (
 
     fun getGeofencesForViu(viuUid: String) = geofenceDataSource.getGeofencesForViu(viuUid)
 }
+

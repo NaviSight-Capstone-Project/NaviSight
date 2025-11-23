@@ -16,14 +16,12 @@ import kotlinx.coroutines.tasks.await
 
 private const val TAG = "ConnectionDataSource"
 
-//For check if may redundant request
+
 
 
 class ConnectionDataSource(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
-
-    //Most Needed Function guys pacheck na lang
     fun getAllPairedVius(caregiverUid: String): Flow<List<Viu>> = callbackFlow {
 
         var viuListener: ListenerRegistration? = null
@@ -88,8 +86,6 @@ class ConnectionDataSource(
         awaitClose { listener.remove() }
     }
 
-    //Request Side
-
     suspend fun getQrByUid(qrUid: String): QRModel? {
         return try {
             val snapshot = firestore.collection("QR_Code")
@@ -146,6 +142,89 @@ class ConnectionDataSource(
             RequestStatus.Error(e.message ?: "Unknown Error")
         }
     }
+
+    fun getSecondaryPendingRequestsForCaregiver(caregiverUid: String): Flow<List<SecondaryPairingRequest>> = callbackFlow {
+        var listener: ListenerRegistration? = null
+
+        val relationshipListener = firestore.collection("relationships")
+            .whereEqualTo("caregiverUid", caregiverUid)
+            .addSnapshotListener { relSnapshot, relError ->
+                if (relError != null) {
+                    Log.e("ConnectionDataSource", "Error fetching relationships", relError)
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+
+                val viuUids = relSnapshot?.documents?.mapNotNull { it.getString("viuUid") } ?: emptyList()
+                listener?.remove()
+
+                if (viuUids.isEmpty()) {
+                    trySend(emptyList())
+                } else {
+                    listener = firestore.collection("secondaryPairingRequests")
+                        .whereIn("viuUid", viuUids)
+                        .whereEqualTo("status", "pending")
+                        .addSnapshotListener { reqSnapshot, reqError ->
+                            if (reqError != null) {
+                                Log.e("ConnectionDataSource", "Error fetching pending requests", reqError)
+                                trySend(emptyList())
+                                return@addSnapshotListener
+                            }
+
+                            val requests = reqSnapshot?.documents?.map { doc ->
+                                val request = doc.toObject(SecondaryPairingRequest::class.java)
+                                request?.id = doc.id
+                                request!!
+                            } ?: emptyList()
+                            Log.d("ConnectionDataSource", "Fetched ${requests.size} pending requests")
+                            trySend(requests)
+                        }
+                }
+            }
+
+        awaitClose {
+            relationshipListener.remove()
+            listener?.remove()
+        }
+    }
+
+    suspend fun approveSecondaryRequest(request: SecondaryPairingRequest): RequestStatus {
+        return try {
+            val requestRef = firestore.collection("secondaryPairingRequests").document(request.id)
+
+            requestRef.update("status", "approved").await()
+
+            val relationship = Relationship(
+                createdAt = Timestamp.now(),
+                caregiverUid = request.requesterUid,
+                viuUid = request.viuUid,
+                primaryCaregiver = false
+            )
+
+            firestore.collection("relationships").add(relationship).await()
+
+            RequestStatus.Success
+
+        } catch (e: Exception) {
+            RequestStatus.Error(e.message ?: "Unknown error")
+        }
+    }
+
+    suspend fun denySecondaryRequest(requestId: String): RequestStatus {
+        return try {
+
+            firestore.collection("secondaryPairingRequests")
+                .document(requestId)
+                .update("status", "denied")
+                .await()
+
+            RequestStatus.Success
+
+        } catch (e: Exception) {
+            RequestStatus.Error(e.message ?: "Unknown error")
+        }
+    }
+
 
 
 }
