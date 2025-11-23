@@ -48,14 +48,14 @@ class MapViewModel(
     }
 
     private fun observeViusList() {
-
-        val currentUid = getCurrentUserUidUseCase()
-        if (currentUid == null) {
-            _vius.value = emptyList() // Default muna di ko na kaya mag think
-            return
-        }
-
         viewModelScope.launch {
+            val currentUid = getCurrentUserUidUseCase()
+
+            if (currentUid == null) {
+                _vius.value = emptyList()
+                return@launch
+            }
+
             getAllPairedViusUseCase(currentUid).collect { list ->
                 _vius.value = list
 
@@ -72,12 +72,15 @@ class MapViewModel(
     }
 
     fun selectViu(uid: String?) {
+        if (_selectedViu.value?.uid == uid && uid != null) return
+        if (uid == null && _selectedViu.value == null) return
 
         viuJob?.cancel()
         permissionJob?.cancel()
 
         if (uid == null) {
             _selectedViu.value = null
+            _isPrimary.value = false
             return
         }
 
