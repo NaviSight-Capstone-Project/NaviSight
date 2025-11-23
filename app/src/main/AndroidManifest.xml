@@ -65,7 +65,15 @@
             android:exported="false"
             android:label="Select Role" />
 
-
+        <activity
+            android:theme="@style/Theme.AppCompat.NoActionBar"
+            android:name=".viu.ui.call.CallActivity"
+            android:exported="false" />
+        <service
+            android:name=".webrtc.service.MainService"
+            android:exported="false"
+            tools:targetApi="34"
+            android:foregroundServiceType="dataSync|mediaProjection|camera|microphone|location" />
 
     </application>
 

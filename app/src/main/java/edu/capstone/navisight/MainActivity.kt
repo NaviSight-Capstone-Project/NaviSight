@@ -29,6 +29,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var getUserCollectionUseCase: GetUserCollectionUseCase
     private val getCurrentUserUidUseCase = GetCurrentUserUidUseCase()
 
+    // WebRTC init.
+    companion object {
+        var firstTimeLaunched : Boolean = true
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)

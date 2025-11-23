@@ -116,4 +116,4 @@ obj/
 libs/
 
 # WebRTC properties
-/app/src/main/assets/webrtc.properties
+/app/src/main/assets/webrtc-credentials.properties

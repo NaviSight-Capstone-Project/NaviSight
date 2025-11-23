@@ -4,8 +4,10 @@ import com.google.firebase.firestore.FirebaseFirestore
 import edu.capstone.navisight.viu.data.model.Geofence
 import edu.capstone.navisight.viu.data.model.GeofenceEvent
 import kotlinx.coroutines.tasks.await
+import kotlin.collections.mapNotNull
+import kotlin.jvm.java
 
-class GeofenceDataSource(
+class GeofenceRemoteDataSource(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
 
