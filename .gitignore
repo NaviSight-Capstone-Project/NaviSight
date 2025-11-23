@@ -1,6 +1,5 @@
 *.iml
 .gradle
-/local.properties
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
@@ -12,9 +11,107 @@
 /captures
 .externalNativeBuild
 .cxx
-local.properties
 
 # Firebase
 **/google-services.json
 /app/src/main/assets/smtp.properties
 /app/src/main/assets/cloudinary.properties
+google-services.json
+
+# Built application files
+*.apk
+*.ap_
+*.aab
+*.aar
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# All logs
+*.log
+
+# Properties
+/local.properties
+local.properties
+.properties
+
+# Generated files
+bin/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+.idea/workspace.xml
+.idea/libraries/
+.idea/gradle.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/assetWizardSettings.xml
+.idea/codeStyles/
+.idea/dictionaries/
+.idea/deploymentTargetDropDown.xml
+.idea/dynamic.xml
+.idea/jarRepositories.xml
+.idea/misc.xml
+.idea/render.xml
+.idea/runConfigurations/
+.idea/tasks.xml
+.idea/templateLanguages.xml
+.idea/uiDesigner.xml
+.idea/compiler.xml
+.idea/kotlinc.xml
+.idea/navEditor.xml
+.idea/project-template.xml
+.idea/shelf/
+
+# Gradle
+.gradle/
+gradle-wrapper/
+!gradle-wrapper/gradle-wrapper.jar
+gradlew
+gradlew.bat
+
+# Local configuration files
+.DS_Store # macOS specific
+Thumbs.db # Windows specific
+
+# Android Studio specific ignores
+.idea/
+misc.xml
+
+# NDK/C++ related ignores
+# Compiled object files
+*.o
+*.lo
+*.la
+*.so
+*.dylib
+*.a
+
+# Executables
+*.exe
+*.out
+*.bin
+
+# Debugging information
+*.dwo
+*.elf
+*.gch
+*.pch
+*.swp
+*.swo
+
+# Build directories from native toolchains
+cmake-build-*/
+cmake_build/
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+
+# Other common NDK build artifacts
+obj/
+libs/
