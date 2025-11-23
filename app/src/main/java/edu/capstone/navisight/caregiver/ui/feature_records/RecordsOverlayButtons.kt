@@ -44,7 +44,7 @@ fun RecordsOverlayButtons(viewModel: RecordsViewModel) {
             ),
             iconRes = R.drawable.ic_scan_qr
         ) {
-            val fragment = edu.capstone.navisight.caregiver.ui.scanner.ScanQrFragment()
+            val fragment = edu.capstone.navisight.caregiver.ui.feature_scanqr.ScanQrFragment()
             val fragmentManager = (context as? AppCompatActivity)?.supportFragmentManager
             fragmentManager?.beginTransaction()
                 ?.replace(R.id.fragment_container, fragment)
