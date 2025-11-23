@@ -1,4 +1,4 @@
-package edu.capstone.navisight.utils
+package edu.capstone.navisight.common
 
 import android.content.Context
 import android.util.Log
@@ -6,7 +6,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.InputStream
 import java.util.Properties
-import javax.mail.*
+import javax.mail.AuthenticationFailedException
+import javax.mail.Authenticator
+import javax.mail.Message
+import javax.mail.MessagingException
+import javax.mail.PasswordAuthentication
+import javax.mail.Session
+import javax.mail.Transport
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
 

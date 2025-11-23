@@ -1,0 +1,289 @@
+package edu.capstone.navisight.caregiver.ui.feature_settings
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import edu.capstone.navisight.R
+import edu.capstone.navisight.caregiver.model.Caregiver
+
+@Composable
+fun SettingsScreen(
+    viewModel: SettingsViewModel,
+    uid: String,
+    onEditAccount: () -> Unit,
+    onLogout: () -> Unit
+) {
+    val caregiver by viewModel.profile.collectAsState()
+    val error by viewModel.error.collectAsState()
+
+    // Load profile once
+    LaunchedEffect(uid) {
+        viewModel.loadProfile(uid)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF9FAFB))
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+
+        // Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_sett),
+                contentDescription = "Settings Icon",
+                tint = Color(0xFF6041EC),
+                modifier = Modifier.size(28.dp)
+            )
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Text(
+                text = "Settings",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF202833),
+                style = TextStyle(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(Color(0xFFB644F1), Color(0xFF6041EC))
+                    )
+                )
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        when {
+            error != null -> {
+                Text(
+                    text = error ?: "",
+                    color = Color.Red,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+
+            caregiver != null -> {
+                ProfileCard(caregiver = caregiver!!, onEditClick = onEditAccount)
+            }
+
+            else -> {
+                // Loading state
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color(0xFF6041EC))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SettingsSection(title = "Notification", titleColor = Color(0xFF4E34C5)) {
+            NotificationToggleItem("Notification")
+            NotificationToggleItem("Sound Alert")
+            NotificationToggleItem("Vibration")
+            NotificationToggleItem("Email Alerts")
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = onLogout,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5C5C)),
+            shape = RoundedCornerShape(25.dp)
+        ) {
+            Text(
+                text = "Logout",
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+fun ProfileCard(
+    caregiver: Caregiver,
+    onEditClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .shadow(8.dp, RoundedCornerShape(30.dp))
+            .padding(horizontal = 2.dp),
+        shape = RoundedCornerShape(30.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(Color(0xFF6041EC), Color(0xFFB644F1))
+                    )
+                )
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Profile Image
+                AsyncImage(
+                    model = caregiver.profileImageUrl ?: R.drawable.default_profile,
+                    contentDescription = "Profile Image",
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(CircleShape)
+                        .border(2.dp, Color.White, CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Name + contact info
+                Column(
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "${caregiver.firstName} ${caregiver.lastName}",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Email,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = caregiver.email,
+                            fontSize = 12.sp,
+                            color = Color.White
+                        )
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Phone,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = caregiver.phoneNumber,
+                            fontSize = 12.sp,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+
+            Button(
+                onClick = onEditClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White.copy(alpha = 0.9f)
+                ),
+                shape = RoundedCornerShape(50),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 4.dp, end = 4.dp)
+                    .height(28.dp)
+            ) {
+                Text(
+                    text = "Edit Profile",
+                    color = Color(0xFF6041EC),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsSection(
+    title: String,
+    titleColor: Color = Color.Gray,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 8.dp)
+            .shadow(2.dp, RoundedCornerShape(8.dp))
+            .background(Color.White, RoundedCornerShape(8.dp))
+            .padding(12.dp)
+    ) {
+        Text(
+            text = title,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            color = titleColor
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        content()
+    }
+}
+
+@Composable
+fun NotificationToggleItem(title: String) {
+    var isChecked by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(title, modifier = Modifier.weight(1f))
+        Switch(
+            checked = isChecked,
+            onCheckedChange = { isChecked = it },
+            colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF4E34C5))
+        )
+    }
+}

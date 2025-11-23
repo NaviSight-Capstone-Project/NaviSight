@@ -5,7 +5,7 @@ import android.util.Log
 import edu.capstone.navisight.auth.model.OtpResult.OtpVerificationResult
 import edu.capstone.navisight.auth.model.OtpResult.PasswordChangeRequestResult
 import edu.capstone.navisight.auth.model.OtpResult.ResendOtpResult
-import edu.capstone.navisight.utils.EmailSender
+import edu.capstone.navisight.common.EmailSender
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
