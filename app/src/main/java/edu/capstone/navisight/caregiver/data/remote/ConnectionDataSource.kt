@@ -163,6 +163,7 @@ class ConnectionDataSource(
 
         val relationshipListener = firestore.collection("relationships")
             .whereEqualTo("caregiverUid", caregiverUid)
+            .whereEqualTo("primaryCaregiver", true)
             .addSnapshotListener { relSnapshot, relError ->
                 if (relError != null) {
                     Log.e("ConnectionDataSource", "Error fetching relationships", relError)
