@@ -1,0 +1,406 @@
+package edu.capstone.navisight.guest
+
+/*
+
+GuestFragment.kt
+
+This fragment is used primarily as a placeholder for non-registered users.
+This fragment must default to object detection - camera mode.
+This fragment will and only will be used if there is NO user logged in.
+
+-fraeron
+
+ */
+
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
+import android.content.res.Configuration
+import android.graphics.Bitmap
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import android.util.Log
+import android.util.Size
+import android.view.MotionEvent
+import android.view.Surface
+import android.view.View
+import android.widget.AdapterView
+import android.widget.Toast
+import androidx.camera.core.AspectRatio
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.commit
+import edu.capstone.navisight.R
+import edu.capstone.navisight.databinding.FragmentCameraBinding
+import edu.capstone.navisight.viu.detectors.ObjectDetection
+import edu.capstone.navisight.viu.utils.ObjectDetectorHelper
+import edu.capstone.navisight.viu.utils.TTSHelper
+
+import java.util.LinkedList
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import edu.capstone.navisight.auth.ui.login.LoginActivity
+
+class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.DetectorListener {
+
+    private val TAG = "ObjectDetection"
+
+    private var _fragmentCameraBinding: FragmentCameraBinding? = null
+    private val fragmentCameraBinding get() = _fragmentCameraBinding
+
+    private lateinit var objectDetectorHelper: ObjectDetectorHelper
+    private lateinit var bitmapBuffer: Bitmap
+    private var preview: Preview? = null
+    private var imageAnalyzer: ImageAnalysis? = null
+    private var camera: Camera? = null
+    private var cameraProvider: ProcessCameraProvider? = null
+
+    private var clickCount = 0
+    private var isScreensaverActive = false
+    private var currentBrightness = 0.0F // Default.
+
+    private val idleTimeout = 10_000L
+    private val idleHandler = Handler(Looper.getMainLooper())
+    private val idleRunnable = Runnable {
+        if (!isScreensaverActive) {
+            context?.let { safeContext ->
+                toggleScreenSaver(safeContext)
+            }
+        }
+    }
+
+
+    // Handle menu long tap (commented out na) or 4-tap activation
+//    private val longPressDuration = 3_000L
+//    private val longPressHandler = Handler(Looper.getMainLooper())
+//    private val longPressRunnable = Runnable {
+//        context?.let { safeContext ->
+//            TTSHelper.speak(safeContext, "Navigating to Login Page")
+//            if (isAdded) {
+//                parentFragmentManager.commit {
+//                    setReorderingAllowed(true)
+//                    replace(R.id.fragment_container, ProfileFragment())
+//                    addToBackStack(null)
+//                }
+//            }
+//        }
+//    }
+    private val QUADRUPLE_TAP_TIMEOUT = 500L
+    private val quadrupleTapHandler = Handler(Looper.getMainLooper())
+    private val quadrupleTapRunnable = Runnable {
+        clickCount = 0
+    }
+
+    private lateinit var cameraExecutor: ExecutorService
+
+    override fun onDestroyView() {
+        idleHandler.removeCallbacks(idleRunnable)
+
+        // Handle menu long tap (commented out na) or 4-tap activation
+//        longPressHandler.removeCallbacks(longPressRunnable)
+        quadrupleTapHandler.removeCallbacks(quadrupleTapRunnable)
+
+        _fragmentCameraBinding = null
+        super.onDestroyView()
+        cameraExecutor.shutdown()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        idleHandler.removeCallbacks(idleRunnable)
+
+        // Handle menu long tap (commented out na) or 4-tap activation
+//        longPressHandler.removeCallbacks(longPressRunnable)
+        quadrupleTapHandler.removeCallbacks(quadrupleTapRunnable)
+
+    }
+
+    @SuppressLint("MissingPermission", "ClickableViewAccessibility")
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        _fragmentCameraBinding = FragmentCameraBinding.bind(view)
+
+        objectDetectorHelper = ObjectDetectorHelper(
+            context = requireContext(),
+            objectDetectorListener = this
+        )
+
+        cameraExecutor = Executors.newSingleThreadExecutor()
+
+        fragmentCameraBinding?.viewFinder?.post {
+            setUpCamera()
+        }
+
+        toggleScreenSaver(requireContext())
+
+//        fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
+//            doAutoScreensaver()
+//            when (event.action) {
+//                MotionEvent.ACTION_DOWN -> {
+//                    longPressHandler.postDelayed(longPressRunnable, longPressDuration)
+//                    clickCount++
+//                    if (clickCount >= 3) {
+//                        context?.let { safeContext -> toggleScreenSaver(safeContext) }
+//                        clickCount = 0
+//                    }
+//                }
+//                MotionEvent.ACTION_UP -> {
+//                    longPressHandler.removeCallbacks(longPressRunnable)
+//                }
+//            }
+//            true
+        fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
+            doAutoScreensaver()
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+
+                    quadrupleTapHandler.removeCallbacks(quadrupleTapRunnable)
+                    clickCount++
+
+                    if (clickCount == 4) { // Activated if tapped 4 times
+                        // Execute the former long-press action
+                        context?.let { safeContext ->
+                            TTSHelper.speak(safeContext, "Navigating to Login Page")
+                            if (isAdded) {
+                                // Start activity to Login.
+                                val intent = Intent(
+                                    activity,
+                                    LoginActivity::class.java)
+                                startActivity(intent)
+                            }
+                        }
+                        // Reset click count after successful 4-tap activation
+                        clickCount = 0
+                    }
+
+                    if (clickCount >= 3 && clickCount < 4) {
+                        // Toggles screensaver on 3rd tap,
+                        // but allows the 4th tap to complete the navigation gesture
+                        context?.let { safeContext -> toggleScreenSaver(safeContext) }
+                    }
+
+                    // Reset clickCount if the next tap doesn't occur soon
+                    if (clickCount > 0 && clickCount < 4) {
+                        quadrupleTapHandler.postDelayed(quadrupleTapRunnable, QUADRUPLE_TAP_TIMEOUT)
+                    }
+                }
+            }
+            true
+        }
+    }
+
+    private fun initBottomSheetControls() {
+        fragmentCameraBinding?.bottomSheetLayout?.apply {
+            thresholdMinus.setOnClickListener {
+                if (objectDetectorHelper.threshold >= 0.1) {
+                    objectDetectorHelper.threshold -= 0.1f
+                    updateControlsUi()
+                }
+            }
+            thresholdPlus.setOnClickListener {
+                if (objectDetectorHelper.threshold <= 0.8) {
+                    objectDetectorHelper.threshold += 0.1f
+                    updateControlsUi()
+                }
+            }
+            maxResultsMinus.setOnClickListener {
+                if (objectDetectorHelper.maxResults > 1) {
+                    objectDetectorHelper.maxResults--
+                    updateControlsUi()
+                }
+            }
+            maxResultsPlus.setOnClickListener {
+                if (objectDetectorHelper.maxResults < 5) {
+                    objectDetectorHelper.maxResults++
+                    updateControlsUi()
+                }
+            }
+            threadsMinus.setOnClickListener {
+                if (objectDetectorHelper.numThreads > 1) {
+                    objectDetectorHelper.numThreads--
+                    updateControlsUi()
+                }
+            }
+            threadsPlus.setOnClickListener {
+                if (objectDetectorHelper.numThreads < 4) {
+                    objectDetectorHelper.numThreads++
+                    updateControlsUi()
+                }
+            }
+            spinnerDelegate.setSelection(0, false)
+            spinnerDelegate.onItemSelectedListener =
+                object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+                        objectDetectorHelper.currentDelegate = p2
+                        updateControlsUi()
+                    }
+                    override fun onNothingSelected(p0: AdapterView<*>?) {}
+                }
+            spinnerModel.setSelection(0, false)
+            spinnerModel.onItemSelectedListener =
+                object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+                        objectDetectorHelper.currentModel = p2
+                        updateControlsUi()
+                    }
+                    override fun onNothingSelected(p0: AdapterView<*>?) {}
+                }
+        }
+    }
+
+    private fun updateControlsUi() {
+        fragmentCameraBinding?.let { binding ->
+            binding.bottomSheetLayout.maxResultsValue.text =
+                objectDetectorHelper.maxResults.toString()
+            binding.bottomSheetLayout.thresholdValue.text =
+                String.format("%.2f", objectDetectorHelper.threshold)
+            binding.bottomSheetLayout.threadsValue.text =
+                objectDetectorHelper.numThreads.toString()
+
+            objectDetectorHelper.clearObjectDetector()
+            binding.overlay.clear()
+        }
+    }
+
+    private fun setUpCamera() {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
+        cameraProviderFuture.addListener(
+            {
+                cameraProvider = cameraProviderFuture.get()
+                bindCameraUseCases()
+            },
+            ContextCompat.getMainExecutor(requireContext())
+        )
+    }
+
+    @SuppressLint("UnsafeOptInUsageError")
+    private fun bindCameraUseCases() {
+        val cameraProvider =
+            cameraProvider ?: throw kotlin.IllegalStateException("Camera initialization failed.")
+
+        val cameraSelector =
+            CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
+
+        preview =
+            Preview.Builder()
+                .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+                .setTargetRotation(fragmentCameraBinding?.viewFinder?.display?.rotation ?: Surface.ROTATION_0)
+                .build()
+
+        imageAnalyzer =
+            ImageAnalysis.Builder()
+//                .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+                .setTargetResolution(Size(640, 640))
+                .setTargetRotation(fragmentCameraBinding?.viewFinder?.display?.rotation ?: Surface.ROTATION_0)
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+                .build()
+                .also {
+                    it.setAnalyzer(cameraExecutor) { image ->
+                        if (!::bitmapBuffer.isInitialized) {
+                            bitmapBuffer = Bitmap.createBitmap(
+                                image.width,
+                                image.height,
+                                Bitmap.Config.ARGB_8888
+                            )
+                        }
+                        detectObjects(image)
+                    }
+                }
+
+        cameraProvider.unbindAll()
+
+        try {
+            camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalyzer)
+            preview?.setSurfaceProvider(fragmentCameraBinding?.viewFinder?.surfaceProvider)
+        } catch (exc: Exception) {
+            Log.e(TAG, "Use case binding failed", exc)
+        }
+    }
+
+    private fun detectObjects(image: ImageProxy) {
+        val plane = image.planes[0].buffer
+        if (plane.remaining() >= bitmapBuffer.byteCount) {
+            image.use {
+                bitmapBuffer.copyPixelsFromBuffer(plane)
+            }
+            val imageRotation = image.imageInfo.rotationDegrees
+            objectDetectorHelper.detect(bitmapBuffer, imageRotation)
+        } else {
+            image.close()
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        imageAnalyzer?.targetRotation =
+            fragmentCameraBinding?.viewFinder?.display?.rotation ?: Surface.ROTATION_0
+    }
+
+    override fun onResults(
+        results: List<ObjectDetection>,
+        inferenceTime: Long,
+        imageHeight: Int,
+        imageWidth: Int
+    ) {
+        activity?.runOnUiThread {
+            fragmentCameraBinding?.overlay?.setResults(
+                results ?: LinkedList(),
+                imageHeight,
+                imageWidth
+            )
+            fragmentCameraBinding?.overlay?.invalidate()
+        }
+    }
+
+    override fun onError(error: String) {
+        activity?.runOnUiThread {
+            Toast.makeText(context ?: return@runOnUiThread, error, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun doAutoScreensaver() {
+        idleHandler.removeCallbacks(idleRunnable)
+        idleHandler.postDelayed(idleRunnable, idleTimeout)
+    }
+
+    private fun toggleScreenSaver(context: Context) {
+        fragmentCameraBinding?.let { binding ->
+            if (!isScreensaverActive) {
+                isScreensaverActive = true
+                currentBrightness = Settings.System.getInt(
+                    context.contentResolver, Settings.System.SCREEN_BRIGHTNESS
+                ) / 255f
+                changeScreenBrightness(context, 0.0F)
+                binding.previewModeOverlay.setBackgroundColor(resources.getColor(R.color.screensaver_color))
+                binding.tooltipTitle.setText(R.string.screensaver_mode_tooltip_title)
+                binding.tooltipDescription1.setText(R.string.screensaver_mode_tooltip_1)
+                binding.tooltipDescription2.setText(R.string.screensaver_mode_tooltip_2)
+            } else {
+                isScreensaverActive = false
+                changeScreenBrightness(context, currentBrightness)
+                binding.previewModeOverlay.setBackgroundColor(0)
+                binding.tooltipTitle.setText(R.string.preview_mode_tooltip_title)
+                binding.tooltipDescription1.setText(R.string.preview_mode_tooltip_1)
+                binding.tooltipDescription2.setText(R.string.preview_mode_tooltip_2)
+            }
+        }
+    }
+
+    fun changeScreenBrightness(context: Context, screenBrightnessValue: Float) {
+        val window = requireActivity().window
+        val layoutParams = window.attributes
+        layoutParams.screenBrightness = screenBrightnessValue
+        window.attributes = layoutParams
+    }
+}

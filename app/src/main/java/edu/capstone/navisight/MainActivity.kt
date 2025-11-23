@@ -2,7 +2,8 @@ package edu.capstone.navisight
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.commit
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
 import edu.capstone.navisight.auth.data.remote.CloudinaryDataSource
@@ -10,11 +11,12 @@ import edu.capstone.navisight.auth.domain.GetUserCollectionUseCase
 import edu.capstone.navisight.auth.ui.login.LoginActivity
 import edu.capstone.navisight.caregiver.CaregiverHomeActivity
 import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
+import edu.capstone.navisight.guest.GuestFragment
 import edu.capstone.navisight.viu.ViuHomeActivity
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
 
     private lateinit var auth: FirebaseAuth
     private lateinit var getUserCollectionUseCase: GetUserCollectionUseCase
@@ -22,6 +24,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
 
         MapLibre.getInstance(this)
@@ -33,7 +36,7 @@ class MainActivity : ComponentActivity() {
             val currentUser = getCurrentUserUidUseCase()
 
             if (currentUser == null) {
-                navigateTo(LoginActivity::class.java)
+                navigateToGuestMode()
             } else {
                 try {
                     val collection = getUserCollectionUseCase(currentUser)
@@ -52,6 +55,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    fun navigateToGuestMode() {
+        supportFragmentManager.commit {
+            add(R.id.fragment_container, GuestFragment())
+        }
+    }
 
     private fun navigateTo(activityClass: Class<*>) {
         startActivity(Intent(this, activityClass))

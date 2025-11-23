@@ -32,9 +32,9 @@ android {
             properties.getProperty("MAPTILER_API_KEY", "\"\"")
         )
 
-//        ndk {
-//            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-//        }
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
     }
 
     buildTypes {
@@ -83,11 +83,11 @@ android {
         }
     }
 
-//    externalNativeBuild {
-//        cmake {
-//            path = file("src/main/cpp/CMakeLists.txt")
-//        }
-//    }
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+        }
+    }
 }
 
 dependencies {
