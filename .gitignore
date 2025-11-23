@@ -114,3 +114,6 @@ cmake_install.cmake
 # Other common NDK build artifacts
 obj/
 libs/
+
+# WebRTC properties
+/app/src/main/assets/webrtc.properties
