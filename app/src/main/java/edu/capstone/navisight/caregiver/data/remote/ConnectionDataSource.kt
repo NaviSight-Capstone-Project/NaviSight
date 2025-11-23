@@ -104,6 +104,21 @@ class ConnectionDataSource(
         }
     }
 
+    suspend fun checkIfRelationshipExists(caregiverUid: String, viuUid: String): Boolean {
+        return try {
+            val snapshot = firestore.collection("relationships")
+                .whereEqualTo("caregiverUid", caregiverUid)
+                .whereEqualTo("viuUid", viuUid)
+                .limit(1)
+                .get()
+                .await()
+
+            !snapshot.isEmpty
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     suspend fun sendSecondaryPairingRequest(
         requesterUid: String,
         viuUid: String,

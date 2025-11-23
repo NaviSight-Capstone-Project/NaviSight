@@ -23,6 +23,10 @@ class ConnectionRepository(
         return connectionDataSource.getQrByUid(qrUid)
     }
 
+    suspend fun checkIfPaired(caregiverUid: String, viuUid: String): Boolean {
+        return connectionDataSource.checkIfRelationshipExists(caregiverUid, viuUid)
+    }
+
     suspend fun requestSecondaryPairing(
         requesterUid: String,
         viuUid: String,

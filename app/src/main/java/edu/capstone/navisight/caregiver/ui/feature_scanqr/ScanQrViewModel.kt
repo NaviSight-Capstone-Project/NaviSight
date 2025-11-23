@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import edu.capstone.navisight.caregiver.domain.connectionUseCase.GetQrCodeUseCase
 import edu.capstone.navisight.caregiver.domain.connectionUseCase.SecondaryConnectionUseCase
+import edu.capstone.navisight.caregiver.domain.connectionUseCase.CheckRelationshipUseCase
 import edu.capstone.navisight.caregiver.model.RequestStatus
 import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +14,8 @@ import kotlinx.coroutines.launch
 class ScanQrViewModel(
     private val getQrCodeUseCase: GetQrCodeUseCase = GetQrCodeUseCase(),
     private val secondaryConnectionUseCase: SecondaryConnectionUseCase = SecondaryConnectionUseCase(),
-    private val getCurrentUserUidUseCase: GetCurrentUserUidUseCase = GetCurrentUserUidUseCase()
+    private val getCurrentUserUidUseCase: GetCurrentUserUidUseCase = GetCurrentUserUidUseCase(),
+            private val checkRelationshipUseCase: CheckRelationshipUseCase = CheckRelationshipUseCase()
 ) : ViewModel() {
 
     private val _isLoading = MutableStateFlow(false)
@@ -49,6 +51,14 @@ class ScanQrViewModel(
                 val qrData = getQrCodeUseCase(cleanQrUid)
 
                 if (qrData != null) {
+                    val isAlreadyPaired = checkRelationshipUseCase(currentUserUid, qrData.viuUid)
+
+                    if (isAlreadyPaired) {
+                        _errorMessage.value = "You are already connected to ${qrData.name}."
+                        stopLoading()
+                        return@launch
+                    }
+
                     val result = secondaryConnectionUseCase.sendRequest(
                         requesterUid = currentUserUid,
                         viuUid = qrData.viuUid,
