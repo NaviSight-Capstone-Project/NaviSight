@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -13,7 +14,6 @@ import edu.capstone.navisight.R
 class RecordsFragment : Fragment() {
 
     private val viewModel: RecordsViewModel by viewModels()
-
     private var navigationListener: OnViuClickedListener? = null
 
     interface OnViuClickedListener {
@@ -40,23 +40,25 @@ class RecordsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-
         val composeView = view.findViewById<ComposeView>(R.id.composeRecords)
         composeView.setContent {
             RecordsScreen(
                 viewModel = viewModel,
                 onViuClicked = { viuUid ->
                     navigationListener?.onViuClicked(viuUid)
+                },
+                onTransferViuClicked = {
+                    val fragment = edu.capstone.navisight.caregiver.ui.feature_scanqr.ScanQrFragment()
+                    val fragmentManager = (context as? AppCompatActivity)?.supportFragmentManager
+                    fragmentManager?.beginTransaction()
+                        ?.replace(R.id.fragment_container, fragment)
+                        ?.addToBackStack(null)
+                        ?.commit()
                 }
             )
         }
-
-
-        val overlayView = view.findViewById<ComposeView>(R.id.records_compose_overlay)
-        overlayView.setContent {
-            RecordsOverlayButtons(viewModel)
-        }
     }
+
     override fun onDetach() {
         super.onDetach()
         navigationListener = null

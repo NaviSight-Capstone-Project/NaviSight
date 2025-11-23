@@ -5,11 +5,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:clipChildren="false"
-    android:clipToPadding="false"
-    tools:context=".ui.feature_records.RecordsFragment">
+    tools:context="caregiver.ui.feature_records.RecordsFragment">
 
-    <!-- Main Records screen Compose content (scrolls behind nav bar) -->
+    <!-- Main Records screen Compose content -->
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/composeRecords"
         android:layout_width="0dp"
@@ -17,19 +15,6 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:elevation="0dp" />
-
-    <!-- Floating overlay (for action buttons above nav bar) -->
-    <androidx.compose.ui.platform.ComposeView
-        android:id="@+id/records_compose_overlay"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginStart="0dp"
-        android:layout_marginBottom="55dp"
-        android:elevation="16dp"
-        android:padding="8dp" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

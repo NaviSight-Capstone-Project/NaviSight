@@ -3,12 +3,18 @@ package edu.capstone.navisight.caregiver.ui.feature_records
 import edu.capstone.navisight.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.foundation.clickable
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,14 +29,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import  edu.capstone.navisight.caregiver.model.Viu
+import edu.capstone.navisight.caregiver.model.Viu
 
 @Composable
 fun RecordsScreen(
     viewModel: RecordsViewModel,
-    onViuClicked: (String) -> Unit
+    onViuClicked: (String) -> Unit,
+    onTransferViuClicked: () -> Unit
 ) {
     val vius by viewModel.vius.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val sortOrder by viewModel.sortOrder.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
@@ -41,7 +50,7 @@ fun RecordsScreen(
             .padding(horizontal = 16.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Header
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -50,7 +59,7 @@ fun RecordsScreen(
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_records),
-                contentDescription = "Records Icon",
+                contentDescription = null,
                 tint = Color(0xFF6041EC),
                 modifier = Modifier.size(28.dp)
             )
@@ -68,11 +77,64 @@ fun RecordsScreen(
             )
         }
 
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                SearchBar(
+                    query = searchQuery,
+                    onQueryChange = { viewModel.onSearchQueryChanged(it) }
+                )
+            }
+            IconButton(
+                onClick = { viewModel.toggleSortOrder() },
+                modifier = Modifier
+                    .size(50.dp)
+                    .shadow(4.dp, CircleShape)
+                    .background(Color.White, CircleShape)
+            ) {
+                Icon(
+                    imageVector = if (sortOrder == SortOrder.ASCENDING)
+                        Icons.Default.KeyboardArrowDown
+                    else
+                        Icons.Default.KeyboardArrowUp,
+                    contentDescription = "Sort",
+                    tint = Color(0xFF6041EC)
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .shadow(4.dp, CircleShape)
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(Color(0xFF77F7ED), Color(0xFF6041EC))
+                        ),
+                        shape = CircleShape
+                    )
+                    .clip(CircleShape)
+                    .clickable { onTransferViuClicked() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_add_secondary_pair),
+                    contentDescription = "Transfer VIU",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
         when {
             isLoading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(color = Color(0xFF6041EC))
             }
 
             error != null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -81,8 +143,9 @@ fun RecordsScreen(
 
             vius.isEmpty() -> Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "No VIU records found",
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+                    text = if (searchQuery.isNotEmpty()) "No matching VIUs found" else "No VIU records found",
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    color = Color.Gray
                 )
             }
 
@@ -93,17 +156,62 @@ fun RecordsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(vius) { viu ->
-
                     ViuCard(
                         viu = viu,
-                        onClick = {
-                            onViuClicked(viu.uid)
-                        }
+                        onClick = { onViuClicked(viu.uid) }
                     )
                 }
             }
         }
     }
+}
+
+@Composable
+fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit
+) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .shadow(4.dp, RoundedCornerShape(50)),
+        shape = RoundedCornerShape(50),
+        placeholder = {
+            Text(
+                text = "Search...",
+                style = TextStyle(color = Color.Gray, fontSize = 14.sp)
+            )
+        },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Search",
+                tint = Color(0xFF6041EC)
+            )
+        },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Clear",
+                        tint = Color.Gray
+                    )
+                }
+            }
+        },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White,
+            focusedBorderColor = Color(0xFF6041EC),
+            unfocusedBorderColor = Color.Transparent,
+            cursorColor = Color(0xFF6041EC)
+        ),
+        singleLine = true
+    )
 }
 
 @Composable
@@ -115,7 +223,7 @@ fun ViuCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(120.dp)
-            .padding(horizontal = 8.dp)
+            .padding(horizontal = 4.dp)
             .clickable { onClick() },
         colors = CardDefaults.elevatedCardColors(containerColor = Color.White),
         shape = RoundedCornerShape(16.dp)
@@ -126,7 +234,6 @@ fun ViuCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.Top
         ) {
-            // Profile Image with shadow
             AsyncImage(
                 model = viu.profileImageUrl,
                 contentDescription = "Profile Image",
@@ -141,22 +248,18 @@ fun ViuCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Right Column
             Column(
                 modifier = Modifier
                     .fillMaxHeight()
                     .weight(1f),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-
                 Column {
-                    // VIU Name
                     Text(
                         text = "${viu.firstName} ${viu.lastName}",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
 
-                    // Status badge
                     if (!viu.status.isNullOrEmpty()) {
                         Box(
                             modifier = Modifier
@@ -178,12 +281,11 @@ fun ViuCard(
                     }
                 }
 
-                // Contact Info
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_phone),
-                            contentDescription = "Phone Icon",
+                            contentDescription = null,
                             tint = Color.Black,
                             modifier = Modifier.size(12.dp)
                         )
@@ -194,7 +296,7 @@ fun ViuCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_email),
-                            contentDescription = "Email Icon",
+                            contentDescription = null,
                             tint = Color.Black,
                             modifier = Modifier.size(12.dp)
                         )
@@ -203,7 +305,6 @@ fun ViuCard(
                     }
                 }
 
-                // Click to view information
                 Box(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
@@ -220,4 +321,3 @@ fun ViuCard(
         }
     }
 }
-
