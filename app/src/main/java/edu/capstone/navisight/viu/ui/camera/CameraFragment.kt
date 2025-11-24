@@ -109,7 +109,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
         context?.let { safeContext ->
             TTSHelper.speak(safeContext, "Navigating to Profile Page")
             if (isAdded) {
-                parentFragmentManager.commit {
+                requireActivity().supportFragmentManager.commit {
                     setReorderingAllowed(true)
                     replace(R.id.fragment_container, ProfileFragment())
                     addToBackStack(null)

@@ -18,7 +18,7 @@ import edu.capstone.navisight.auth.AuthActivity
 import edu.capstone.navisight.auth.data.remote.CloudinaryDataSource
 import edu.capstone.navisight.auth.domain.GetUserCollectionUseCase
 import edu.capstone.navisight.caregiver.CaregiverHomeFragment
-// import edu.capstone.navisight.viu.ViuHomeFragment // Pag okie na
+ import edu.capstone.navisight.viu.ViuHomeFragment
 import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
 import edu.capstone.navisight.webrtc.repository.MainRepository
 import edu.capstone.navisight.webrtc.service.MainService
@@ -97,8 +97,7 @@ class MainActivity : AppCompatActivity() {
         val fragment = if (isCaregiver) {
             CaregiverHomeFragment()
         } else {
-            // Replace with ViuHomeFragment()  heere
-            CaregiverHomeFragment() // Temporary lang nganiiii
+            ViuHomeFragment()
         }
 
         supportFragmentManager.beginTransaction()

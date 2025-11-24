@@ -59,7 +59,6 @@
             android:name=".caregiver.ui.call.CaregiverCallActivity"
             android:exported="false" />
 
-        <activity android:name=".viu.ViuHomeActivity" />
 
         <service
             android:name=".webrtc.service.MainService"
