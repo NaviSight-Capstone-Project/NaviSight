@@ -2,18 +2,85 @@ package edu.capstone.navisight.caregiver.ui.feature_editProfile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.delay
+
+@Composable
+internal fun SuccessDialog(
+    message: String,
+    onDismiss: () -> Unit
+) {
+    // Automatically dismiss after 2 seconds
+    LaunchedEffect(Unit) {
+        delay(2000)
+        onDismiss()
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Success Icon Circle
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(color = Color(0xFF4CAF50), shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Success",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Success!",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = Color.Gray
+                )
+            }
+        }
+    }
+}
 
 @Composable
 internal fun ChangeEmailDialog(onConfirm: (String, String) -> Unit, onDismiss: () -> Unit) {
@@ -71,43 +138,6 @@ internal fun ChangeEmailDialog(onConfirm: (String, String) -> Unit, onDismiss: (
 }
 
 @Composable
-internal fun SectionTitle(text: String) {
-    Text(text, color = Color.Gray, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
-}
-
-@Composable
-internal fun ValidatedField(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    error: String? = null
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            label = { Text(label) },
-            isError = error != null,
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White, RoundedCornerShape(12.dp)),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White,
-                focusedBorderColor = Color(0xFF6A5AE0)
-            )
-        )
-        if (error != null)
-            Text(
-                error,
-                color = Color.Red,
-                fontSize = MaterialTheme.typography.labelSmall.fontSize
-            )
-    }
-}
-
-@Composable
 internal fun ChangePasswordDialog(onConfirm: (String, String) -> Unit, onDismiss: () -> Unit) {
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
@@ -159,6 +189,7 @@ internal fun ChangePasswordDialog(onConfirm: (String, String) -> Unit, onDismiss
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
+
 @Composable
 internal fun OtpVerificationDialog(
     title: String,
@@ -213,20 +244,19 @@ internal fun OtpVerificationDialog(
                     fontSize = MaterialTheme.typography.labelSmall.fontSize
                 )
 
-                // --- NEW RESEND TEXT LOGIC ---
                 TextButton(
                     onClick = onResend,
                     enabled = canResend
                 ) {
                     Text(
                         when {
-                            // Priority 1: Cooldown is active
-                            cooldownSeconds > 0 -> "Limit reached, try again later" // <-- CHANGED
-                            // Priority 2: Resend limit is hit (and no cooldown)
+                            // Cooldown is active
+                            cooldownSeconds > 0 -> "Limit reached, try again later"
+                            // Resend limit is hit (and no cooldown)
                             isResendLimitReached -> "Resend limit reached"
-                            // Priority 3: 60s wait timer is active
+                            // 60s wait timer is active
                             resendWaitSeconds > 0 -> "Resend OTP in (${resendWaitSeconds} s)"
-                            // Default: Ready to resend
+                            // Ready to resend
                             else -> "Resend OTP"
                         }
                     )
@@ -298,4 +328,41 @@ internal fun ReauthenticationDialog(
             }
         }
     )
+}
+
+@Composable
+internal fun SectionTitle(text: String) {
+    Text(text, color = Color.Gray, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
+}
+
+@Composable
+internal fun ValidatedField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    error: String? = null
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text(label) },
+            isError = error != null,
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White, RoundedCornerShape(12.dp)),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                focusedBorderColor = Color(0xFF6A5AE0)
+            )
+        )
+        if (error != null)
+            Text(
+                error,
+                color = Color.Red,
+                fontSize = MaterialTheme.typography.labelSmall.fontSize
+            )
+    }
 }

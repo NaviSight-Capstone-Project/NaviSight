@@ -14,6 +14,7 @@ class OtpResult {
     sealed class ResendOtpResult {
         object Success : ResendOtpResult()
         object FailureCooldown : ResendOtpResult()
+        object FailureEmailAlreadyInUse : ResendOtpResult()
         object FailureGeneric : ResendOtpResult() // For re-auth fail or other errors
     }
     sealed class PasswordChangeRequestResult {

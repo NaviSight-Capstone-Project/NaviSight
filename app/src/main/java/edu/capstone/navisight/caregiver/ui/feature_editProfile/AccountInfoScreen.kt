@@ -33,11 +33,9 @@ import kotlinx.coroutines.delay
 private fun isAgeValid(timestamp: Timestamp?): Boolean {
     if (timestamp == null) return false
     val selectedDate = timestamp.toDate()
-
     val today = Calendar.getInstance()
     val birthDate = Calendar.getInstance()
     birthDate.time = selectedDate
-
     var age = today.get(Calendar.YEAR) - birthDate.get(Calendar.YEAR)
     if (today.get(Calendar.DAY_OF_YEAR) < birthDate.get(Calendar.DAY_OF_YEAR)) {
         age--
@@ -83,28 +81,44 @@ fun AccountInfoScreen(
     var showEmailDialog by remember { mutableStateOf(false) }
     var showEmailOtpDialog by remember { mutableStateOf(false) }
     var showReauthDialog by remember { mutableStateOf(false) }
-
     var showPasswordOtpDialog by remember { mutableStateOf(false) }
+
+    // --- SUCCESS POPUP STATE ---
+    var showSuccessPopup by remember { mutableStateOf(false) }
+    var successPopupMessage by remember { mutableStateOf("") }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // --- DIRTY CHECK ---
+    val hasChanges = remember(
+        firstName, middleName, lastName, phone, selectedBirthdayTimestamp, address, profile
+    ) {
+        profile?.let {
+            firstName != (it.firstName ?: "") ||
+                    middleName != (it.middleName ?: "") ||
+                    lastName != (it.lastName ?: "") ||
+                    phone != (it.phoneNumber ?: "") ||
+                    selectedBirthdayTimestamp != it.birthday ||
+                    address != (it.address ?: "")
+        } ?: false
+    }
+
+    // Colors
+    val focusedColor = Color(0xFF6641EC)
+    val unfocusedColor = Color.Black
+    val sectionHeaderColor = Color(0xFF8E41E8)
+    val fieldLabelColor = Color(0xFF8E41E8)
+    val gradientBrush = Brush.horizontalGradient(colors = listOf(Color(0xFFAA41E5), Color(0xFF6342ED)))
+    val disabledBrush = Brush.horizontalGradient(colors = listOf(Color.Gray, Color.LightGray))
+
+    // OTP State Variables
     var emailOtpTriesLeft by remember { mutableStateOf(3) }
     var emailResendCount by remember { mutableStateOf(0) }
     var emailResendWaitSeconds by remember { mutableStateOf(0) }
     var isEmailResendWaiting by remember { mutableStateOf(false) }
     var emailCooldownSeconds by remember { mutableStateOf(0) }
     var emailBackendError by remember { mutableStateOf<String?>(null) }
-
-    val focusedColor = Color(0xFF6641EC)
-    val unfocusedColor = Color.Black
-    val sectionHeaderColor = Color(0xFF8E41E8)
-    val fieldLabelColor = Color(0xFF8E41E8)
-
-    val gradientBrush = Brush.horizontalGradient(
-        colors = listOf(Color(0xFFAA41E5), Color(0xFF6342ED))
-    )
-
     var pendingNewEmail by remember { mutableStateOf("") }
     var pendingPassword by remember { mutableStateOf("") }
 
@@ -115,43 +129,29 @@ fun AccountInfoScreen(
     var passwordCooldownSeconds by remember { mutableStateOf(0) }
     var passwordBackendError by remember { mutableStateOf<String?>(null) }
 
+    // Timers
     LaunchedEffect(isEmailResendWaiting) {
         if (isEmailResendWaiting) {
             emailResendWaitSeconds = 60
-            while (emailResendWaitSeconds > 0) {
-                delay(1000L)
-                emailResendWaitSeconds--
-            }
+            while (emailResendWaitSeconds > 0) { delay(1000L); emailResendWaitSeconds-- }
             isEmailResendWaiting = false
         }
     }
-
     LaunchedEffect(emailCooldownSeconds) {
         if (emailCooldownSeconds > 0) {
-            while (emailCooldownSeconds > 0) {
-                delay(1000L)
-                emailCooldownSeconds--
-            }
+            while (emailCooldownSeconds > 0) { delay(1000L); emailCooldownSeconds-- }
         }
     }
-
     LaunchedEffect(isPasswordResendWaiting) {
         if (isPasswordResendWaiting) {
             passwordResendWaitSeconds = 60
-            while (passwordResendWaitSeconds > 0) {
-                delay(1000L)
-                passwordResendWaitSeconds--
-            }
+            while (passwordResendWaitSeconds > 0) { delay(1000L); passwordResendWaitSeconds-- }
             isPasswordResendWaiting = false
         }
     }
-
     LaunchedEffect(passwordCooldownSeconds) {
         if (passwordCooldownSeconds > 0) {
-            while (passwordCooldownSeconds > 0) {
-                delay(1000L)
-                passwordCooldownSeconds--
-            }
+            while (passwordCooldownSeconds > 0) { delay(1000L); passwordCooldownSeconds-- }
         }
     }
 
@@ -177,44 +177,58 @@ fun AccountInfoScreen(
             lastName = profile.lastName ?: ""
             phone = profile.phoneNumber ?: ""
             address = profile.address ?: ""
-
             selectedBirthdayTimestamp = profile.birthday
             birthdayText = profile.birthday?.toDate()?.let { dateFormatter.format(it) } ?: ""
-            // Re-validate birthday on load
             birthdayError = if (birthdayText.isNotBlank() && !isAgeValid(selectedBirthdayTimestamp)) "Must be 18-60 years old" else null
         }
     }
 
+    // UNIFIED DIALOG HANDLING LOGIC
     LaunchedEffect(uiMessage) {
-        uiMessage?.let {
-            snackbarHostState.showSnackbar(it)
+        uiMessage?.let { message ->
+            // Only show snackbar if it is NOT one of the success messages we handle with a popup
+            val isSuccessMessage = message.contains("Profile updated successfully", ignoreCase = true) ||
+                    message.contains("Email successfully verified", ignoreCase = true) ||
+                    message.contains("Password updated successfully", ignoreCase = true) ||
+                    message.contains("Photo updated successfully", ignoreCase = true)
 
-            val cooldownTime = 300
-
-            if (it.contains("OTP has been sent to", ignoreCase = true)) {
-                showEmailOtpDialog = true
-                emailOtpTriesLeft = 3
-                isEmailResendWaiting = true
-                emailCooldownSeconds = 0
-                emailBackendError = null
-                emailResendCount++
-                if (emailResendCount >= 3) {
-                    emailCooldownSeconds = cooldownTime
-                }
+            if (!isSuccessMessage) {
+                snackbarHostState.showSnackbar(message)
             }
-            if (it.contains("Email successfully verified", ignoreCase = true)) {
+
+            // Profile Save Success: Close Reauth Dialog & Show Success
+            if (message.contains("Profile updated successfully", ignoreCase = true)) {
+                showReauthDialog = false
+                successPopupMessage = "Profile updated successfully!"
+                showSuccessPopup = true
+            }
+
+            // Photo Update Success: Show Success (No dialog to close)
+            if (message.contains("Photo updated successfully", ignoreCase = true)) {
+                successPopupMessage = "Photo updated successfully!"
+                showSuccessPopup = true
+            }
+
+            // Email Change Success: Close OTP Dialog & Show Success
+            if (message.contains("Email successfully verified", ignoreCase = true)) {
                 showEmailOtpDialog = false
                 emailCooldownSeconds = 0
                 emailResendCount = 0
-            }
-            if (it.contains("Please wait 5 minutes to request a new OTP", ignoreCase = true)) {
-                showEmailDialog = false
-                showEmailOtpDialog = false
-                emailCooldownSeconds = cooldownTime
-                emailResendCount = 3
+                successPopupMessage = "Email updated successfully!"
+                showSuccessPopup = true
             }
 
-            if (it.contains("Password OTP Sent", ignoreCase = true)) {
+            // Password Change Success: Close OTP Dialog & Show Success
+            if (message.contains("Password updated successfully", ignoreCase = true)) {
+                showPasswordOtpDialog = false
+                passwordCooldownSeconds = 0
+                passwordResendCount = 0
+                successPopupMessage = "Password updated successfully!"
+                showSuccessPopup = true
+            }
+
+            // Password Change Request Success: Close Input Dialog, Open OTP Dialog
+            if (message.contains("Password OTP Sent", ignoreCase = true)) {
                 showPasswordDialog = false
                 showPasswordOtpDialog = true
                 passwordOtpTriesLeft = 3
@@ -223,34 +237,44 @@ fun AccountInfoScreen(
                 passwordBackendError = null
                 passwordResendCount = 1
             }
-            if (it.contains("Password OTP Resent", ignoreCase = true)) {
+
+            // Email Change Request Success: Open OTP Dialog
+            if (message.contains("OTP has been sent to", ignoreCase = true)) {
+                showEmailOtpDialog = true
+                emailOtpTriesLeft = 3
+                isEmailResendWaiting = true
+                emailCooldownSeconds = 0
+                emailBackendError = null
+                emailResendCount++
+                if (emailResendCount >= 3) emailCooldownSeconds = 300
+            }
+
+            // Error/Flow Handling
+            if (message.contains("Please wait 5 minutes to request a new OTP", ignoreCase = true)) {
+                showEmailDialog = false
+                showEmailOtpDialog = false
+                emailCooldownSeconds = 300
+                emailResendCount = 3
+            }
+            if (message.contains("Password OTP Resent", ignoreCase = true)) {
                 showPasswordOtpDialog = true
                 passwordOtpTriesLeft = 3
                 isPasswordResendWaiting = true
                 passwordBackendError = null
                 passwordResendCount++
-                if (passwordResendCount >= 3) {
-                    passwordCooldownSeconds = cooldownTime
-                }
+                if (passwordResendCount >= 3) passwordCooldownSeconds = 300
             }
-            if (it.contains("Please wait 5 minutes to resend password OTP", ignoreCase = true)) {
+            if (message.contains("Please wait 5 minutes to resend password OTP", ignoreCase = true)) {
                 showPasswordOtpDialog = false
-                passwordCooldownSeconds = cooldownTime
+                passwordCooldownSeconds = 300
                 passwordResendCount = 3
             }
-            if (it.contains("Password updated successfully", ignoreCase = true)) {
-                showPasswordOtpDialog = false
-                passwordCooldownSeconds = 0
-                passwordResendCount = 0
-            }
-
-            if (it.contains("Password change is locked", ignoreCase = true) ||
-                it.contains("Too many attempts. Password change locked", ignoreCase = true)) {
+            if (message.contains("Password change is locked", ignoreCase = true) ||
+                message.contains("Too many attempts. Password change locked", ignoreCase = true)) {
                 showPasswordDialog = false
-                passwordCooldownSeconds = cooldownTime
+                passwordCooldownSeconds = 300
             }
-
-            if (it.contains("Invalid OTP. Please try again.", ignoreCase = true)) {
+            if (message.contains("Invalid OTP", ignoreCase = true)) {
                 if (showEmailOtpDialog) {
                     emailOtpTriesLeft--
                     emailBackendError = "Wrong OTP. Please try again."
@@ -260,15 +284,14 @@ fun AccountInfoScreen(
                     passwordBackendError = "Wrong OTP. Please try again."
                 }
             }
-
-            if (it.contains("Too many attempts. OTP is now invalid.", ignoreCase = true)) {
+            if (message.contains("Too many attempts. OTP is now invalid", ignoreCase = true)) {
                 if (showEmailOtpDialog) {
                     showEmailOtpDialog = false
-                    emailCooldownSeconds = cooldownTime
+                    emailCooldownSeconds = 300
                 }
                 if (showPasswordOtpDialog) {
                     showPasswordOtpDialog = false
-                    passwordCooldownSeconds = cooldownTime
+                    passwordCooldownSeconds = 300
                 }
             }
             onMessageShown()
@@ -276,9 +299,7 @@ fun AccountInfoScreen(
     }
 
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = selectedBirthdayTimestamp?.toDate()?.time
-        )
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedBirthdayTimestamp?.toDate()?.time)
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
@@ -295,48 +316,28 @@ fun AccountInfoScreen(
                     enabled = datePickerState.selectedDateMillis != null
                 ) { Text("OK") }
             },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } }
+        ) { DatePicker(state = datePickerState) }
     }
 
     Scaffold(
         topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(gradientBrush)
-            ) {
+            Box(modifier = Modifier.fillMaxWidth().background(gradientBrush)) {
                 TopAppBar(
                     title = { Text("Edit Caregiver Profile", color = Color.White) },
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = Color.White
-                            )
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        titleContentColor = Color.White,
-                        navigationIconContentColor = Color.White
-                    )
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color(0xFFF0F0F0)
     ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -360,229 +361,90 @@ fun AccountInfoScreen(
                         .padding(horizontal = 16.dp, vertical = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text(
-                        "Personal Information", // Section Header
-                        style = MaterialTheme.typography.titleLarge,
-                        color = sectionHeaderColor,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .padding(bottom = 8.dp)
-                            .align(Alignment.CenterHorizontally)
-                    )
+                    Text("Personal Information", style = MaterialTheme.typography.titleLarge, color = sectionHeaderColor, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp).align(Alignment.CenterHorizontally))
 
-                    Text(
-                        "Name",
-                        color = fieldLabelColor,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = firstName,
-                            onValueChange = { if (it.all { ch -> ch.isLetter() || ch.isWhitespace() }) firstName = it },
-                            label = { Text("First Name", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            colors = customTextFieldColors,
-                            shape = RoundedCornerShape(12.dp),
-                        )
-                        OutlinedTextField(
-                            value = middleName,
-                            onValueChange = { if (it.all { ch -> ch.isLetter() || ch.isWhitespace() }) middleName = it },
-                            label = { Text("Middle", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            colors = customTextFieldColors,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        OutlinedTextField(
-                            value = lastName,
-                            onValueChange = { if (it.all { ch -> ch.isLetter() || ch.isWhitespace() }) lastName = it },
-                            label = { Text("Last Name", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            colors = customTextFieldColors,
-                            shape = RoundedCornerShape(12.dp),
-                        )
+                    Text("Name", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = firstName, onValueChange = { if (it.all { ch -> ch.isLetter() || ch.isWhitespace() }) firstName = it }, label = { Text("First Name") }, modifier = Modifier.weight(1f), singleLine = true, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp))
+                        OutlinedTextField(value = middleName, onValueChange = { if (it.all { ch -> ch.isLetter() || ch.isWhitespace() }) middleName = it }, label = { Text("Middle") }, modifier = Modifier.weight(1f), singleLine = true, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp))
+                        OutlinedTextField(value = lastName, onValueChange = { if (it.all { ch -> ch.isLetter() || ch.isWhitespace() }) lastName = it }, label = { Text("Last Name") }, modifier = Modifier.weight(1f), singleLine = true, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp))
                     }
 
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         Column(Modifier.weight(1f)) {
-                            Text(
-                                "Birthday",
-                                color = fieldLabelColor,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
+                            Text("Birthday", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
                             OutlinedTextField(
-                                value = birthdayText,
-                                onValueChange = { },
-                                label = { Text("Select Date", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                readOnly = true,
-                                isError = birthdayError != null,
-                                colors = customTextFieldColors,
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { showDatePicker = true },
-                                trailingIcon = {
-                                    Icon(
-                                        Icons.Default.DateRange,
-                                        contentDescription = "Select Date",
-                                        tint = unfocusedColor.copy(alpha = 0.7f),
-                                        modifier = Modifier.clickable { showDatePicker = true }
-                                    )
-                                },
-                                supportingText = {
-                                    if (birthdayError != null) {
-                                        Text(birthdayError!!, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    }
-                                }
+                                value = birthdayText, onValueChange = {}, label = { Text("Select Date") }, readOnly = true, isError = birthdayError != null,
+                                colors = customTextFieldColors, shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true },
+                                trailingIcon = { Icon(Icons.Default.DateRange, "Select Date", tint = unfocusedColor.copy(alpha = 0.7f), modifier = Modifier.clickable { showDatePicker = true }) },
+                                supportingText = { if (birthdayError != null) Text(birthdayError!!, color = MaterialTheme.colorScheme.error) }
                             )
                         }
                         Column(Modifier.weight(1f)) {
-                            Text(
-                                "Phone Number",
-                                color = fieldLabelColor,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
+                            Text("Phone Number", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
                             OutlinedTextField(
-                                value = phone,
-                                onValueChange = {
+                                value = phone, onValueChange = {
                                     if (it.all { c -> c.isDigit() }) phone = it
-                                    phoneError = if (phone.isNotBlank() && !phone.matches(Regex("^09\\d{9}$")))
-                                        "Must be 11 digits starting with 09"
-                                    else
-                                        null
+                                    phoneError = if (phone.isNotBlank() && !phone.matches(Regex("^09\\d{9}$"))) "Must be 11 digits starting with 09" else null
                                 },
-                                label = { Text("09XXXXXXXXX", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                isError = phoneError != null,
-                                colors = customTextFieldColors,
-                                shape = RoundedCornerShape(12.dp),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                                modifier = Modifier.fillMaxWidth(),
-                                supportingText = {
-                                    if (phoneError != null) {
-                                        Text(phoneError!!, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    }
-                                }
+                                label = { Text("09XXXXXXXXX") }, isError = phoneError != null, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth(),
+                                supportingText = { if (phoneError != null) Text(phoneError!!, color = MaterialTheme.colorScheme.error) }
                             )
                         }
                     }
 
-                    Text(
-                        "Address",
-                        color = fieldLabelColor,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
-                    OutlinedTextField(
-                        value = address,
-                        onValueChange = { address = it },
-                        label = { Text("Address", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = customTextFieldColors,
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                    Text("Address", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
+                    OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Address") }, modifier = Modifier.fillMaxWidth(), singleLine = true, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp))
 
-                    Text(
-                        "Email",
-                        color = fieldLabelColor,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
-                    OutlinedTextField(
-                        value = profile?.email ?: "",
-                        onValueChange = {},
-                        label = { Text("Email (Cannot Change Here)") },
-                        readOnly = true,
-
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = customTextFieldColors,
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                    Text("Email", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
+                    OutlinedTextField(value = profile?.email ?: "", onValueChange = {}, label = { Text("Email (Cannot Change Here)") }, readOnly = true, modifier = Modifier.fillMaxWidth(), colors = customTextFieldColors, shape = RoundedCornerShape(12.dp))
 
                     Button(
                         onClick = {
-                            phoneError = if (phone.isNotBlank() && !phone.matches(Regex("^09\\d{9}$")))
-                                "Must be 11 digits starting with 09"
-                            else null
-
-                            birthdayError = if (birthdayText.isNotBlank() && !isAgeValid(selectedBirthdayTimestamp))
-                                "Must be 18-60 years old"
-                            else if (birthdayText.isBlank())
-                                "Birthday is required"
-                            else null
-
-                            if (phoneError == null && birthdayError == null) {
-                                val hasChanges = (firstName != (profile?.firstName ?: "")) ||
-                                        (middleName != (profile?.middleName ?: "")) ||
-                                        (lastName != (profile?.lastName ?: "")) ||
-                                        (phone != (profile?.phoneNumber ?: "")) ||
-                                        (selectedBirthdayTimestamp != profile?.birthday) ||
-                                        (address != (profile?.address ?: ""))
-
-                                if (hasChanges) {
-                                    showReauthDialog = true
-                                } else {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar("No changes to update.")
-                                    }
-                                }
+                            phoneError = if (phone.isNotBlank() && !phone.matches(Regex("^09\\d{9}$"))) "Must be 11 digits starting with 09" else null
+                            birthdayError = if (birthdayText.isNotBlank() && !isAgeValid(selectedBirthdayTimestamp)) "Must be 18-60 years old" else if (birthdayText.isBlank()) "Birthday is required" else null
+                            if (phoneError == null && birthdayError == null && hasChanges) {
+                                showReauthDialog = true
                             }
                         },
-                        enabled = !isSaving,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp)
-                            .height(50.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.Transparent,
-                            contentColor = Color.White
-                        ),
+                        enabled = !isSaving && hasChanges,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(50.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, disabledContainerColor = Color.Transparent),
                         shape = RoundedCornerShape(12.dp),
                         contentPadding = PaddingValues()
                     ) {
                         Box(
-                            modifier = Modifier
-                                .background(
-                                    brush = gradientBrush,
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .fillMaxSize(),
+                            modifier = Modifier.background(if (hasChanges && !isSaving) gradientBrush else disabledBrush, RoundedCornerShape(12.dp)).fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                if (isSaving) "Saving..." else "Save Changes",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Text(if (isSaving) "Saving..." else "Save Changes", color = Color.White, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
                 Spacer(Modifier.height(16.dp))
-
-                TextButton(onClick = { showPasswordDialog = true }) {
-                    Text("Change Password", color = Color.Black)
-                }
-                TextButton(onClick = { showEmailDialog = true }) {
-                    Text("Change Email", color = Color.Black)
-                }
-
+                TextButton(onClick = { showPasswordDialog = true }) { Text("Change Password", color = Color.Black) }
+                TextButton(onClick = { showEmailDialog = true }) { Text("Change Email", color = Color.Black) }
                 Spacer(Modifier.height(24.dp))
-
             }
         }
     }
 
+    // Dialogs
+
+    // Success Popup
+    if (showSuccessPopup) {
+        SuccessDialog(
+            message = successPopupMessage,
+            onDismiss = { showSuccessPopup = false }
+        )
+    }
 
     if (showPasswordDialog) {
         ChangePasswordDialog(
             onConfirm = { current, new ->
-                passwordResendCount = 0 // Reset count on new request
+                passwordResendCount = 0
                 onRequestPasswordChange(current, new)
             },
             onDismiss = { showPasswordDialog = false }
@@ -597,7 +459,7 @@ fun AccountInfoScreen(
                 } else {
                     pendingNewEmail = newEmail
                     pendingPassword = password
-                    emailResendCount = 0 // Reset count on new request
+                    emailResendCount = 0
                     onChangeEmail(newEmail, password)
                     showEmailDialog = false
                 }
@@ -605,6 +467,7 @@ fun AccountInfoScreen(
             onDismiss = { showEmailDialog = false }
         )
     }
+
     if (showEmailOtpDialog) {
         OtpVerificationDialog(
             title = "Verify New Email",
@@ -612,24 +475,11 @@ fun AccountInfoScreen(
             backendError = emailBackendError,
             resendWaitSeconds = emailResendWaitSeconds,
             cooldownSeconds = emailCooldownSeconds,
-            isResendLimitReached = emailResendCount >= 3, // Check limit (3 total sends)
-            onConfirm = { otp ->
-                emailBackendError = null
-                onVerifyEmailOtp(otp)
-            },
-            onDismiss = {
-                showEmailOtpDialog = false
-                emailBackendError = null
-                onCancelEmailChange() // Call cancel function
-            },
-            onResend = {
-                emailBackendError = null
-                onChangeEmail(pendingNewEmail, pendingPassword) // Call resend
-                showEmailOtpDialog = false // Close and wait
-            },
-            onClearError = {
-                emailBackendError = null
-            }
+            isResendLimitReached = emailResendCount >= 3,
+            onConfirm = { otp -> emailBackendError = null; onVerifyEmailOtp(otp) },
+            onDismiss = { showEmailOtpDialog = false; emailBackendError = null; onCancelEmailChange() },
+            onResend = { emailBackendError = null; onChangeEmail(pendingNewEmail, pendingPassword); showEmailOtpDialog = false },
+            onClearError = { emailBackendError = null }
         )
     }
 
@@ -640,24 +490,11 @@ fun AccountInfoScreen(
             backendError = passwordBackendError,
             resendWaitSeconds = passwordResendWaitSeconds,
             cooldownSeconds = passwordCooldownSeconds,
-            isResendLimitReached = passwordResendCount >= 3, // Check limit (3 total sends)
-            onConfirm = { otp ->
-                passwordBackendError = null
-                onVerifyPasswordOtp(otp)
-            },
-            onDismiss = {
-                showPasswordOtpDialog = false
-                passwordBackendError = null
-                onCancelPasswordChange() // Call cancel function
-            },
-            onResend = {
-                passwordBackendError = null
-                onResendPasswordOtp() // Call resend
-                showPasswordOtpDialog = false // Close and wait
-            },
-            onClearError = {
-                passwordBackendError = null
-            }
+            isResendLimitReached = passwordResendCount >= 3,
+            onConfirm = { otp -> passwordBackendError = null; onVerifyPasswordOtp(otp) },
+            onDismiss = { showPasswordOtpDialog = false; passwordBackendError = null; onCancelPasswordChange() },
+            onResend = { passwordBackendError = null; onResendPasswordOtp(); showPasswordOtpDialog = false },
+            onClearError = { passwordBackendError = null }
         )
     }
 

@@ -53,19 +53,29 @@ class CaregiverDataSource(
         password: String
     ): ResendOtpResult {
         try {
+            // --- NEW VALIDATION: Check if email exists in Firestore ---
+            val snapshot = usersCollection
+                .whereEqualTo("email", newEmail)
+                .get()
+                .await()
+
+            if (!snapshot.isEmpty) {
+                Log.w(TAG, "[EmailChange] Request BLOCKED. Email $newEmail already in use.")
+                return ResendOtpResult.FailureEmailAlreadyInUse
+            }
+            // ----------------------------------------------------------
+
             if (otpDataSource.isCooldownActive(uid, OtpDataSource.OtpType.EMAIL_CHANGE)) {
                 Log.w(TAG, "[EmailChange] Request BLOCKED by active cooldown.")
                 return ResendOtpResult.FailureCooldown
             }
-            Log.d(TAG, "[EmailChange] Request: Cooldown check passed.")
 
+            // ... rest of the function (reauth and otp request) ...
             val reauthOk = reauthenticateUser(password)
             if (!reauthOk) {
-                Log.w(TAG, "[EmailChange] Request: Re-authentication failed.")
                 return ResendOtpResult.FailureGeneric
             }
 
-            Log.d(TAG, "[EmailChange] Request: Re-auth OK. Delegating to OtpDataSource.")
             return otpDataSource.requestOtp(
                 context = context,
                 uid = uid,
@@ -179,6 +189,7 @@ class CaregiverDataSource(
                     is ResendOtpResult.Success -> PasswordChangeRequestResult.OtpSent
                     is ResendOtpResult.FailureCooldown -> PasswordChangeRequestResult.FailureCooldown
                     is ResendOtpResult.FailureGeneric -> PasswordChangeRequestResult.FailureGeneric
+                    is ResendOtpResult.FailureEmailAlreadyInUse -> PasswordChangeRequestResult.FailureGeneric
                 }
 
             } catch (reauthException: Exception) {

@@ -24,6 +24,7 @@ import edu.capstone.navisight.auth.ui.login.LoginActivity
 import edu.capstone.navisight.caregiver.data.remote.ViuDataSource
 import edu.capstone.navisight.caregiver.ui.call.CaregiverCallActivity
 import edu.capstone.navisight.caregiver.ui.feature_editProfile.AccountInfoFragment
+import edu.capstone.navisight.caregiver.ui.feature_editViuProfile.ViuProfileFragment
 import edu.capstone.navisight.caregiver.ui.feature_map.MapFragment
 import edu.capstone.navisight.caregiver.ui.feature_notification.NotificationFragment
 import edu.capstone.navisight.caregiver.ui.feature_records.RecordsFragment
@@ -155,7 +156,7 @@ class CaregiverHomeActivity : AppCompatActivity(), RecordsFragment.OnViuClickedL
 
     override fun onViuClicked(viuUid: String) {
         // This is the navigation logic
-        val viuProfileFragment = AccountInfoFragment()
+        val viuProfileFragment = ViuProfileFragment()
 
         // Pass the viuUid to the new fragment
         viuProfileFragment.arguments = bundleOf("viuUid" to viuUid)

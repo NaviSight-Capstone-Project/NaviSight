@@ -121,9 +121,17 @@ class AccountInfoViewModel(
             try {
                 val result = profileUseCase.updateEmail(context, uid, newEmail, password)
                 when (result) {
-                    is OtpResult.ResendOtpResult.Success -> _uiEvent.send("An OTP has been sent to $newEmail. Please check your inbox.")
-                    is OtpResult.ResendOtpResult.FailureCooldown -> _uiEvent.send("Please wait 5 minutes to request a new OTP.")
-                    is OtpResult.ResendOtpResult.FailureGeneric -> _uiEvent.send("Failed to send OTP. Please check your password or wait 1 minute to resend.") // Updated message
+                    is OtpResult.ResendOtpResult.Success ->
+                        _uiEvent.send("An OTP has been sent to $newEmail. Please check your inbox.")
+
+                    is OtpResult.ResendOtpResult.FailureEmailAlreadyInUse -> // <--- HANDLE NEW CASE
+                        _uiEvent.send("That email address is already in use by another account.")
+
+                    is OtpResult.ResendOtpResult.FailureCooldown ->
+                        _uiEvent.send("Please wait 5 minutes to request a new OTP.")
+
+                    is OtpResult.ResendOtpResult.FailureGeneric ->
+                        _uiEvent.send("Failed to send OTP. Please check your password.")
                 }
             } catch (e: Exception) {
                 _uiEvent.send("Error updating email: ${e.message}")
@@ -186,6 +194,7 @@ class AccountInfoViewModel(
                     is OtpResult.ResendOtpResult.Success -> _uiEvent.send("Password OTP Resent. Please check your email.")
                     is OtpResult.ResendOtpResult.FailureCooldown -> _uiEvent.send("Please wait 5 minutes to resend password OTP.")
                     is OtpResult.ResendOtpResult.FailureGeneric -> _uiEvent.send("Please wait 1 minute to resend password OTP.") // More specific message
+                    is OtpResult.ResendOtpResult.FailureEmailAlreadyInUse -> _uiEvent.send("An unexpected error occurred.")
                 }
             } catch (e: Exception) {
                 _uiEvent.send("Error resending password OTP: ${e.message}")

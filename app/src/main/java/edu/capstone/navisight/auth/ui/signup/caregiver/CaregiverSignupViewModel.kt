@@ -174,6 +174,8 @@ class CaregiverSignupViewModel : ViewModel() {
                         errorMessage = "Please wait 1 minute before resending."
                     )
                 }
+
+                OtpResult.ResendOtpResult.FailureEmailAlreadyInUse -> TODO()
             }
         }
     }
