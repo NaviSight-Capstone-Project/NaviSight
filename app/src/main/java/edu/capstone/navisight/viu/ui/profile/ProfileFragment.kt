@@ -30,7 +30,7 @@ import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.viu.domain.usecase.GenerateOrFetchQrUseCase
 import edu.capstone.navisight.viu.domain.usecase.GetViuProfileUseCase
 import edu.capstone.navisight.webrtc.repository.MainRepository
-import edu.capstone.navisight.viu.ui.call.CallActivity
+import edu.capstone.navisight.viu.ui.call.ViuCallActivity
 import edu.capstone.navisight.webrtc.model.DataModel
 import edu.capstone.navisight.webrtc.model.DataModelType
 import edu.capstone.navisight.webrtc.service.MainService
@@ -270,7 +270,7 @@ class ProfileFragment : Fragment(), MainService.Listener {
                     Log.w(TAG, "Mic and Camera permissions retrieved. Proceeding to starting activity.")
                     Log.w(TAG, "Mic and Camera permissions retrieved. Releasing camera...")
                         // Launch CallActivity using the launcher instead of startActivity
-                    val intent = Intent(requireActivity(), CallActivity::class.java).apply {
+                    val intent = Intent(requireActivity(), ViuCallActivity::class.java).apply {
                         putExtra("target", model.sender)
                         putExtra("isVideoCall", isVideoCall)
                         putExtra("isCaller", false)
@@ -334,7 +334,7 @@ class ProfileFragment : Fragment(), MainService.Listener {
                 if (success) {
                     Log.d("CallSignal", "Call request successfully sent.")
 
-                    val intent = Intent(requireActivity(), CallActivity::class.java).apply {
+                    val intent = Intent(requireActivity(), ViuCallActivity::class.java).apply {
                         putExtra("target", targetUid)
                         putExtra("isVideoCall", isVideoCall)
                         putExtra("isCaller", true)

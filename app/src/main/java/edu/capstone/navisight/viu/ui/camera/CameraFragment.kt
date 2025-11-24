@@ -36,7 +36,7 @@ import androidx.fragment.app.commit
 import edu.capstone.navisight.R
 import edu.capstone.navisight.databinding.FragmentCameraBinding
 import edu.capstone.navisight.viu.detectors.ObjectDetection
-import edu.capstone.navisight.viu.ui.call.CallActivity
+import edu.capstone.navisight.viu.ui.call.ViuCallActivity
 import edu.capstone.navisight.viu.ui.profile.ProfileFragment
 import edu.capstone.navisight.viu.utils.ObjectDetectorHelper
 import edu.capstone.navisight.viu.utils.TTSHelper
@@ -532,7 +532,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
                     Log.w(TAG, "Mic and Camera permissions retrieved. Releasing camera...")
                     releaseCamera {
                         // Launch CallActivity using the launcher instead of startActivity
-                        val intent = Intent(requireActivity(), CallActivity::class.java).apply {
+                        val intent = Intent(requireActivity(), ViuCallActivity::class.java).apply {
                             putExtra("target", model.sender)
                             putExtra("isVideoCall", isVideoCall)
                             putExtra("isCaller", false)

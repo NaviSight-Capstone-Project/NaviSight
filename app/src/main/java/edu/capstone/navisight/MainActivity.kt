@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.commit
 import androidx.lifecycle.lifecycleScope
+import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import edu.capstone.navisight.auth.data.remote.CloudinaryDataSource
 import edu.capstone.navisight.auth.domain.GetUserCollectionUseCase
@@ -20,6 +21,13 @@ import edu.capstone.navisight.caregiver.CaregiverHomeActivity
 import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
 import edu.capstone.navisight.guest.GuestFragment
 import edu.capstone.navisight.viu.ViuHomeActivity
+import edu.capstone.navisight.webrtc.repository.MainRepository
+import edu.capstone.navisight.webrtc.service.MainService
+import edu.capstone.navisight.webrtc.service.MainServiceActions
+import edu.capstone.navisight.webrtc.service.MainServiceRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 
@@ -30,6 +38,8 @@ class MainActivity : AppCompatActivity() {
     private val getCurrentUserUidUseCase = GetCurrentUserUidUseCase()
 
     // WebRTC init.
+    private lateinit var mainServiceRepository: MainServiceRepository
+    private lateinit var mainRepository : MainRepository
     companion object {
         var firstTimeLaunched : Boolean = true
     }
@@ -37,9 +47,32 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
         // Begin app here.
         // TODO: Make the functions more seamless and their names more accurate
+        mainServiceRepository = MainServiceRepository.getInstance(applicationContext)
+        mainRepository = MainRepository.getInstance(applicationContext)
+        Log.d("CallSignal", "Finished getting instance of main and mainservice repos")
+
+        FirebaseApp.initializeApp(this)
         val permissionHandler = PermissionHandler()
+//        val locationTracker = LocationTracker(this)
+        auth = FirebaseAuth.getInstance()
+
+        // Activate services if user is logged-in.
+        val currentUser = auth.currentUser
+        Log.d("AuthenticationCheck", auth.currentUser?.email.toString())
+        if (currentUser != null) {
+            Log.d("AuthenticationCheck",
+                "Current email of user logged in is: ${currentUser.email}")
+            Log.d("AuthenticationCheck",
+                "Current UID of user logged in is: ${currentUser.uid}")
+
+            handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
+        } else {
+            Log.d("CallSignal", "warning! user is not logged in, call services are off")
+
+        }
         permissionHandler.checkAndRequestInitialPermissions()
     }
 
@@ -52,6 +85,38 @@ class MainActivity : AppCompatActivity() {
     private fun navigateTo(activityClass: Class<*>) {
         startActivity(Intent(this, activityClass))
         finish()
+    }
+
+    fun handleSuccessfulLogin(email: String, uid: String) {
+        mainRepository.login(uid) { isDone, reason ->
+            if (isDone) {
+                Log.d("CallSignal", "User just logged in and set to ONLINE")
+                startWebrtcService(email)
+
+                // Additionally, call decideAppFlow() to ensure all navigation/permissions are finalized.
+                beginAppFlow()
+            } else {
+                Log.e("CallSignal", "Failed to set user to ONLINE: $reason")
+            }
+        }
+        // Add delay to make sure everything is initialized first.
+        // For Firebase Authorization sync if last event is "denied call"
+        val mainScope = CoroutineScope(Dispatchers.Main)
+        if (firstTimeLaunched) {
+            mainScope.launch {
+                delay(5500)
+                firstTimeLaunched = false
+            }
+        }
+    }
+
+    private fun startWebrtcService(currentUser: String) {
+        Log.d("ServiceCheck", "Attempting to start MainService via startForegroundService()")
+        val intent = Intent(this, MainService::class.java).apply {
+            action = MainServiceActions.START_SERVICE.name
+            putExtra("username", currentUser)
+        }
+        startForegroundService(intent)
     }
 
     // Set how the app will go depending on user credentials

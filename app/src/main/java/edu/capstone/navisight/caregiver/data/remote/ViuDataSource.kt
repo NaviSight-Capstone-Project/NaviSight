@@ -26,6 +26,44 @@ class ViuDataSource(
         private const val VIU_LOCATION_FIELD = "location"
     }
 
+    private val viusCollection = firestore.collection("vius")
+    private val relationshipsCollection = firestore.collection("relationships")
+    private val caregiversCollection = firestore.collection("caregivers")
+
+    fun getViuDetails(viuUid: String): Flow<Viu?> = callbackFlow {
+        val viuRef = viusCollection.document(viuUid)
+        val listener = viuRef.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                trySend(null)
+                close(error)
+                return@addSnapshotListener
+            }
+
+            if (snapshot == null || !snapshot.exists()) {
+                trySend(null)
+                return@addSnapshotListener
+            }
+            val viu = snapshot.data?.let { data ->
+                Viu(
+                    uid = snapshot.getString("uid") ?: "",
+                    firstName = snapshot.getString("firstName") ?: "",
+                    middleName = snapshot.getString("middleName") ?: "",
+                    lastName = snapshot.getString("lastName") ?: "",
+                    birthday = snapshot.getString("birthday") ?: "",
+                    sex = snapshot.getString("sex") ?: "",
+                    email = snapshot.getString("email") ?: "",
+                    phone = snapshot.getString("phone") ?: "",
+                    location = null, // TODO: Fix this
+                    profileImageUrl = snapshot.getString("profileImageUrl"),
+                    status = snapshot.getString("status"),
+                    address = snapshot.getString("address")
+                )
+            }
+            trySend(viu)
+        }
+        awaitClose { listener.remove() }
+    }
+
 
     fun getViuByUid(uid: String): Flow<Viu?> {
         val staticDataFlow = getViuStaticDataFirestore(uid)

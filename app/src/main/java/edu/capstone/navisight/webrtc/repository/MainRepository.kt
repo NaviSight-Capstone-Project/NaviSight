@@ -1,5 +1,6 @@
 package edu.capstone.navisight.webrtc.repository
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.util.Log
@@ -11,6 +12,7 @@ import org.webrtc.IceCandidate
 import edu.capstone.navisight.webrtc.vendor.MyPeerObserver
 import edu.capstone.navisight.webrtc.vendor.WebRTCClient
 import com.google.gson.Gson
+import edu.capstone.navisight.caregiver.model.Viu
 import org.webrtc.MediaStream
 import org.webrtc.PeerConnection
 import org.webrtc.SessionDescription
@@ -34,9 +36,23 @@ class MainRepository private constructor(
     private var remoteView: SurfaceViewRenderer? = null
     private lateinit var currentLatestEvent: DataModel
     private var caregiverStatusListener: (() -> Unit)? = null
+    private lateinit var mainActivity : Activity
 
     fun login(username: String, isDone: (Boolean, String?) -> Unit) {
         firebaseClient.checkRTDB(username, isDone)
+    }
+
+    // TODO: Improve these code
+    // Get and Set for Notification Helper
+    fun setMainActivity(currentActivity: Activity) {
+        mainActivity = currentActivity
+    }
+    fun getMainActivity(): Activity {
+        return mainActivity
+    }
+
+    fun observeUsersStatus(status: (List<Pair<Viu?, String>>) -> Unit) {
+        firebaseClient.observeUsersStatus(status)
     }
 
     fun initFirebase() {

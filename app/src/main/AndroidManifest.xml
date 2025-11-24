@@ -67,8 +67,14 @@
 
         <activity
             android:theme="@style/Theme.AppCompat.NoActionBar"
-            android:name=".viu.ui.call.CallActivity"
+            android:name=".viu.ui.call.ViuCallActivity"
             android:exported="false" />
+
+        <activity
+            android:theme="@style/Theme.AppCompat.NoActionBar"
+            android:name=".caregiver.ui.call.CaregiverCallActivity"
+            android:exported="false" />
+
         <service
             android:name=".webrtc.service.MainService"
             android:exported="false"

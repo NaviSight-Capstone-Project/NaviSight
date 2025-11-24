@@ -10,8 +10,13 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
+import edu.capstone.navisight.caregiver.data.remote.ViuDataSource
+import edu.capstone.navisight.caregiver.model.Viu
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.tasks.await
 
 /**
  * Non-DI Singleton version of FirebaseClient.
@@ -31,8 +36,42 @@ class FirebaseClient private constructor(
         this.currentUID = uid
     }
 
+    private val viuRemoteDataSource = ViuDataSource()
+
     // Tracking listeners for removal, mapping Reference -> Listener
     private val statusListeners = mutableMapOf<DatabaseReference, ValueEventListener>()
+
+    fun observeUsersStatus(status: (List<Pair<Viu?, String>>) -> Unit) {
+        dbRef.addValueEventListener(object : EventListener() {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                clientScope.launch {
+                    val deferredFetches = snapshot.children
+                        .filter { it.key != currentUID }
+                        .mapNotNull { snapshotChild ->
+                            // Set UID as key. Do not remove this.
+                            val uid = snapshotChild.key ?: return@mapNotNull null
+                            val userStatus = snapshotChild.child(FirebaseFieldNames.STATUS).value.toString()
+
+                            // Use 'async' to start all Firestore lookups in parallel
+                            async {
+                                // The suspending call
+                                val credentials = retrieveVIUCredentials(uid)
+                                // Return all necessary data to process later
+                                Pair(credentials, userStatus)
+                            }
+                        }
+
+                    //  Use 'awaitAll' to pause the coroutine until all results are back
+                    val results = deferredFetches.awaitAll()
+
+                    // Switch back to the Main thread before invoking the callback
+                    withContext(Dispatchers.Main) {
+                        status(results)
+                    }
+                }
+            }
+        })
+    }
 
     fun listenForTargetNodeChanges(userId: String, onNodeChange: (DataSnapshot) -> Unit): () -> Unit {
         // Monitor the entire user node reference
@@ -59,6 +98,71 @@ class FirebaseClient private constructor(
             statusListeners.remove(userNodeRef)
             Log.d("FirebaseClient", "Target node listener removed for $userId.")
         }
+    }
+
+    // Handle relationships
+    suspend fun getAssociatedViuUids(caregiverUid: String): List<String> {
+        val firestoreDb = FirebaseFirestore.getInstance()
+        val vius = mutableListOf<String>()
+
+        try {
+            val querySnapshot = firestoreDb.collection("relationships")
+                .whereEqualTo("caregiverUid", caregiverUid)
+                .get()
+                .await() // Requires kotlinx-coroutines-play-services dependency
+
+            for (document in querySnapshot.documents) {
+                val viuUid = document.getString("viuUid")
+                if (viuUid != null) {
+                    vius.add(viuUid)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("FirebaseClient", "Error fetching associated VIUs: ${e.message}")
+        }
+        return vius
+    }
+
+    fun observeAssociatedUsersStatus(
+        associatedViuUids: List<String>,
+        status: (List<Pair<Viu?, String>>) -> Unit
+    ) {
+        // Only proceed if there are UIDs to observe
+        if (associatedViuUids.isEmpty()) {
+            status(emptyList())
+            return
+        }
+
+        dbRef.addValueEventListener(object : EventListener() {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                clientScope.launch {
+                    val deferredFetches = snapshot.children
+                        // Include children whose key is in the associated list
+                        .filter { it.key in associatedViuUids }
+                        .mapNotNull { snapshotChild ->
+                            val uid = snapshotChild.key ?: return@mapNotNull null
+                            val userStatus = snapshotChild.child(FirebaseFieldNames.STATUS).value?.toString() ?: "OFFLINE"
+
+                            async {
+                                val credentials = retrieveVIUCredentials(uid)
+                                Pair(credentials, userStatus)
+                            }
+                        }
+
+                    val results = deferredFetches.awaitAll()
+                        .filter { (viu, _) -> viu != null } // Filter out any VIUs whose credentials failed to load
+
+                    withContext(Dispatchers.Main) {
+                        status(results)
+                    }
+                }
+            }
+        })
+    }
+
+
+    private suspend fun retrieveVIUCredentials(uid: String): Viu? {
+        return viuRemoteDataSource.getViuDetails(uid).first()
     }
 
     // Formerly login.

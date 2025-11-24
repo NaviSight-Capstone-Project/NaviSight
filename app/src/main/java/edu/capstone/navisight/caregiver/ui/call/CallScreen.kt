@@ -1,0 +1,269 @@
+package edu.capstone.navisight.caregiver.ui.call
+
+import android.app.Activity
+import android.app.AlertDialog
+import android.content.Context
+import android.media.projection.MediaProjectionManager
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.Color
+import coil.compose.rememberAsyncImagePainter
+import edu.capstone.navisight.caregiver.data.remote.ViuDataSource
+import edu.capstone.navisight.caregiver.model.Viu
+import edu.capstone.navisight.webrtc.service.MainService
+import edu.capstone.navisight.webrtc.service.MainServiceRepository
+import edu.capstone.navisight.webrtc.utils.convertToHumanTime
+import edu.capstone.navisight.R
+import edu.capstone.navisight.webrtc.vendor.RTCAudioManager
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
+import org.webrtc.SurfaceViewRenderer
+
+@Composable
+fun CallScreen(
+    target: String,
+    isVideoCall: Boolean,
+    isCaller: Boolean,
+    onEndCall: () -> Unit,
+    serviceRepository: MainServiceRepository,
+    onRequestScreenCapture: () -> Unit,
+    viuRemoteDataSource: ViuDataSource
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var callTime by remember { mutableStateOf("00:00") }
+    var isMicrophoneMuted by remember { mutableStateOf(false) }
+    var isCameraMuted by remember { mutableStateOf(false) }
+    var isSpeakerMode by remember { mutableStateOf(true) }
+    var isScreenCasting by remember { mutableStateOf(false) }
+
+    // Retrieve caregiver record.
+    var viuRecord by remember { mutableStateOf<Viu?>(null) }
+    LaunchedEffect(target) {
+        if (target != null) {
+            launch {
+                try {
+                    // Call the suspend function
+                    viuRecord = viuRemoteDataSource.getViuDetails(target).first()
+                } catch (e: Exception) {
+                    Log.e("CallScreen", "Failed to fetch caregiver profile: ${e.message}")
+                }
+            }
+        }
+    }
+
+    // Timer coroutine
+    LaunchedEffect(Unit) {
+        for (i in 0..3600) {
+            delay(1000)
+            callTime = i.convertToHumanTime()
+        }
+    }
+
+    // Launcher for screen capture
+    val requestScreenCaptureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val intent = result.data
+            MainService.screenPermissionIntent = intent
+            isScreenCasting = true
+            serviceRepository.toggleScreenShare(true)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        // Remote video view (full screen)
+        AndroidView(
+            factory = { context ->
+                SurfaceViewRenderer(context).apply {
+                    MainService.remoteSurfaceView = this
+                    serviceRepository.setupViews(isVideoCall, isCaller, target)
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Local video preview (small corner view)
+        if (!isScreenCasting && isVideoCall) {
+            AndroidView(
+                factory = { context ->
+                    SurfaceViewRenderer(context).apply {
+                        MainService.localSurfaceView = this
+                    }
+                },
+                modifier = Modifier
+                    .size(width = 100.dp, height = 150.dp)
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 10.dp, bottom = 70.dp)
+            )
+        }
+
+        // Top bar with timer + title
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp)
+                .background(Color(0xAA000000))
+                .align(Alignment.TopCenter),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = callTime,
+                color = Color.White,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 10.dp)
+            )
+            Text(
+                text = "In call with ${viuRecord?.firstName}",
+                color = Color.White,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        // Bottom control panel
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .background(Color(0xAA000000))
+                .align(Alignment.BottomCenter),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // End call
+            IconButton(onClick = {
+                serviceRepository.sendEndOrAbortCall()
+                onEndCall()
+            }) {
+                Icon(
+                    painter = rememberAsyncImagePainter(R.drawable.ic_end_call),
+                    contentDescription = "End Call",
+                    tint = Color.Red
+                )
+            }
+
+            // Toggle Mic
+            IconButton(onClick = {
+                if (!isMicrophoneMuted) {
+                    serviceRepository.toggleAudio(true)
+                } else {
+                    serviceRepository.toggleAudio(false)
+                }
+                isMicrophoneMuted = !isMicrophoneMuted
+            }) {
+                Icon(
+                    painter = rememberAsyncImagePainter(
+                        if (isMicrophoneMuted) R.drawable.ic_mic_on else R.drawable.ic_mic_off
+                    ),
+                    contentDescription = "Mic Toggle",
+                    tint = Color.White
+                )
+            }
+
+            // Toggle Camera
+            if (isVideoCall) {
+                IconButton(onClick = {
+                    if (!isCameraMuted) {
+                        serviceRepository.toggleVideo(true)
+                    } else {
+                        serviceRepository.toggleVideo(false)
+                    }
+                    isCameraMuted = !isCameraMuted
+                }) {
+                    Icon(
+                        painter = rememberAsyncImagePainter(
+                            if (isCameraMuted) R.drawable.ic_camera_on else R.drawable.ic_camera_off
+                        ),
+                        contentDescription = "Camera Toggle",
+                        tint = Color.White
+                    )
+                }
+            }
+
+            // Switch Camera
+            if (isVideoCall) {
+                IconButton(onClick = {
+                    serviceRepository.switchCamera()
+                }) {
+                    Icon(
+                        painter = rememberAsyncImagePainter(R.drawable.ic_switch_camera),
+                        contentDescription = "Switch Camera",
+                        tint = Color.White
+                    )
+                }
+            }
+
+            // Toggle Audio Device
+            IconButton(onClick = {
+                if (isSpeakerMode) {
+                    serviceRepository.toggleAudioDevice(RTCAudioManager.AudioDevice.EARPIECE.name)
+                } else {
+                    serviceRepository.toggleAudioDevice(RTCAudioManager.AudioDevice.SPEAKER_PHONE.name)
+                }
+                isSpeakerMode = !isSpeakerMode
+            }) {
+                Icon(
+                    painter = rememberAsyncImagePainter(
+                        if (isSpeakerMode) R.drawable.ic_ear else R.drawable.ic_speaker
+                    ),
+                    contentDescription = "Audio Device",
+                    tint = Color.White
+                )
+            }
+
+            // Screen Share
+            if (isVideoCall) {
+                IconButton(onClick = {
+                    if (!isScreenCasting) {
+                        AlertDialog.Builder(context)
+                            .setTitle("Screen Casting")
+                            .setMessage("Start casting your screen?")
+                            .setPositiveButton("Yes") { dialog, _ ->
+                                val mgr = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE)
+                                        as MediaProjectionManager
+                                val intent = mgr.createScreenCaptureIntent()
+                                requestScreenCaptureLauncher.launch(intent)
+                                dialog.dismiss()
+                            }
+                            .setNegativeButton("No") { dialog, _ -> dialog.dismiss() }
+                            .show()
+                    } else {
+                        isScreenCasting = false
+                        serviceRepository.toggleScreenShare(false)
+                    }
+                }) {
+                    Icon(
+                        painter = rememberAsyncImagePainter(
+                            if (isScreenCasting) R.drawable.ic_stop_screen_share
+                            else R.drawable.ic_screen_share
+                        ),
+                        contentDescription = "Screen Share",
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
