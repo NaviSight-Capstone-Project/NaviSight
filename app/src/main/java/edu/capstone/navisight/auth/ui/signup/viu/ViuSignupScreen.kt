@@ -60,7 +60,7 @@ fun ViuSignupScreen(
     var rePassword by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
-    var status by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf("") }
     var caregiverEmail by remember { mutableStateOf("") }
 
     //  State for validation
@@ -197,9 +197,9 @@ fun ViuSignupScreen(
                 OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Address (City, Country)", maxLines = 1, overflow = TextOverflow.Ellipsis) }, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth(), singleLine = true)
                 Spacer(Modifier.height(16.dp))
 
-                // Status
-                Text("Status", color = fieldLabelColor, modifier = Modifier.align(Alignment.Start).padding(bottom = 4.dp))
-                OutlinedTextField(value = status, onValueChange = { status = it }, label = { Text("Status (e.g., Student, Employed)", maxLines = 1, overflow = TextOverflow.Ellipsis) }, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth(), singleLine = true)
+                // category
+                Text("Category", color = fieldLabelColor, modifier = Modifier.align(Alignment.Start).padding(bottom = 4.dp))
+                OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category (e.g., Student, Employed)", maxLines = 1, overflow = TextOverflow.Ellipsis) }, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth(), singleLine = true)
                 Spacer(Modifier.height(24.dp))
 
                 // Account Information Header
@@ -254,7 +254,7 @@ fun ViuSignupScreen(
                                 isCaregiverEmailValid &&
                                 firstName.isNotBlank() && lastName.isNotBlank() && email.isNotBlank() &&
                                 password.isNotBlank() && rePassword.isNotBlank() && phone.isNotBlank() &&
-                                address.isNotBlank() && status.isNotBlank() &&
+                                address.isNotBlank() && category.isNotBlank() &&
                                 caregiverEmail.isNotBlank()
 
                         if (allFieldsValid) {
@@ -262,8 +262,8 @@ fun ViuSignupScreen(
                             viewModel.signup(
                                 context = context, email = email, password = password,
                                 firstName = firstName.trim(), middleName = middleName.trim(), lastName = lastName.trim(),
-                                phone = phone, address = address.trim(), status = status.trim(),
-                                caregiverEmail = caregiverEmail.trim() // <-- ADDED
+                                phone = phone, address = address.trim(), category = category.trim(),
+                                caregiverEmail = caregiverEmail.trim()
                             )
                         } else {
                             Toast.makeText(context, "Please fill all required fields correctly", Toast.LENGTH_SHORT).show()

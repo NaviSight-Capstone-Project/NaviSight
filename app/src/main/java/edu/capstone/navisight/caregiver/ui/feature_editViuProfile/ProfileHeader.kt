@@ -9,11 +9,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
@@ -57,12 +55,9 @@ internal fun ProfileHeader(
             "N/A"
         } else {
             try {
-                // Parse the long date string
                 val date = inputFormat.parse(viuData.birthday)
-                // Format it to the short string
                 date?.let { outputFormat.format(it) } ?: "N/A"
             } catch (e: Exception) {
-                // Fallback if parsing fails (e.g., format is already different)
                 viuData.birthday
             }
         }
@@ -131,14 +126,14 @@ internal fun ProfileHeader(
                 text = "${viuData.firstName} ${viuData.middleName.ifEmpty { "" }} ${viuData.lastName}".replace("  ", " "),
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
             )
-            if (!viuData.status.isNullOrEmpty()) {
+            if (!viuData.category.isNullOrEmpty()) {
                 Box(
                     modifier = Modifier
                         .background(Color(0xFFE8E4FF), RoundedCornerShape(12.dp))
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = viuData.status,
+                        text = viuData.category,
                         color = Color(0xFF6041EC),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium

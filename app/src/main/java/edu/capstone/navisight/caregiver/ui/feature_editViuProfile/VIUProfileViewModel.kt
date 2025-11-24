@@ -283,7 +283,7 @@ class ViuProfileViewModel(
                 sex != (currentViu.sex ?: "") ||
                 phone != currentViu.phone ||
                 address != (currentViu.address ?: "") ||
-                status != (currentViu.status ?: "")
+                status != (currentViu.category ?: "")
 
         if (!hasChanges) {
             _saveError.value = "No changes to save"
@@ -298,7 +298,7 @@ class ViuProfileViewModel(
             sex = sex.trim(),
             phone = phone.trim(),
             address = address.trim().takeIf { it.isNotEmpty() },
-            status = status.trim().takeIf { it.isNotEmpty() }
+            category = status.trim().takeIf { it.isNotEmpty() }
         )
 
         _saveFlowState.value = SaveFlowState.PENDING_PASSWORD

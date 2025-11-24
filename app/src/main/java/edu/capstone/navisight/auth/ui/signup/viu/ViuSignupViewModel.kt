@@ -76,7 +76,7 @@ class ViuSignupViewModel : ViewModel() {
         middleName: String,
         phone: String,
         address: String,
-        status: String,
+        category: String,
         caregiverEmail: String
     ) {
         viewModelScope.launch {
@@ -91,7 +91,7 @@ class ViuSignupViewModel : ViewModel() {
                 middleName = middleName,
                 phone = phone,
                 address = address,
-                status = status,
+                category = category,
                 imageUri = _uiState.value.profileImageUri,
                 caregiverEmail = caregiverEmail
             )

@@ -97,7 +97,7 @@ fun ViuProfileScreen(
                 sex != (it.sex ?: "") ||
                 phone != it.phone ||
                 address != (it.address ?: "") ||
-                status != (it.status ?: "")
+                status != (it.category ?: "")
     } ?: false
 
     LaunchedEffect(viu) {
@@ -107,7 +107,7 @@ fun ViuProfileScreen(
             lastName = it.lastName
             phone = it.phone
             address = it.address ?: ""
-            status = it.status ?: ""
+            status = it.category ?: ""
             birthday = it.birthday ?: ""
             sex = it.sex ?: ""
             // Try to parse birthday string back to millis for validation

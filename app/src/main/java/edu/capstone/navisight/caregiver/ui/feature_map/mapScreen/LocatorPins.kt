@@ -4,10 +4,11 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,20 +20,28 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import edu.capstone.navisight.caregiver.model.Geofence
 import edu.capstone.navisight.caregiver.model.Viu
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
+import java.text.SimpleDateFormat
+import java.util.*
 import kotlin.math.roundToInt
 
+private val PinVioletColor = Color(0xFF6041EC)
+private val PinOfflineColor = Color.Black
+private val OuterPinSize = 17.dp
+private val MiddlePinSize = 16.5.dp
+private val InnerPinSize = 14.dp
 
 data class GeofenceScreenState(
     val offset: IntOffset = IntOffset.Zero,
     val radiusInPixels: Float = 0f,
     val alpha: Float = 1.0f
 )
-
 
 @Composable
 fun ViuAndGeofencePins(
@@ -46,29 +55,32 @@ fun ViuAndGeofencePins(
     val geofenceStates = remember { mutableStateMapOf<String, GeofenceScreenState>() }
     val mapLoc = remember { IntArray(2) }
 
+    var showLastSeen by remember { mutableStateOf(false) }
+    val isOnline = selectedViu?.status?.state == "online"
+
+    LaunchedEffect(isOnline) {
+        if (isOnline) showLastSeen = false
+    }
+
     val updatePositions = {
         if (map != null && mapView != null) {
             mapView.getLocationOnScreen(mapLoc)
-
             val currentZoom = map.cameraPosition.zoom
             val maxZoomForFade = 14.0
             val minZoomForFade = 11.0
             val alpha = ((currentZoom - minZoomForFade) / (maxZoomForFade - minZoomForFade))
                 .coerceIn(0.0, 1.0).toFloat()
 
-            // Update VIU Pin
             selectedViu?.location?.let { loc ->
                 val screenPoint = map.projection.toScreenLocation(LatLng(loc.latitude, loc.longitude))
                 viuScreenOffset = IntOffset(screenPoint.x.roundToInt(), screenPoint.y.roundToInt())
             }
 
-            // Update Geofence Pins
             geofences.forEach { geo ->
                 geo.location?.let { loc ->
                     val metersPerPixel = map.projection.getMetersPerPixelAtLatitude(loc.latitude)
                     val radiusInPixels = (geo.radius / metersPerPixel).toFloat()
                     val screenPoint = map.projection.toScreenLocation(LatLng(loc.latitude, loc.longitude))
-
                     geofenceStates[geo.id] = GeofenceScreenState(
                         offset = IntOffset(screenPoint.x.roundToInt(), screenPoint.y.roundToInt()),
                         radiusInPixels = radiusInPixels,
@@ -78,21 +90,18 @@ fun ViuAndGeofencePins(
             }
         }
     }
-
     DisposableEffect(map, geofences, selectedViu) {
         val moveListener = MapLibreMap.OnCameraMoveListener { updatePositions() }
         val idleListener = MapLibreMap.OnCameraIdleListener { updatePositions() }
         map?.addOnCameraMoveListener(moveListener)
         map?.addOnCameraIdleListener(idleListener)
         updatePositions()
-
         onDispose {
             map?.removeOnCameraMoveListener(moveListener)
             map?.removeOnCameraIdleListener(idleListener)
         }
     }
 
-    // Render Geofences
     geofences.forEach { geofence ->
         val state = geofenceStates[geofence.id] ?: GeofenceScreenState()
         Box(modifier = Modifier.alpha(state.alpha)) {
@@ -104,21 +113,126 @@ fun ViuAndGeofencePins(
         }
     }
 
-    // Render VIU Pin
     if (selectedViu != null) {
         Box(
             modifier = Modifier
                 .offset { viuScreenOffset }
-                .offset(x = (-25).dp, y = (-25).dp),
+                .offset(x = (-25).dp, y = (-25).dp)
+                .size(50.dp)
+                .zIndex(if (showLastSeen) 1f else 0f),
             contentAlignment = Alignment.Center
         ) {
-            Box(modifier = Modifier.size(50.dp), contentAlignment = Alignment.Center) {
-                LocatorPin()
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable {
+                        if (!isOnline) showLastSeen = !showLastSeen
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                LocatorPin(isOnline = isOnline)
+            }
+
+            if (showLastSeen && !isOnline) {
+                LastSeenTooltip(
+                    timestamp = selectedViu.status?.last_seen ?: 0L,
+                    modifier = Modifier
+                        .wrapContentSize(unbounded = true)
+                        .align(Alignment.TopCenter)
+                        .offset(y = (-45).dp)
+                )
             }
         }
     }
 }
 
+@Composable
+fun LastSeenTooltip(timestamp: Long, modifier: Modifier = Modifier) {
+    if (timestamp == 0L) return
+
+    val date = Date(timestamp)
+    val formatter = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault())
+    val formattedTime = formatter.format(date)
+
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = Color.DarkGray,
+        shadowElevation = 4.dp
+    ) {
+        Text(
+            text = "Last seen: $formattedTime",
+            color = Color.White,
+            fontSize = 12.sp,
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
+fun LocatorPin(isOnline: Boolean) {
+    val pinColor = if (isOnline) PinVioletColor else PinOfflineColor
+
+    Box(contentAlignment = Alignment.Center) {
+        if (isOnline) {
+            PulsingGlow(color = pinColor, modifier = Modifier.size(OuterPinSize))
+        }
+        StaticPin(color = pinColor, modifier = Modifier.size(OuterPinSize))
+    }
+}
+
+@Composable
+private fun PulsingGlow(color: Color, modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "PulseTransition")
+
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200, easing = LinearOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "PulseScale"
+    )
+
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.7f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200, easing = LinearOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "PulseAlpha"
+    )
+
+    Box(
+        modifier = modifier
+            .scale(pulseScale)
+            .background(color = color.copy(alpha = pulseAlpha), shape = CircleShape)
+    )
+}
+
+@Composable
+private fun StaticPin(color: Color, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.background(color, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(MiddlePinSize)
+                .background(Color.White, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(InnerPinSize)
+                    .background(color, CircleShape)
+            )
+        }
+    }
+}
 
 
 @Composable
@@ -131,10 +245,8 @@ fun PositionedGeofencePin(
         modifier = Modifier
             .layout { measurable, constraints ->
                 val placeable = measurable.measure(constraints)
-
                 val x = offset.x - placeable.width / 2
                 val y = offset.y - placeable.height / 2
-
                 layout(placeable.width, placeable.height) {
                     placeable.placeRelative(x, y)
                 }
@@ -189,66 +301,10 @@ fun GeofenceRadiusPin(radiusInPixels: Float) {
                     shape = CircleShape
                 )
         )
-
-        // Inner solid circle
         Box(
             modifier = Modifier
                 .size(10.dp)
                 .background(innerCircleColor, CircleShape)
         )
-    }
-}
-
-
-private val PinVioletColor = Color(0xFF6041EC)
-private val OuterPinSize = 17.dp
-private val MiddlePinSize = 16.5.dp
-private val InnerPinSize = 14.dp
-
-@Composable
-fun LocatorPin() {
-    Box(contentAlignment = Alignment.Center) {
-        PulsingGlow(modifier = Modifier.size(OuterPinSize))
-        StaticPin(modifier = Modifier.size(OuterPinSize))
-    }
-}
-
-@Composable
-private fun PulsingGlow(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "PulseTransition")
-
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 3f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = LinearOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "PulseScale"
-    )
-
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.7f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = LinearOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "PulseAlpha"
-    )
-
-    Box(
-        modifier = modifier
-            .scale(pulseScale)
-            .background(color = PinVioletColor.copy(alpha = pulseAlpha), shape = CircleShape)
-    )
-}
-
-@Composable
-private fun StaticPin(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.background(PinVioletColor, CircleShape), contentAlignment = Alignment.Center) {
-        Box(modifier = Modifier.size(MiddlePinSize).background(Color.White, CircleShape), contentAlignment = Alignment.Center) {
-            Box(modifier = Modifier.size(InnerPinSize).background(PinVioletColor, CircleShape))
-        }
     }
 }

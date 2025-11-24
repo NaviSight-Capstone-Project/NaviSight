@@ -18,6 +18,7 @@ import edu.capstone.navisight.auth.model.OtpResult.OtpVerificationResult
 import edu.capstone.navisight.auth.model.OtpResult.ResendOtpResult
 import edu.capstone.navisight.caregiver.model.Viu
 import edu.capstone.navisight.caregiver.model.ViuLocation
+import edu.capstone.navisight.caregiver.model.ViuStatus
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -27,17 +28,16 @@ import kotlinx.coroutines.tasks.await
 class ViuDataSource(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val rtdb: FirebaseDatabase = FirebaseDatabase.getInstance(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance() // Initialized
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) {
 
     private val TAG = "ViuDataSource"
-    private val otpDataSource = OtpDataSource() // Initialized
+    private val otpDataSource = OtpDataSource()
 
     companion object {
         private const val VIUS_COLLECTION = "vius"
         private const val VIU_LOCATION_REF = "viu_location"
-        private const val VIU_LOCATION_FIELD = "location"
-    }
+          }
 
     private val viusCollection = firestore.collection("vius")
     private val relationshipsCollection = firestore.collection("relationships")
@@ -55,7 +55,6 @@ class ViuDataSource(
                 trySend(null)
                 return@addSnapshotListener
             }
-            // Ensure we handle potential nulls safely
             val viu = snapshot.toObject(Viu::class.java)?.copy(uid = snapshot.id)
             trySend(viu)
         }
@@ -65,10 +64,15 @@ class ViuDataSource(
 
     fun getViuByUid(uid: String): Flow<Viu?> {
         val staticDataFlow = getViuStaticDataFirestore(uid)
-        val locationDataFlow = getViuLocationRtdb(uid)
+        val realtimeDataFlow = getViuRealtimeData(uid)
 
-        return staticDataFlow.combine(locationDataFlow) { viu, location ->
-            val updatedViu = viu?.copy(location = location)
+        return staticDataFlow.combine(realtimeDataFlow) { viu, realtimeData ->
+            val (location, status) = realtimeData ?: Pair(null, null)
+
+            val updatedViu = viu?.copy(
+                location = location,
+                status = status
+            )
             updatedViu
         }
     }
@@ -88,17 +92,21 @@ class ViuDataSource(
         awaitClose { firestoreListener.remove() }
     }
 
-    private fun getViuLocationRtdb(uid: String): Flow<ViuLocation?> = callbackFlow {
-        val rtdbRef = rtdb.getReference(VIU_LOCATION_REF).child(uid).child(VIU_LOCATION_FIELD)
+    private fun getViuRealtimeData(uid: String): Flow<Pair<ViuLocation?, ViuStatus?>?> = callbackFlow {
+
+        val rtdbRef = rtdb.getReference(VIU_LOCATION_REF).child(uid)
+
         val rtdbListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val location = snapshot.getValue(ViuLocation::class.java)
-                trySend(location)
+                val location = snapshot.child("location").getValue(ViuLocation::class.java)
+                val status = snapshot.child("status").getValue(ViuStatus::class.java)
+
+                trySend(Pair(location, status))
             }
 
             override fun onCancelled(error: DatabaseError) {
                 trySend(null)
-                close(error.toException())
+                Log.e(TAG, "RTDB Cancelled: ${error.message}")
             }
         }
         rtdbRef.addValueEventListener(rtdbListener)
@@ -290,7 +298,6 @@ class ViuDataSource(
             ?: return Result.failure(Exception("Caregiver not signed in"))
 
         return try {
-            // Query the relationship between THIS caregiver and THIS VIU
             val querySnapshot = relationshipsCollection
                 .whereEqualTo("caregiverUid", caregiverUid)
                 .whereEqualTo("viuUid", viuUid)
@@ -298,20 +305,17 @@ class ViuDataSource(
                 .await()
 
             if (querySnapshot.isEmpty) {
-                // No relationship found at all
                 return Result.success(false)
             }
 
             val document = querySnapshot.documents.first()
 
-            // Get the raw value of the "primaryCaregiver" field
             val primaryField = document.get("primaryCaregiver")
 
-            // Determine if primary based on field type
             val isPrimary = when (primaryField) {
-                is String -> primaryField == caregiverUid // If it's a UID string, does it match me?
+                is String -> primaryField == caregiverUid
                 is Boolean -> primaryField
-                else -> false // Default to false if field is missing or unknown type
+                else -> false
             }
 
             Result.success(isPrimary)

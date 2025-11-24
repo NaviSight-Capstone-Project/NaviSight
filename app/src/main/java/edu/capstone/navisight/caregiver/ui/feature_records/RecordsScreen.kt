@@ -260,7 +260,7 @@ fun ViuCard(
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
 
-                    if (!viu.status.isNullOrEmpty()) {
+                    if (!viu.category.isNullOrEmpty()) {
                         Box(
                             modifier = Modifier
                                 .padding(top = 4.dp)
@@ -273,7 +273,7 @@ fun ViuCard(
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = viu.status,
+                                text = viu.category,
                                 fontSize = 12.sp,
                                 color = Color(0xFF6041EC)
                             )

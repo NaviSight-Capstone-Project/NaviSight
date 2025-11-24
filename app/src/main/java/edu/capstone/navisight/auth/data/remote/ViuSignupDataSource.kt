@@ -4,7 +4,6 @@ import android.content.ContentValues.TAG
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -40,7 +39,7 @@ class ViuSignupDataSource(
         middleName: String,
         phone: String,
         address: String,
-        status: String,
+        category: String,
         imageUri: Uri?,
         caregiverEmail: String
     ): Result<Pair<Viu, String>> {
@@ -59,7 +58,7 @@ class ViuSignupDataSource(
             val viu = Viu(
                 uid = viuUid,
                 firstName = firstName, middleName = middleName, lastName = lastName,
-                email = email, phone = phone, address = address, status = status,
+                email = email, phone = phone, address = address, category = category,
                 profileImageUrl = imageUrl
             )
             viusCollection.document(viuUid).set(viu).await()

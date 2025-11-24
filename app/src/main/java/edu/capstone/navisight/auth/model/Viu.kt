@@ -8,6 +8,6 @@ data class Viu(
     var lastName: String = "",
     val phone: String = "",
     var profileImageUrl: String? = null,
-    val status : String? = null,
+    val category : String? = null,
     val address: String? = null
 )

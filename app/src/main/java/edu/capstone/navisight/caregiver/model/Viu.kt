@@ -11,9 +11,11 @@ data class Viu(
     val phone: String = "",
     var location: ViuLocation? = null,
     var profileImageUrl: String? = null,
-    val status : String? = null,
-    var address: String? = null
-)
+    val category : String? = null,
+    var address: String? = null,
+    val status: ViuStatus? = null
+
+    )
 
 data class ViuLocation(
     val latitude: Double = 0.0,
