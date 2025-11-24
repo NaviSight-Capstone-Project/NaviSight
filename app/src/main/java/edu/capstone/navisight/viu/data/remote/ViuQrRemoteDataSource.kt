@@ -1,7 +1,7 @@
 package edu.capstone.navisight.viu.data.remote
 
 import com.google.firebase.firestore.FirebaseFirestore
-import edu.capstone.navisight.viu.data.model.QR
+import edu.capstone.navisight.viu.model.QR
 import kotlinx.coroutines.tasks.await
 import kotlin.collections.firstOrNull
 import kotlin.jvm.java

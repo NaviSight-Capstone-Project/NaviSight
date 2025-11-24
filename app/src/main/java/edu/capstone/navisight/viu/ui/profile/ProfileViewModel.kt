@@ -6,8 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
-import edu.capstone.navisight.viu.data.model.QR
-import edu.capstone.navisight.viu.data.model.Viu
+import edu.capstone.navisight.viu.model.QR
+import edu.capstone.navisight.viu.model.Viu
 import edu.capstone.navisight.viu.domain.usecase.GenerateOrFetchQrUseCase
 import edu.capstone.navisight.viu.domain.usecase.GetViuProfileUseCase
 import edu.capstone.navisight.webrtc.FirebaseClient

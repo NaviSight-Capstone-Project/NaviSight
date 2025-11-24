@@ -1,7 +1,7 @@
 package edu.capstone.navisight.viu.domain.usecase
 
 import com.google.firebase.firestore.GeoPoint
-import edu.capstone.navisight.viu.data.model.Geofence
+import edu.capstone.navisight.viu.model.Geofence
 import kotlin.math.*
 
 class CheckGeofenceStatusUseCase {

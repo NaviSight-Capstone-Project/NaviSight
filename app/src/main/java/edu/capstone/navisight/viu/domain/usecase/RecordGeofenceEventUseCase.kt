@@ -1,6 +1,6 @@
 package edu.capstone.navisight.viu.domain.usecase
 
-import edu.capstone.navisight.viu.data.model.GeofenceEvent
+import edu.capstone.navisight.viu.model.GeofenceEvent
 import edu.capstone.navisight.viu.data.repository.GeofenceRepository
 
 class RecordGeofenceEventUseCase(

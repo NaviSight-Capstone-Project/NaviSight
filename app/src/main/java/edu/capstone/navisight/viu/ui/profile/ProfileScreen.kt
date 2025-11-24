@@ -20,8 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import edu.capstone.navisight.viu.data.model.Viu
-import edu.capstone.navisight.viu.data.model.QR
+import edu.capstone.navisight.viu.model.Viu
+import edu.capstone.navisight.viu.model.QR
 import edu.capstone.navisight.R
 
 @Composable

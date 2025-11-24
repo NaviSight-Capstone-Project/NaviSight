@@ -1,7 +1,7 @@
 package edu.capstone.navisight.viu.domain.usecase
 
 import edu.capstone.navisight.viu.data.repository.GeofenceRepository
-import edu.capstone.navisight.viu.data.model.Geofence
+import edu.capstone.navisight.viu.model.Geofence
 
 class FetchGeofencesUseCase(
     private val repository: GeofenceRepository = GeofenceRepository()

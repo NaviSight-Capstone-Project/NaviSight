@@ -1,8 +1,8 @@
 package edu.capstone.navisight.viu.data.remote
 
 import com.google.firebase.firestore.FirebaseFirestore
-import edu.capstone.navisight.viu.data.model.Geofence
-import edu.capstone.navisight.viu.data.model.GeofenceEvent
+import edu.capstone.navisight.viu.model.Geofence
+import edu.capstone.navisight.viu.model.GeofenceEvent
 import kotlinx.coroutines.tasks.await
 import kotlin.collections.mapNotNull
 import kotlin.jvm.java

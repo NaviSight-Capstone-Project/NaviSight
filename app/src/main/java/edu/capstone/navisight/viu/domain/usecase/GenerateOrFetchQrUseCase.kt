@@ -1,7 +1,7 @@
 package edu.capstone.navisight.viu.domain.usecase
 
 import android.graphics.Bitmap
-import edu.capstone.navisight.viu.data.model.QR
+import edu.capstone.navisight.viu.model.QR
 import edu.capstone.navisight.viu.data.remote.QrGenerator
 import edu.capstone.navisight.viu.data.repository.ViuQrRepository
 import java.util.UUID

@@ -1,6 +1,6 @@
 package edu.capstone.navisight.viu.domain.usecase
 
-import edu.capstone.navisight.viu.data.model.Viu
+import edu.capstone.navisight.viu.model.Viu
 import edu.capstone.navisight.viu.data.repository.AuthRepository
 
 class LoginUseCase(

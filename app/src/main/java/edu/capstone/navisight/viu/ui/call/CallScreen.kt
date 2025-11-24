@@ -23,7 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.Color
 import coil.compose.rememberAsyncImagePainter
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
-import edu.capstone.navisight.viu.data.model.Caregiver
+import edu.capstone.navisight.viu.model.Caregiver
 import edu.capstone.navisight.webrtc.service.MainServiceRepository
 import edu.capstone.navisight.webrtc.service.MainService
 import edu.capstone.navisight.webrtc.utils.convertToHumanTime

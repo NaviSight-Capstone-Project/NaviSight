@@ -1,6 +1,6 @@
 package edu.capstone.navisight.viu.data.repository
 
-import edu.capstone.navisight.viu.data.model.QR
+import edu.capstone.navisight.viu.model.QR
 import edu.capstone.navisight.viu.data.remote.ViuQrRemoteDataSource
 
 class ViuQrRepository(

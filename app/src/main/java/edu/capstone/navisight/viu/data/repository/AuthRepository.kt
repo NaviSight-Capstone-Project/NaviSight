@@ -1,7 +1,7 @@
 package edu.capstone.navisight.viu.data.repository
 
 import edu.capstone.navisight.auth.data.remote.FirebaseAuthDataSource
-import edu.capstone.navisight.viu.data.model.Viu
+import edu.capstone.navisight.viu.model.Viu
 
 class AuthRepository(
     private val remote: FirebaseAuthDataSource = FirebaseAuthDataSource()

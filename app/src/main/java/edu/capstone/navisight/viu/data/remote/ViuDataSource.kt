@@ -2,8 +2,8 @@ package edu.capstone.navisight.viu.data.remote
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import edu.capstone.navisight.viu.data.model.Caregiver
-import edu.capstone.navisight.viu.data.model.Viu
+import edu.capstone.navisight.viu.model.Caregiver
+import edu.capstone.navisight.viu.model.Viu
 import kotlinx.coroutines.tasks.await
 import kotlin.collections.firstOrNull
 import kotlin.jvm.java

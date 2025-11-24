@@ -1,7 +1,7 @@
 package edu.capstone.navisight.viu.data.repository
 
-import edu.capstone.navisight.viu.data.model.Geofence
-import edu.capstone.navisight.viu.data.model.GeofenceEvent
+import edu.capstone.navisight.viu.model.Geofence
+import edu.capstone.navisight.viu.model.GeofenceEvent
 import edu.capstone.navisight.viu.data.remote.GeofenceRemoteDataSource
 
 class GeofenceRepository(

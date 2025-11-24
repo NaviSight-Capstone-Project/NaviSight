@@ -1,4 +1,4 @@
-package edu.capstone.navisight.viu.data.model
+package edu.capstone.navisight.viu.model
 
 data class QR(
     val QrUid: String = "",
