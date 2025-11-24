@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -146,17 +147,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     // Set all initial permissions here
+    // TODO: Make this class more cleaner
     private inner class PermissionHandler {
         private lateinit var initialPermissionsLauncher: ActivityResultLauncher<Array<String>>
         private lateinit var backgroundLocationPermissionLauncher: ActivityResultLauncher<String>
+        private val permissionCheckTag = "MainActivity: PermissionCheck"
 
         private val INITIAL_PERMISSIONS = arrayOf(
             Manifest.permission.CAMERA,
             Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.POST_NOTIFICATIONS
         )
-
-        private val locationTag = "LocationPermission"
 
         init {
             registerLaunchers()
@@ -166,43 +169,44 @@ class MainActivity : AppCompatActivity() {
             initialPermissionsLauncher = registerForActivityResult(
                 ActivityResultContracts.RequestMultiplePermissions()
             ) { permissions ->
-
                 val cameraGranted = permissions.getOrDefault(Manifest.permission.CAMERA, false)
                 val fineGranted =
                     permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false)
                 val coarseGranted =
                     permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
+                val micGranted =
+                    permissions.getOrDefault(Manifest.permission.RECORD_AUDIO, false)
 
-                if (cameraGranted) Log.d(locationTag, "Camera permission granted.")
-                else Log.w(locationTag, "Camera permission denied.")
+                if (cameraGranted) Log.d(permissionCheckTag, "Camera permission granted.")
+                else Log.w(permissionCheckTag, "Camera permission denied.")
 
                 if (fineGranted || coarseGranted) {
                     Log.d(
-                        locationTag,
+                        permissionCheckTag,
                         "Foreground location granted. Proceeding to background check."
                     )
                     checkAndRequestBackgroundLocation()
                 } else {
                     Log.w(
-                        locationTag,
+                        permissionCheckTag,
                         "Foreground location denied. Location features will be disabled."
                     )
                 }
                 if (cameraGranted && (fineGranted || coarseGranted)) beginAppFlow()
             }
-
-
             backgroundLocationPermissionLauncher = registerForActivityResult(
                 ActivityResultContracts.RequestPermission()
             ) { granted ->
                 if (granted) {
-                    Log.d(locationTag, "Background location granted.")
+                    Log.d(permissionCheckTag, "Background location granted.")
                 } else {
-                    Log.w(locationTag, "Background location denied.")
+                    Toast.makeText(applicationContext,
+                        "Please set NaviSight to 'Allow all the time' in location!",
+                        Toast.LENGTH_LONG).show()
+                    Log.w(permissionCheckTag, "Background location denied.")
                 }
             }
         }
-
         fun checkAndRequestInitialPermissions() {
             val permissionsToRequest = INITIAL_PERMISSIONS.filter {
                 ContextCompat.checkSelfPermission(
@@ -210,12 +214,11 @@ class MainActivity : AppCompatActivity() {
                     it
                 ) != PackageManager.PERMISSION_GRANTED
             }.toTypedArray()
-
             if (permissionsToRequest.isNotEmpty()) {
-                Log.d(locationTag, "Requesting: ${permissionsToRequest.contentToString()}")
+                Log.d(permissionCheckTag, "Requesting: ${permissionsToRequest.contentToString()}")
                 initialPermissionsLauncher.launch(permissionsToRequest)
             } else {
-                Log.d(locationTag, "All initial permissions already granted.")
+                Log.d(permissionCheckTag, "All initial permissions already granted.")
                 checkAndRequestBackgroundLocation()
                 beginAppFlow()
             }
@@ -229,13 +232,13 @@ class MainActivity : AppCompatActivity() {
                 ) == PackageManager.PERMISSION_GRANTED
 
                 if (!granted) {
-                    Log.d(locationTag, "Requesting background location permission.")
+                    Log.d(permissionCheckTag, "Requesting background location permission.")
                     backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                 } else {
-                    Log.d(locationTag, "Background location already granted.")
+                    Log.d(permissionCheckTag, "Background location already granted.")
                 }
             } else {
-                Log.d(locationTag, "Pre-Q device — background location is implicit.")
+                Log.d(permissionCheckTag, "Pre-Q device — background location is implicit.")
             }
         }
     }
