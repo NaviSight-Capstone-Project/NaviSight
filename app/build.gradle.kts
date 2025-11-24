@@ -90,6 +90,10 @@ android {
     }
 }
 
+configurations.all {
+    exclude(group = "org.maplibre.gl", module = "android-sdk") //for now, since for some reason nalilitu yung ide(?) or system(?) nung siniwitch ko
+}
+
 dependencies {
     // Core Android and XML
     implementation(libs.androidx.core.ktx)
@@ -166,7 +170,7 @@ dependencies {
     implementation("com.sun.mail:android-activation:1.6.7")
 
     // MapLibre
-    implementation("org.maplibre.gl:android-sdk:11.13.1")
+    implementation("org.maplibre.gl:android-sdk-vulkan:12.1.2")
     implementation("org.maplibre.gl:android-plugin-annotation-v9:3.0.2")
 
     // WebRTC
