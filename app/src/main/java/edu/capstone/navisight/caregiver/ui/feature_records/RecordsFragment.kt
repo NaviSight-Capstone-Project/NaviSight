@@ -5,8 +5,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import edu.capstone.navisight.R
@@ -22,10 +22,14 @@ class RecordsFragment : Fragment() {
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        if (context is OnViuClickedListener) {
+        if (parentFragment is OnViuClickedListener) {
+            navigationListener = parentFragment as OnViuClickedListener
+        }
+        else if (context is OnViuClickedListener) {
             navigationListener = context
-        } else {
-            throw RuntimeException("$context must implement OnViuClickedListener")
+        }
+        else {
+            throw RuntimeException("$context (or parent fragment) must implement OnViuClickedListener")
         }
     }
 
@@ -41,21 +45,25 @@ class RecordsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val composeView = view.findViewById<ComposeView>(R.id.composeRecords)
-        composeView.setContent {
-            RecordsScreen(
-                viewModel = viewModel,
-                onViuClicked = { viuUid ->
-                    navigationListener?.onViuClicked(viuUid)
-                },
-                onTransferViuClicked = {
-                    val fragment = edu.capstone.navisight.caregiver.ui.feature_scanqr.ScanQrFragment()
-                    val fragmentManager = (context as? AppCompatActivity)?.supportFragmentManager
-                    fragmentManager?.beginTransaction()
-                        ?.replace(R.id.fragment_container, fragment)
-                        ?.addToBackStack(null)
-                        ?.commit()
-                }
-            )
+        composeView.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+
+            setContent {
+                RecordsScreen(
+                    viewModel = viewModel,
+                    onViuClicked = { viuUid ->
+                        navigationListener?.onViuClicked(viuUid)
+                    },
+                    onTransferViuClicked = {
+                        val fragment = edu.capstone.navisight.caregiver.ui.feature_scanqr.ScanQrFragment()
+
+                        parentFragmentManager.beginTransaction()
+                            .replace(R.id.fragment_container, fragment)
+                            .addToBackStack(null)
+                            .commit()
+                    }
+                )
+            }
         }
     }
 

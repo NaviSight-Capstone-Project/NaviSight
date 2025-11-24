@@ -10,6 +10,10 @@ This fragment will and only will be used if there is NO user logged in.
 
 -fraeron
 
+k di waw
+
+-charles
+
  */
 
 import android.annotation.SuppressLint
@@ -37,18 +41,15 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.commit
 import edu.capstone.navisight.R
+import edu.capstone.navisight.auth.AuthActivity
 import edu.capstone.navisight.databinding.FragmentCameraBinding
 import edu.capstone.navisight.viu.detectors.ObjectDetection
 import edu.capstone.navisight.viu.utils.ObjectDetectorHelper
 import edu.capstone.navisight.viu.utils.TTSHelper
-
 import java.util.LinkedList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import edu.capstone.navisight.auth.ui.login.LoginActivity
 
 class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.DetectorListener {
 
@@ -66,7 +67,7 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
 
     private var clickCount = 0
     private var isScreensaverActive = false
-    private var currentBrightness = 0.0F // Default.
+    private var currentBrightness = 0.0F
 
     private val idleTimeout = 10_000L
     private val idleHandler = Handler(Looper.getMainLooper())
@@ -78,22 +79,6 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
         }
     }
 
-
-    // Handle menu long tap (commented out na) or 4-tap activation
-//    private val longPressDuration = 3_000L
-//    private val longPressHandler = Handler(Looper.getMainLooper())
-//    private val longPressRunnable = Runnable {
-//        context?.let { safeContext ->
-//            TTSHelper.speak(safeContext, "Navigating to Login Page")
-//            if (isAdded) {
-//                parentFragmentManager.commit {
-//                    setReorderingAllowed(true)
-//                    replace(R.id.fragment_container, ProfileFragment())
-//                    addToBackStack(null)
-//                }
-//            }
-//        }
-//    }
     private val QUADRUPLE_TAP_TIMEOUT = 500L
     private val quadrupleTapHandler = Handler(Looper.getMainLooper())
     private val quadrupleTapRunnable = Runnable {
@@ -104,9 +89,6 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
 
     override fun onDestroyView() {
         idleHandler.removeCallbacks(idleRunnable)
-
-        // Handle menu long tap (commented out na) or 4-tap activation
-//        longPressHandler.removeCallbacks(longPressRunnable)
         quadrupleTapHandler.removeCallbacks(quadrupleTapRunnable)
 
         _fragmentCameraBinding = null
@@ -117,11 +99,7 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
     override fun onStop() {
         super.onStop()
         idleHandler.removeCallbacks(idleRunnable)
-
-        // Handle menu long tap (commented out na) or 4-tap activation
-//        longPressHandler.removeCallbacks(longPressRunnable)
         quadrupleTapHandler.removeCallbacks(quadrupleTapRunnable)
-
     }
 
     @SuppressLint("MissingPermission", "ClickableViewAccessibility")
@@ -143,22 +121,6 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
 
         toggleScreenSaver(requireContext())
 
-//        fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
-//            doAutoScreensaver()
-//            when (event.action) {
-//                MotionEvent.ACTION_DOWN -> {
-//                    longPressHandler.postDelayed(longPressRunnable, longPressDuration)
-//                    clickCount++
-//                    if (clickCount >= 3) {
-//                        context?.let { safeContext -> toggleScreenSaver(safeContext) }
-//                        clickCount = 0
-//                    }
-//                }
-//                MotionEvent.ACTION_UP -> {
-//                    longPressHandler.removeCallbacks(longPressRunnable)
-//                }
-//            }
-//            true
         fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
             doAutoScreensaver()
             when (event.action) {
@@ -167,29 +129,25 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
                     quadrupleTapHandler.removeCallbacks(quadrupleTapRunnable)
                     clickCount++
 
-                    if (clickCount == 4) { // Activated if tapped 4 times
-                        // Execute the former long-press action
+                    if (clickCount == 4) {
                         context?.let { safeContext ->
                             TTSHelper.speak(safeContext, "Navigating to Login Page")
                             if (isAdded) {
                                 // Start activity to Login.
                                 val intent = Intent(
-                                    activity,
-                                    LoginActivity::class.java)
+                                    requireContext(),
+                                    AuthActivity::class.java
+                                )
                                 startActivity(intent)
                             }
                         }
-                        // Reset click count after successful 4-tap activation
                         clickCount = 0
                     }
 
                     if (clickCount >= 3 && clickCount < 4) {
-                        // Toggles screensaver on 3rd tap,
-                        // but allows the 4th tap to complete the navigation gesture
                         context?.let { safeContext -> toggleScreenSaver(safeContext) }
                     }
 
-                    // Reset clickCount if the next tap doesn't occur soon
                     if (clickCount > 0 && clickCount < 4) {
                         quadrupleTapHandler.postDelayed(quadrupleTapRunnable, QUADRUPLE_TAP_TIMEOUT)
                     }
@@ -299,7 +257,6 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
 
         imageAnalyzer =
             ImageAnalysis.Builder()
-//                .setTargetAspectRatio(AspectRatio.RATIO_4_3)
                 .setTargetResolution(Size(640, 640))
                 .setTargetRotation(fragmentCameraBinding?.viewFinder?.display?.rotation ?: Surface.ROTATION_0)
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)

@@ -29,41 +29,25 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.NaviSight">
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <activity android:name=".auth.ui.login.LoginActivity" />
-        <activity android:name=".viu.ViuHomeActivity" />
-        <activity android:name=".caregiver.CaregiverHomeActivity" />
-
         <activity
-            android:name=".auth.ui.signup.caregiver.CaregiverSignupActivity"
+            android:name=".auth.AuthActivity"
             android:exported="false"
-            android:label="Sign Up"
-            android:windowSoftInputMode="adjustResize" />
-
-        <activity
-            android:name=".auth.ui.signup.viu.ViuSignupActivity"
-            android:exported="false"
-            android:label="Sign Up"
-            android:windowSoftInputMode="adjustResize" />
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
 
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
-
-        <activity
-            android:name=".auth.ui.signup.RoleSelectionActivity"
-            android:exported="false"
-            android:label="Select Role" />
 
         <activity
             android:theme="@style/Theme.AppCompat.NoActionBar"
@@ -74,6 +58,8 @@
             android:theme="@style/Theme.AppCompat.NoActionBar"
             android:name=".caregiver.ui.call.CaregiverCallActivity"
             android:exported="false" />
+
+        <activity android:name=".viu.ViuHomeActivity" />
 
         <service
             android:name=".webrtc.service.MainService"

@@ -11,17 +11,15 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.commit
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
+import edu.capstone.navisight.auth.AuthActivity
 import edu.capstone.navisight.auth.data.remote.CloudinaryDataSource
 import edu.capstone.navisight.auth.domain.GetUserCollectionUseCase
-import edu.capstone.navisight.auth.ui.login.LoginActivity
-import edu.capstone.navisight.caregiver.CaregiverHomeActivity
+import edu.capstone.navisight.caregiver.CaregiverHomeFragment
+// import edu.capstone.navisight.viu.ViuHomeFragment // Pag okie na
 import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
-import edu.capstone.navisight.guest.GuestFragment
-import edu.capstone.navisight.viu.ViuHomeActivity
 import edu.capstone.navisight.webrtc.repository.MainRepository
 import edu.capstone.navisight.webrtc.service.MainService
 import edu.capstone.navisight.webrtc.service.MainServiceActions
@@ -38,73 +36,88 @@ class MainActivity : AppCompatActivity() {
     private lateinit var getUserCollectionUseCase: GetUserCollectionUseCase
     private val getCurrentUserUidUseCase = GetCurrentUserUidUseCase()
 
-    // WebRTC init.
     private lateinit var mainServiceRepository: MainServiceRepository
-    private lateinit var mainRepository : MainRepository
+    private lateinit var mainRepository: MainRepository
+
     companion object {
-        var firstTimeLaunched : Boolean = true
+        var firstTimeLaunched: Boolean = true
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Begin app here.
-        // TODO: Make the functions more seamless and their names more accurate
+        MapLibre.getInstance(this)
+        CloudinaryDataSource.init(this)
+        FirebaseApp.initializeApp(this)
+
         mainServiceRepository = MainServiceRepository.getInstance(applicationContext)
         mainRepository = MainRepository.getInstance(applicationContext)
-        Log.d("CallSignal", "Finished getting instance of main and mainservice repos")
 
-        FirebaseApp.initializeApp(this)
         val permissionHandler = PermissionHandler()
-//        val locationTracker = LocationTracker(this)
         auth = FirebaseAuth.getInstance()
 
-        // Activate services if user is logged-in.
-        val currentUser = auth.currentUser
-        Log.d("AuthenticationCheck", auth.currentUser?.email.toString())
-        if (currentUser != null) {
-            Log.d("AuthenticationCheck",
-                "Current email of user logged in is: ${currentUser.email}")
-            Log.d("AuthenticationCheck",
-                "Current UID of user logged in is: ${currentUser.uid}")
-
-            handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
-        } else {
-            Log.d("CallSignal", "warning! user is not logged in, call services are off")
-
-        }
         permissionHandler.checkAndRequestInitialPermissions()
     }
 
-    fun navigateToGuestMode() {
-        supportFragmentManager.commit {
-            add(R.id.fragment_container, GuestFragment())
+    fun beginAppFlow() {
+        auth = FirebaseAuth.getInstance()
+        val currentUser = auth.currentUser
+
+        if (currentUser != null) {
+            handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
+
+            lifecycleScope.launch {
+                try {
+                    getUserCollectionUseCase = GetUserCollectionUseCase()
+                    val collection = getUserCollectionUseCase(currentUser.uid)
+
+                    when (collection) {
+                        "caregivers" -> navigateToHomeFragment(isCaregiver = true)
+                        "vius" -> navigateToHomeFragment(isCaregiver = false)
+                        else -> navigateToAuth()
+                    }
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Error fetching user collection", e)
+                    navigateToAuth()
+                }
+            }
+        } else {
+            navigateToAuth()
         }
     }
 
-    private fun navigateTo(activityClass: Class<*>) {
-        startActivity(Intent(this, activityClass))
+    private fun navigateToAuth() {
+        val intent = Intent(this, AuthActivity::class.java)
+        startActivity(intent)
         finish()
     }
 
-    fun handleSuccessfulLogin(email: String, uid: String) {
+    private fun navigateToHomeFragment(isCaregiver: Boolean) {
+        val fragment = if (isCaregiver) {
+            CaregiverHomeFragment()
+        } else {
+            // Replace with ViuHomeFragment()  heere
+            CaregiverHomeFragment() // Temporary lang nganiiii
+        }
+
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, fragment)
+            .commit()
+    }
+
+    private fun handleSuccessfulLogin(email: String, uid: String) {
         mainRepository.login(uid) { isDone, reason ->
             if (isDone) {
-                Log.d("CallSignal", "User just logged in and set to ONLINE")
+                Log.d("CallSignal", "User set to ONLINE")
                 startWebrtcService(email)
-
-                // Additionally, call decideAppFlow() to ensure all navigation/permissions are finalized.
-                beginAppFlow()
             } else {
                 Log.e("CallSignal", "Failed to set user to ONLINE: $reason")
             }
         }
-        // Add delay to make sure everything is initialized first.
-        // For Firebase Authorization sync if last event is "denied call"
-        val mainScope = CoroutineScope(Dispatchers.Main)
+
         if (firstTimeLaunched) {
-            mainScope.launch {
+            CoroutineScope(Dispatchers.Main).launch {
                 delay(5500)
                 firstTimeLaunched = false
             }
@@ -112,7 +125,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startWebrtcService(currentUser: String) {
-        Log.d("ServiceCheck", "Attempting to start MainService via startForegroundService()")
         val intent = Intent(this, MainService::class.java).apply {
             action = MainServiceActions.START_SERVICE.name
             putExtra("username", currentUser)
@@ -120,38 +132,9 @@ class MainActivity : AppCompatActivity() {
         startForegroundService(intent)
     }
 
-    // Set how the app will go depending on user credentials
-    fun beginAppFlow() {
-        MapLibre.getInstance(this)
-        CloudinaryDataSource.init(this)
-        auth = FirebaseAuth.getInstance()
-        getUserCollectionUseCase = GetUserCollectionUseCase()
-        val currentUser = getCurrentUserUidUseCase()
-        lifecycleScope.launch {
-            if (currentUser == null) {
-                navigateToGuestMode()
-            } else {
-                try {
-                    val collection = getUserCollectionUseCase(currentUser)
-                    when (collection) {
-                        "vius" -> navigateTo(ViuHomeActivity::class.java)
-                        "caregivers" -> navigateTo(CaregiverHomeActivity::class.java)
-                        else -> {
-                            auth.signOut()
-                            navigateTo(LoginActivity::class.java)
-                        }
-                    }
-                } catch (e: Exception) { navigateTo(LoginActivity::class.java) }
-            }
-        }
-    }
-
-    // Set all initial permissions here
-    // TODO: Make this class more cleaner
     private inner class PermissionHandler {
         private lateinit var initialPermissionsLauncher: ActivityResultLauncher<Array<String>>
         private lateinit var backgroundLocationPermissionLauncher: ActivityResultLauncher<String>
-        private val permissionCheckTag = "MainActivity: PermissionCheck"
 
         private val INITIAL_PERMISSIONS = arrayOf(
             Manifest.permission.CAMERA,
@@ -170,55 +153,33 @@ class MainActivity : AppCompatActivity() {
                 ActivityResultContracts.RequestMultiplePermissions()
             ) { permissions ->
                 val cameraGranted = permissions.getOrDefault(Manifest.permission.CAMERA, false)
-                val fineGranted =
-                    permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false)
-                val coarseGranted =
-                    permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
-                val micGranted =
-                    permissions.getOrDefault(Manifest.permission.RECORD_AUDIO, false)
+                val fineGranted = permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false)
+                val coarseGranted = permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
 
-                if (cameraGranted) Log.d(permissionCheckTag, "Camera permission granted.")
-                else Log.w(permissionCheckTag, "Camera permission denied.")
-
-                if (fineGranted || coarseGranted) {
-                    Log.d(
-                        permissionCheckTag,
-                        "Foreground location granted. Proceeding to background check."
-                    )
-                    checkAndRequestBackgroundLocation()
+                if (cameraGranted && (fineGranted || coarseGranted)) {
+                    beginAppFlow()
                 } else {
-                    Log.w(
-                        permissionCheckTag,
-                        "Foreground location denied. Location features will be disabled."
-                    )
+                    Toast.makeText(this@MainActivity, "Permissions required to proceed", Toast.LENGTH_SHORT).show()
                 }
-                if (cameraGranted && (fineGranted || coarseGranted)) beginAppFlow()
             }
+
             backgroundLocationPermissionLauncher = registerForActivityResult(
                 ActivityResultContracts.RequestPermission()
             ) { granted ->
-                if (granted) {
-                    Log.d(permissionCheckTag, "Background location granted.")
-                } else {
-                    Toast.makeText(applicationContext,
-                        "Please set NaviSight to 'Allow all the time' in location!",
-                        Toast.LENGTH_LONG).show()
-                    Log.w(permissionCheckTag, "Background location denied.")
+                if (!granted) {
+                    Toast.makeText(this@MainActivity, "Please allow background location in settings", Toast.LENGTH_LONG).show()
                 }
             }
         }
+
         fun checkAndRequestInitialPermissions() {
             val permissionsToRequest = INITIAL_PERMISSIONS.filter {
-                ContextCompat.checkSelfPermission(
-                    this@MainActivity,
-                    it
-                ) != PackageManager.PERMISSION_GRANTED
+                ContextCompat.checkSelfPermission(this@MainActivity, it) != PackageManager.PERMISSION_GRANTED
             }.toTypedArray()
+
             if (permissionsToRequest.isNotEmpty()) {
-                Log.d(permissionCheckTag, "Requesting: ${permissionsToRequest.contentToString()}")
                 initialPermissionsLauncher.launch(permissionsToRequest)
             } else {
-                Log.d(permissionCheckTag, "All initial permissions already granted.")
                 checkAndRequestBackgroundLocation()
                 beginAppFlow()
             }
@@ -227,18 +188,12 @@ class MainActivity : AppCompatActivity() {
         private fun checkAndRequestBackgroundLocation() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val granted = ContextCompat.checkSelfPermission(
-                    this@MainActivity,
-                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                    this@MainActivity, Manifest.permission.ACCESS_BACKGROUND_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED
 
                 if (!granted) {
-                    Log.d(permissionCheckTag, "Requesting background location permission.")
                     backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                } else {
-                    Log.d(permissionCheckTag, "Background location already granted.")
                 }
-            } else {
-                Log.d(permissionCheckTag, "Pre-Q device — background location is implicit.")
             }
         }
     }

@@ -11,6 +11,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import edu.capstone.navisight.R
@@ -32,7 +33,7 @@ class AccountInfoFragment : Fragment() {
         ucropLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK && result.data != null) {
                 val resultUri = UCrop.getOutput(result.data!!)
-                val uid = getCurrentUserUidUseCase.invoke() // Get UID here
+                val uid = getCurrentUserUidUseCase.invoke()
 
                 if (resultUri != null && uid != null) {
                     viewModel.uploadProfileImageNow(uid, resultUri)
@@ -54,6 +55,17 @@ class AccountInfoFragment : Fragment() {
         }
     }
 
+
+    override fun onResume() {
+        super.onResume()
+        requireActivity().findViewById<View>(R.id.bottom_nav_compose_view)?.visibility = View.GONE //hide bottom nav
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        requireActivity().findViewById<View>(R.id.bottom_nav_compose_view)?.visibility = View.VISIBLE //bulaga bottom nav
+    }
+
     private fun launchUCrop(sourceUri: Uri) {
         val context = requireContext()
         val destinationFileName = "cropped_image_${System.currentTimeMillis()}.jpg"
@@ -65,15 +77,12 @@ class AccountInfoFragment : Fragment() {
         options.withAspectRatio(1f, 1f)
         options.withMaxResultSize(400, 400)
 
-        // Get the intent from uCrop library
         val ucropIntent = UCrop.of(sourceUri, destinationUri)
             .withOptions(options)
             .getIntent(context)
 
-        // Launch the uCrop activity
         ucropLauncher.launch(ucropIntent)
     }
-
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -82,6 +91,8 @@ class AccountInfoFragment : Fragment() {
     ): View {
         val rootView = inflater.inflate(R.layout.fragment_account_info, container, false)
         val composeView = ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+
             setContent {
                 val uid = getCurrentUserUidUseCase.invoke()
                 uid?.let {
@@ -89,15 +100,12 @@ class AccountInfoFragment : Fragment() {
                     val isSaving by viewModel.isSaving.collectAsState()
                     var uiMessage by remember { mutableStateOf<String?>(null) }
 
-
-                    // Collect UI messages
                     LaunchedEffect(Unit) {
                         viewModel.uiEvent.collect { message ->
                             uiMessage = message
                         }
                     }
 
-                    // Load profile
                     LaunchedEffect(it) {
                         viewModel.loadProfile(it)
                     }
@@ -120,10 +128,10 @@ class AccountInfoFragment : Fragment() {
                         onChangeEmail = { newEmail, password ->
                             viewModel.updateEmail(requireContext(), it, newEmail, password)
                         },
-                        onVerifyEmailOtp = { otp -> // Renamed
+                        onVerifyEmailOtp = { otp ->
                             viewModel.verifyEmailOtp(it, otp)
                         },
-                        onVerifyPasswordOtp = { otp -> // Added
+                        onVerifyPasswordOtp = { otp ->
                             viewModel.verifyPasswordChangeOtp(otp)
                         },
                         onCancelEmailChange = {
@@ -135,7 +143,9 @@ class AccountInfoFragment : Fragment() {
                         isSaving = isSaving,
                         uiMessage = uiMessage,
                         onMessageShown = { uiMessage = null },
-                        onBackClick = { requireActivity().onBackPressedDispatcher.onBackPressed() }
+                        onBackClick = {
+                            parentFragmentManager.popBackStack()
+                        }
                     )
                 }
             }
