@@ -2,28 +2,27 @@ package edu.capstone.navisight.viu
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import edu.capstone.navisight.viu.data.repository.LocationRepository
+import edu.capstone.navisight.viu.domain.locationUseCase.MonitorGeofenceUseCase
 import edu.capstone.navisight.viu.domain.locationUseCase.UpdateUserLocationUseCase
-//import edu.capstone.navisight.viu.domain.MonitorGeofenceUseCase
 import kotlinx.coroutines.launch
 
 class ViuHomeViewModel : ViewModel() {
-    private val repository = LocationRepository()
-    private val updateUserLocationUseCase = UpdateUserLocationUseCase(repository)
-//    private val monitorGeofenceUseCase = MonitorGeofenceUseCase(repository)
-    private val currentViuName = "  try"
+
+    private val updateUserLocationUseCase = UpdateUserLocationUseCase()
+    private val monitorGeofenceUseCase = MonitorGeofenceUseCase()
 
     init {
         viewModelScope.launch {
             updateUserLocationUseCase.startPresence()
-//            monitorGeofenceUseCase.startMonitoring()
+            monitorGeofenceUseCase.startMonitoring()
         }
     }
 
     fun updateLocation(lat: Double, lon: Double) {
         viewModelScope.launch {
             updateUserLocationUseCase(lat, lon)
-//            monitorGeofenceUseCase(lat, lon, currentViuName)
+
+            monitorGeofenceUseCase(lat, lon)
         }
     }
 
