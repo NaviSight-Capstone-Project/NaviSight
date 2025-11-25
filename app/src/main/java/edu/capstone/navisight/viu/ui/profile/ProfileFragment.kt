@@ -31,11 +31,11 @@ import edu.capstone.navisight.viu.domain.usecase.GenerateOrFetchQrUseCase
 import edu.capstone.navisight.viu.domain.usecase.GetViuProfileUseCase
 import edu.capstone.navisight.viu.ui.call.ViuCallActivity
 import edu.capstone.navisight.common.TTSHelper
-import edu.capstone.navisight.webrtc.model.DataModel
-import edu.capstone.navisight.webrtc.model.DataModelType
-import edu.capstone.navisight.webrtc.repository.MainRepository
-import edu.capstone.navisight.webrtc.service.MainService
-import edu.capstone.navisight.webrtc.utils.getCameraAndMicPermission
+import edu.capstone.navisight.common.webrtc.repository.MainRepository
+import edu.capstone.navisight.common.webrtc.service.MainService
+import edu.capstone.navisight.common.webrtc.model.DataModel
+import edu.capstone.navisight.common.webrtc.model.DataModelType
+import edu.capstone.navisight.common.webrtc.utils.getCameraAndMicPermission
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch

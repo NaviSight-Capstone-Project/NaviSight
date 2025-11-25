@@ -26,10 +26,10 @@ import edu.capstone.navisight.caregiver.CaregiverHomeFragment
 import edu.capstone.navisight.disclaimer.DisclaimerFragment
 import edu.capstone.navisight.viu.ViuHomeFragment
 import edu.capstone.navisight.guest.GuestFragment
-import edu.capstone.navisight.webrtc.repository.MainRepository
-import edu.capstone.navisight.webrtc.service.MainService
-import edu.capstone.navisight.webrtc.service.MainServiceActions
-import edu.capstone.navisight.webrtc.service.MainServiceRepository
+import edu.capstone.navisight.common.webrtc.repository.MainRepository
+import edu.capstone.navisight.common.webrtc.service.MainService
+import edu.capstone.navisight.common.webrtc.service.MainServiceActions
+import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay

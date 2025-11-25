@@ -1,4 +1,4 @@
-package edu.capstone.navisight.webrtc.utils
+package edu.capstone.navisight.common.webrtc.utils
 
 import android.Manifest
 import android.widget.Toast

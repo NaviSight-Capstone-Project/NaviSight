@@ -1,10 +1,10 @@
-package edu.capstone.navisight.webrtc
+package edu.capstone.navisight.common.webrtc
 
 import android.util.Log
-import edu.capstone.navisight.webrtc.model.FirebaseFieldNames
-import edu.capstone.navisight.webrtc.utils.EventListener
-import edu.capstone.navisight.webrtc.utils.UserStatus
-import edu.capstone.navisight.webrtc.model.DataModel
+import edu.capstone.navisight.common.webrtc.model.FirebaseFieldNames
+import edu.capstone.navisight.common.webrtc.utils.EventListener
+import edu.capstone.navisight.common.webrtc.utils.UserStatus
+import edu.capstone.navisight.common.webrtc.model.DataModel
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
@@ -17,6 +17,8 @@ import edu.capstone.navisight.caregiver.model.Viu
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
+import kotlin.collections.remove
+import kotlin.text.set
 
 /**
  * Non-DI Singleton version of FirebaseClient.

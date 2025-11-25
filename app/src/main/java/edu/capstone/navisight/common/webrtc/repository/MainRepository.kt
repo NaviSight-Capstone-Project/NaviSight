@@ -1,16 +1,16 @@
-package edu.capstone.navisight.webrtc.repository
+package edu.capstone.navisight.common.webrtc.repository
 
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import edu.capstone.navisight.webrtc.FirebaseClient
-import edu.capstone.navisight.webrtc.model.DataModel
-import edu.capstone.navisight.webrtc.model.DataModelType.*
-import edu.capstone.navisight.webrtc.utils.UserStatus
+import edu.capstone.navisight.common.webrtc.FirebaseClient
+import edu.capstone.navisight.common.webrtc.model.DataModel
+import edu.capstone.navisight.common.webrtc.model.DataModelType.*
+import edu.capstone.navisight.common.webrtc.utils.UserStatus
 import org.webrtc.IceCandidate
-import edu.capstone.navisight.webrtc.vendor.MyPeerObserver
-import edu.capstone.navisight.webrtc.vendor.WebRTCClient
+import edu.capstone.navisight.common.webrtc.vendor.MyPeerObserver
+import edu.capstone.navisight.common.webrtc.vendor.WebRTCClient
 import com.google.gson.Gson
 import edu.capstone.navisight.caregiver.model.Viu
 import org.webrtc.MediaStream

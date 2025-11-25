@@ -1,4 +1,4 @@
-package edu.capstone.navisight.webrtc.service
+package edu.capstone.navisight.common.webrtc.service
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -15,12 +15,12 @@ import androidx.core.app.NotificationCompat
 import edu.capstone.navisight.MainActivity
 import edu.capstone.navisight.R
 import edu.capstone.navisight.common.TTSHelper
-import edu.capstone.navisight.webrtc.service.MainServiceActions.*
-import edu.capstone.navisight.webrtc.model.DataModel
-import edu.capstone.navisight.webrtc.model.DataModelType
-import edu.capstone.navisight.webrtc.model.isValid
-import edu.capstone.navisight.webrtc.repository.MainRepository
-import edu.capstone.navisight.webrtc.vendor.RTCAudioManager
+import edu.capstone.navisight.common.webrtc.vendor.RTCAudioManager
+import edu.capstone.navisight.common.webrtc.service.MainServiceActions.*
+import edu.capstone.navisight.common.webrtc.model.DataModel
+import edu.capstone.navisight.common.webrtc.model.DataModelType
+import edu.capstone.navisight.common.webrtc.model.isValid
+import edu.capstone.navisight.common.webrtc.repository.MainRepository
 import org.webrtc.SurfaceViewRenderer
 
 

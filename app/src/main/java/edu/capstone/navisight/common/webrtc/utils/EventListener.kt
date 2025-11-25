@@ -1,4 +1,4 @@
-package edu.capstone.navisight.webrtc.utils
+package edu.capstone.navisight.common.webrtc.utils
 
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError

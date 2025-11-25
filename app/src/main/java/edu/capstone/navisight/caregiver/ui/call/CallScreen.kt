@@ -24,11 +24,11 @@ import androidx.compose.ui.graphics.Color
 import coil.compose.rememberAsyncImagePainter
 import edu.capstone.navisight.caregiver.data.remote.ViuDataSource
 import edu.capstone.navisight.caregiver.model.Viu
-import edu.capstone.navisight.webrtc.service.MainService
-import edu.capstone.navisight.webrtc.service.MainServiceRepository
-import edu.capstone.navisight.webrtc.utils.convertToHumanTime
+import edu.capstone.navisight.common.webrtc.service.MainService
+import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
+import edu.capstone.navisight.common.webrtc.utils.convertToHumanTime
 import edu.capstone.navisight.R
-import edu.capstone.navisight.webrtc.vendor.RTCAudioManager
+import edu.capstone.navisight.common.webrtc.vendor.RTCAudioManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import org.webrtc.SurfaceViewRenderer

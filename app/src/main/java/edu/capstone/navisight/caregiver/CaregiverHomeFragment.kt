@@ -32,11 +32,11 @@ import edu.capstone.navisight.caregiver.ui.feature_records.RecordsFragment
 import edu.capstone.navisight.caregiver.ui.feature_settings.SettingsFragment
 import edu.capstone.navisight.caregiver.ui.feature_stream.StreamFragment
 import edu.capstone.navisight.caregiver.ui.navigation.BottomNavigationBar
-import edu.capstone.navisight.webrtc.model.DataModel
-import edu.capstone.navisight.webrtc.model.DataModelType
-import edu.capstone.navisight.webrtc.repository.MainRepository
-import edu.capstone.navisight.webrtc.service.MainService
-import edu.capstone.navisight.webrtc.utils.getCameraAndMicPermission
+import edu.capstone.navisight.common.webrtc.model.DataModel
+import edu.capstone.navisight.common.webrtc.model.DataModelType
+import edu.capstone.navisight.common.webrtc.repository.MainRepository
+import edu.capstone.navisight.common.webrtc.service.MainService
+import edu.capstone.navisight.common.webrtc.utils.getCameraAndMicPermission
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

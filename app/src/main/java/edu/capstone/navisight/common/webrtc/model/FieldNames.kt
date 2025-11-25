@@ -1,4 +1,4 @@
-package edu.capstone.navisight.webrtc.model
+package edu.capstone.navisight.common.webrtc.model
 
 object FirebaseFieldNames {
     const val STATUS = "status"

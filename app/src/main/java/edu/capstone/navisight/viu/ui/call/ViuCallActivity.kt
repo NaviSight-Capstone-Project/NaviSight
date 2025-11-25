@@ -9,8 +9,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
-import edu.capstone.navisight.webrtc.service.MainService
-import edu.capstone.navisight.webrtc.service.MainServiceRepository
+import edu.capstone.navisight.common.webrtc.service.MainService
+import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
 
 class ViuCallActivity : ComponentActivity(), MainService.EndAndDeniedCallListener {
 

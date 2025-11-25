@@ -37,9 +37,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import edu.capstone.navisight.R
 import edu.capstone.navisight.caregiver.model.Viu
-import edu.capstone.navisight.webrtc.adapter.UserListView
+import edu.capstone.navisight.common.webrtc.adapter.UserListView
 import com.google.firebase.auth.FirebaseAuth
-import edu.capstone.navisight.webrtc.FirebaseClient
+import edu.capstone.navisight.common.webrtc.FirebaseClient
 
 @Composable
 fun StreamScreen(

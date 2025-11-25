@@ -1,4 +1,4 @@
-package edu.capstone.navisight.webrtc.vendor
+package edu.capstone.navisight.common.webrtc.vendor
 
 import android.content.Context
 import android.content.Intent
@@ -6,8 +6,8 @@ import android.media.projection.MediaProjection
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
-import edu.capstone.navisight.webrtc.model.DataModel
-import edu.capstone.navisight.webrtc.model.DataModelType
+import edu.capstone.navisight.common.webrtc.model.DataModel
+import edu.capstone.navisight.common.webrtc.model.DataModelType
 import com.google.gson.Gson
 import org.webrtc.*
 import java.util.Properties

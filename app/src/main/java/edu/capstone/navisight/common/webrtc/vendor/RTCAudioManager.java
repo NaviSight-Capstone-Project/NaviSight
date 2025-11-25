@@ -8,7 +8,7 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-package edu.capstone.navisight.webrtc.vendor;
+package edu.capstone.navisight.common.webrtc.vendor;
 
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;

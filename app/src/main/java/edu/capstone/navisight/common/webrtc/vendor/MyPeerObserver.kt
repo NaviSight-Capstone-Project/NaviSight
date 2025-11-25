@@ -1,4 +1,4 @@
-package edu.capstone.navisight.webrtc.vendor
+package edu.capstone.navisight.common.webrtc.vendor
 
 import org.webrtc.*
 

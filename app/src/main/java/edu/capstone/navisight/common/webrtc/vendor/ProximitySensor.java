@@ -1,4 +1,4 @@
-package edu.capstone.navisight.webrtc.vendor;
+package edu.capstone.navisight.common.webrtc.vendor;
 
 /*
  *  Copyright 2014 The WebRTC Project Authors. All rights reserved.

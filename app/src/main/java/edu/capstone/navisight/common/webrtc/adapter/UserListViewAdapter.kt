@@ -1,4 +1,4 @@
-package edu.capstone.navisight.webrtc.adapter
+package edu.capstone.navisight.common.webrtc.adapter
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

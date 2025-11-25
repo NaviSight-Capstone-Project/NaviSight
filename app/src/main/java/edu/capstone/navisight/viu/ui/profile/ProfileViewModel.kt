@@ -10,8 +10,8 @@ import edu.capstone.navisight.viu.model.QR
 import edu.capstone.navisight.viu.model.Viu
 import edu.capstone.navisight.viu.domain.usecase.GenerateOrFetchQrUseCase
 import edu.capstone.navisight.viu.domain.usecase.GetViuProfileUseCase
-import edu.capstone.navisight.webrtc.FirebaseClient
-import edu.capstone.navisight.webrtc.utils.UserStatus
+import edu.capstone.navisight.common.webrtc.FirebaseClient
+import edu.capstone.navisight.common.webrtc.utils.UserStatus
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

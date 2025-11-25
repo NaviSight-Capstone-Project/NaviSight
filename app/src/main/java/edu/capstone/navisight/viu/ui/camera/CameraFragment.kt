@@ -40,10 +40,10 @@ import edu.capstone.navisight.viu.ui.call.ViuCallActivity
 import edu.capstone.navisight.viu.ui.profile.ProfileFragment
 import edu.capstone.navisight.viu.utils.ObjectDetectorHelper
 import edu.capstone.navisight.common.TTSHelper
-import edu.capstone.navisight.webrtc.model.DataModel
-import edu.capstone.navisight.webrtc.model.DataModelType
-import edu.capstone.navisight.webrtc.service.MainService
-import edu.capstone.navisight.webrtc.utils.getCameraAndMicPermission
+import edu.capstone.navisight.common.webrtc.model.DataModel
+import edu.capstone.navisight.common.webrtc.model.DataModelType
+import edu.capstone.navisight.common.webrtc.service.MainService
+import edu.capstone.navisight.common.webrtc.utils.getCameraAndMicPermission
 import java.util.LinkedList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors

@@ -1,4 +1,4 @@
-package edu.capstone.navisight.webrtc.service
+package edu.capstone.navisight.common.webrtc.service
 
 import android.content.Context
 import android.content.Intent
