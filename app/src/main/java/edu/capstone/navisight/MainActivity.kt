@@ -20,6 +20,7 @@ import edu.capstone.navisight.auth.domain.GetUserCollectionUseCase
 import edu.capstone.navisight.caregiver.CaregiverHomeFragment
  import edu.capstone.navisight.viu.ViuHomeFragment
 import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
+import edu.capstone.navisight.guest.GuestFragment
 import edu.capstone.navisight.webrtc.repository.MainRepository
 import edu.capstone.navisight.webrtc.service.MainService
 import edu.capstone.navisight.webrtc.service.MainServiceActions
@@ -83,7 +84,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         } else {
-            navigateToAuth()
+            navigateToGuestMode()
+//            navigateToAuth()
         }
     }
 
@@ -91,6 +93,12 @@ class MainActivity : AppCompatActivity() {
         val intent = Intent(this, AuthActivity::class.java)
         startActivity(intent)
         finish()
+    }
+
+    private fun navigateToGuestMode() {
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, GuestFragment())
+            .commit()
     }
 
     private fun navigateToHomeFragment(isCaregiver: Boolean) {
