@@ -2,6 +2,7 @@ package edu.capstone.navisight.auth.ui.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuthException
 import edu.capstone.navisight.auth.domain.ForgotPasswordUseCase
 import edu.capstone.navisight.auth.domain.LoginUseCase
 import edu.capstone.navisight.auth.model.LoginResult
@@ -149,15 +150,9 @@ class LoginViewModel(
     fun resetPassword(email: String) {
         viewModelScope.launch {
             _error.value = null
-
-            if (email.isBlank()) {
-                _error.value = "Please enter your email."
-                return@launch
-            }
-
             _isLoading.value = true
 
-            // This calls Domain -> Repo -> DataSource (REST API)
+            // Call Domain Layer
             val result = forgotPasswordUseCase(email)
 
             _isLoading.value = false
@@ -167,17 +162,15 @@ class LoginViewModel(
                     _error.value = "Reset link sent! Check your email."
                 },
                 onFailure = { exception ->
-                    // The exception message will contain the raw server error
-                    // (e.g., "EMAIL_NOT_FOUND" or "MISSING_RECAPTCHA")
-                    val rawError = exception.message ?: "Unknown error"
-
-                    // Optional: Make messages prettier for the user
-                    if (rawError.contains("EMAIL_NOT_FOUND")) {
-                        _error.value = "User not found."
-                    } else if (rawError.contains("MISSING_RECAPTCHA")) {
-                        _error.value = "Server Config Error: Recaptcha is ON."
+                    // Handle specific Firebase errors for better UX
+                    if (exception is FirebaseAuthException) {
+                        when (exception.errorCode) {
+                            "ERROR_USER_NOT_FOUND" -> _error.value = "User not found."
+                            "ERROR_INVALID_EMAIL" -> _error.value = "Invalid email format."
+                            else -> _error.value = exception.message
+                        }
                     } else {
-                        _error.value = rawError
+                        _error.value = exception.message ?: "Error sending email"
                     }
                 }
             )
