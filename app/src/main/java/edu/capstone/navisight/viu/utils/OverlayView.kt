@@ -134,7 +134,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
 
     private fun doOnDetection(result : ObjectDetection) {
         speakWhenDetected(context, result)  // Do Text to Speech, with variability.
-        // vibrate()                        // TODO: Complete and enable vibration feedback
+        vibrationHelper.vibrate()
     }
 
     private fun calculateCurrentBBArea(result: ObjectDetection): Float {
@@ -188,14 +188,14 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
             if (currentSpeechQueue.size > speechQueueThreshold) TTSHelper.clearQueue()
             val proximityStatus = bbEstimatedProximity(currentDetectedArea, currentLabel)
             if (lastLabel == currentLabel) {
-                if (currentAreaThreshold > lastAreaThreshold) TTSHelper.queueSpeakLatest(context,
-                    proximityStatus, redundancyDelay)
+                if (currentAreaThreshold > lastAreaThreshold) TTSHelper.queueSpeakLatest(
+                    context,
+                    proximityStatus, redundancyDelay
+                )
                 lastAreaThreshold = currentAreaThreshold
-            }
-            else TTSHelper.queueSpeakLatest(context, proximityStatus)
+            } else TTSHelper.queueSpeakLatest(context, proximityStatus)
             lastLabel = currentLabel
             lastDetectedArea = currentDetectedArea
         }
-        vibrationHelper.vibrate()
     }
 }

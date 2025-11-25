@@ -9,7 +9,6 @@ Defaults to 500 milliseconds (0.5)
 
  */
 
-
 import android.content.Context
 import android.os.Build
 import android.os.VibrationEffect
