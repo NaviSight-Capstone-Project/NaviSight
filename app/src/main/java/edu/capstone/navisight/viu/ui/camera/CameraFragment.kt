@@ -34,6 +34,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import edu.capstone.navisight.R
+import edu.capstone.navisight.auth.AuthActivity
 import edu.capstone.navisight.databinding.FragmentCameraBinding
 import edu.capstone.navisight.viu.detectors.ObjectDetection
 import edu.capstone.navisight.viu.ui.call.ViuCallActivity
@@ -68,6 +69,12 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
     private var clickCount = 0
     private var isScreensaverActive = false
     private var currentBrightness = 0.0F // Default.
+
+    private val QUADRUPLE_TAP_TIMEOUT = 500L
+    private val quadrupleTapHandler = Handler(Looper.getMainLooper())
+    private val quadrupleTapRunnable = Runnable {
+        clickCount = 0
+    }
 
     private val idleTimeout = 10_000L
     private val idleHandler = Handler(Looper.getMainLooper())
@@ -116,13 +123,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
                 }
             }
         }
-    }
-
-    // TODO: Return quadruple timeout
-    private val QUADRUPLE_TAP_TIMEOUT = 500L
-    private val quadrupleTapHandler = Handler(Looper.getMainLooper())
-    private val quadrupleTapRunnable = Runnable {
-        clickCount = 0
     }
 
 
@@ -190,17 +190,47 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
         toggleScreenSaver(requireContext()) // Begin screen saving
         fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
             doAutoScreensaver()
+//            when (event.action) {
+//                MotionEvent.ACTION_DOWN -> {
+//                    longPressHandler.postDelayed(longPressRunnable, longPressDuration)
+//                    clickCount++
+//                    if (clickCount >= 3) {
+//                        context?.let { safeContext -> toggleScreenSaver(safeContext) }
+//                        clickCount = 0
+//                    }
+//                }
+//                MotionEvent.ACTION_UP -> {
+//                    longPressHandler.removeCallbacks(longPressRunnable)
+//                }
+//            }
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    longPressHandler.postDelayed(longPressRunnable, longPressDuration)
+
+                    quadrupleTapHandler.removeCallbacks(quadrupleTapRunnable)
                     clickCount++
-                    if (clickCount >= 3) {
-                        context?.let { safeContext -> toggleScreenSaver(safeContext) }
+
+                    if (clickCount == 4) {
+                        context?.let { safeContext ->
+                            TTSHelper.speak(safeContext, "Navigating to Login Page")
+                            if (isAdded) {
+                                // Start activity to Login.
+                                val intent = Intent(
+                                    requireContext(),
+                                    AuthActivity::class.java
+                                )
+                                startActivity(intent)
+                            }
+                        }
                         clickCount = 0
                     }
-                }
-                MotionEvent.ACTION_UP -> {
-                    longPressHandler.removeCallbacks(longPressRunnable)
+
+                    if (clickCount >= 3 && clickCount < 4) {
+                        context?.let { safeContext -> toggleScreenSaver(safeContext) }
+                    }
+
+                    if (clickCount > 0 && clickCount < 4) {
+                        quadrupleTapHandler.postDelayed(quadrupleTapRunnable, QUADRUPLE_TAP_TIMEOUT)
+                    }
                 }
             }
             true
@@ -307,7 +337,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
 
         imageAnalyzer =
             ImageAnalysis.Builder()
-//                .setTargetAspectRatio(AspectRatio.RATIO_4_3)
                 .setTargetResolution(Size(640, 640))
                 .setTargetRotation(fragmentCameraBinding?.viewFinder?.display?.rotation ?: Surface.ROTATION_0)
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)

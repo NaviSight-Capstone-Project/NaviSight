@@ -8,14 +8,6 @@ This fragment is used primarily as a placeholder for non-registered users.
 This fragment must default to object detection - camera mode.
 This fragment will and only will be used if there is NO user logged in.
 
--fraeron
-
-k di waw
-
--charles
-
-oml, bat sinira yung flow T.T
-
  */
 
 import android.annotation.SuppressLint
@@ -159,64 +151,64 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
         }
     }
 
-    private fun initBottomSheetControls() {
-        fragmentCameraBinding?.bottomSheetLayout?.apply {
-            thresholdMinus.setOnClickListener {
-                if (objectDetectorHelper.threshold >= 0.1) {
-                    objectDetectorHelper.threshold -= 0.1f
-                    updateControlsUi()
-                }
-            }
-            thresholdPlus.setOnClickListener {
-                if (objectDetectorHelper.threshold <= 0.8) {
-                    objectDetectorHelper.threshold += 0.1f
-                    updateControlsUi()
-                }
-            }
-            maxResultsMinus.setOnClickListener {
-                if (objectDetectorHelper.maxResults > 1) {
-                    objectDetectorHelper.maxResults--
-                    updateControlsUi()
-                }
-            }
-            maxResultsPlus.setOnClickListener {
-                if (objectDetectorHelper.maxResults < 5) {
-                    objectDetectorHelper.maxResults++
-                    updateControlsUi()
-                }
-            }
-            threadsMinus.setOnClickListener {
-                if (objectDetectorHelper.numThreads > 1) {
-                    objectDetectorHelper.numThreads--
-                    updateControlsUi()
-                }
-            }
-            threadsPlus.setOnClickListener {
-                if (objectDetectorHelper.numThreads < 4) {
-                    objectDetectorHelper.numThreads++
-                    updateControlsUi()
-                }
-            }
-            spinnerDelegate.setSelection(0, false)
-            spinnerDelegate.onItemSelectedListener =
-                object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-                        objectDetectorHelper.currentDelegate = p2
-                        updateControlsUi()
-                    }
-                    override fun onNothingSelected(p0: AdapterView<*>?) {}
-                }
-            spinnerModel.setSelection(0, false)
-            spinnerModel.onItemSelectedListener =
-                object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-                        objectDetectorHelper.currentModel = p2
-                        updateControlsUi()
-                    }
-                    override fun onNothingSelected(p0: AdapterView<*>?) {}
-                }
-        }
-    }
+//    private fun initBottomSheetControls() {
+//        fragmentCameraBinding?.bottomSheetLayout?.apply {
+//            thresholdMinus.setOnClickListener {
+//                if (objectDetectorHelper.threshold >= 0.1) {
+//                    objectDetectorHelper.threshold -= 0.1f
+//                    updateControlsUi()
+//                }
+//            }
+//            thresholdPlus.setOnClickListener {
+//                if (objectDetectorHelper.threshold <= 0.8) {
+//                    objectDetectorHelper.threshold += 0.1f
+//                    updateControlsUi()
+//                }
+//            }
+//            maxResultsMinus.setOnClickListener {
+//                if (objectDetectorHelper.maxResults > 1) {
+//                    objectDetectorHelper.maxResults--
+//                    updateControlsUi()
+//                }
+//            }
+//            maxResultsPlus.setOnClickListener {
+//                if (objectDetectorHelper.maxResults < 5) {
+//                    objectDetectorHelper.maxResults++
+//                    updateControlsUi()
+//                }
+//            }
+//            threadsMinus.setOnClickListener {
+//                if (objectDetectorHelper.numThreads > 1) {
+//                    objectDetectorHelper.numThreads--
+//                    updateControlsUi()
+//                }
+//            }
+//            threadsPlus.setOnClickListener {
+//                if (objectDetectorHelper.numThreads < 4) {
+//                    objectDetectorHelper.numThreads++
+//                    updateControlsUi()
+//                }
+//            }
+//            spinnerDelegate.setSelection(0, false)
+//            spinnerDelegate.onItemSelectedListener =
+//                object : AdapterView.OnItemSelectedListener {
+//                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+//                        objectDetectorHelper.currentDelegate = p2
+//                        updateControlsUi()
+//                    }
+//                    override fun onNothingSelected(p0: AdapterView<*>?) {}
+//                }
+//            spinnerModel.setSelection(0, false)
+//            spinnerModel.onItemSelectedListener =
+//                object : AdapterView.OnItemSelectedListener {
+//                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+//                        objectDetectorHelper.currentModel = p2
+//                        updateControlsUi()
+//                    }
+//                    override fun onNothingSelected(p0: AdapterView<*>?) {}
+//                }
+//        }
+//    }
 
     private fun updateControlsUi() {
         fragmentCameraBinding?.let { binding ->
