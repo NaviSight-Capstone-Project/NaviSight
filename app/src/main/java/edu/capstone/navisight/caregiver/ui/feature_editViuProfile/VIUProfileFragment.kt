@@ -14,11 +14,14 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import edu.capstone.navisight.R
 import com.yalantis.ucrop.UCrop
+import edu.capstone.navisight.caregiver.ui.feature_travel_log.TravelLogViewModel
 import java.io.File
 
+// acccckk not readable yung code lalo na sa screen jusq gpt ko muna tsaka ko ayusin
 class ViuProfileFragment : Fragment() {
 
     private val viewModel: ViuProfileViewModel by viewModels()
+    private val travelLogViewModel: TravelLogViewModel by viewModels()
 
     // ActivityResultLaunchers
     private lateinit var imagePickerLauncher: ActivityResultLauncher<String>
@@ -52,9 +55,7 @@ class ViuProfileFragment : Fragment() {
         }
     }
 
-    /**
-     * Creates a destination Uri and launches the uCrop activity.
-     */
+
     private fun launchUCrop(sourceUri: Uri) {
         val context = requireContext()
         // Create a unique file name for the cropped image in the cache
@@ -86,12 +87,9 @@ class ViuProfileFragment : Fragment() {
             setContent {
                 ViuProfileScreen(
                     viewModel = viewModel,
-                    onNavigateBack = {
-                        parentFragmentManager.popBackStack()
-                    },
-                    onLaunchImagePicker = {
-                        imagePickerLauncher.launch("image/*")
-                    }
+                    travelLogViewModel = travelLogViewModel,
+                    onNavigateBack = { parentFragmentManager.popBackStack() },
+                    onLaunchImagePicker = { imagePickerLauncher.launch("image/*") }
                 )
             }
         }

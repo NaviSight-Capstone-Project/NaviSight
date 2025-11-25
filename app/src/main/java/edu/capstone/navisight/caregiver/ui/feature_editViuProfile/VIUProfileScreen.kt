@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -23,26 +24,23 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import edu.capstone.navisight.caregiver.ui.feature_travel_log.TravelLogScreen
+import edu.capstone.navisight.caregiver.ui.feature_travel_log.TravelLogViewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import androidx.compose.ui.graphics.Brush
-
 
 private fun isAgeValid(selectedMillis: Long?): Boolean {
     if (selectedMillis == null) return false
     val selectedDate = Date(selectedMillis)
-
     val today = Calendar.getInstance()
     val birthDate = Calendar.getInstance()
     birthDate.time = selectedDate
-
     var age = today.get(Calendar.YEAR) - birthDate.get(Calendar.YEAR)
     if (today.get(Calendar.DAY_OF_YEAR) < birthDate.get(Calendar.DAY_OF_YEAR)) {
         age--
     }
-    // Validates age is between 18 and 60 (inclusive)
     return age in 18..60
 }
 
@@ -50,6 +48,7 @@ private fun isAgeValid(selectedMillis: Long?): Boolean {
 @Composable
 fun ViuProfileScreen(
     viewModel: ViuProfileViewModel,
+    travelLogViewModel: TravelLogViewModel, // <--- ADDED THIS
     onNavigateBack: () -> Unit,
     onLaunchImagePicker: () -> Unit
 ) {
@@ -83,11 +82,13 @@ fun ViuProfileScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var selectedBirthdayMillis by remember { mutableStateOf<Long?>(null) }
     val dateFormatter = remember { SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()) }
-    var isAgeValid by remember { mutableStateOf(true) } // For UI validation
+    var isAgeValid by remember { mutableStateOf(true) }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    val gradientBrush = Brush.horizontalGradient(
-        colors = listOf(Color(0xFFB644F1), Color(0xFF6041EC)))
+    val gradientBrush = Brush.horizontalGradient(colors = listOf(Color(0xFFB644F1), Color(0xFF6041EC)))
     val canEdit by viewModel.canEdit.collectAsState()
+
+    // --- TAB STATE ---
+    var selectedTabIndex by remember { mutableStateOf(0) }
 
     val hasChanges = viu?.let {
         firstName != it.firstName ||
@@ -110,7 +111,6 @@ fun ViuProfileScreen(
             status = it.category ?: ""
             birthday = it.birthday ?: ""
             sex = it.sex ?: ""
-            // Try to parse birthday string back to millis for validation
             if (it.birthday != null && it.birthday.isNotEmpty()) {
                 try {
                     val date = dateFormatter.parse(it.birthday)
@@ -118,10 +118,10 @@ fun ViuProfileScreen(
                     isAgeValid = isAgeValid(selectedBirthdayMillis)
                 } catch (e: Exception) {
                     selectedBirthdayMillis = null
-                    isAgeValid = false // Mark as invalid if unparseable
+                    isAgeValid = false
                 }
             } else {
-                isAgeValid = true // Valid if empty (VM will catch "cannot be empty")
+                isAgeValid = true
             }
         }
     }
@@ -164,9 +164,7 @@ fun ViuProfileScreen(
     }
 
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = selectedBirthdayMillis
-        )
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedBirthdayMillis)
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
@@ -177,18 +175,14 @@ fun ViuProfileScreen(
                         selectedBirthdayMillis?.let { millis ->
                             birthday = dateFormatter.format(Date(millis))
                             isAgeValid = isAgeValid(millis)
-                            viewModel.clearSaveError() // Clear errors on change
+                            viewModel.clearSaveError()
                         }
                     },
                     enabled = datePickerState.selectedDateMillis != null
                 ) { Text("OK") }
             },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } }
+        ) { DatePicker(state = datePickerState) }
     }
 
     if (showDeleteDialog) {
@@ -198,49 +192,38 @@ fun ViuProfileScreen(
             text = { Text("Are you sure you want to delete this VIU?") },
             confirmButton = {
                 Button(
-                    onClick = {
-                        showDeleteDialog = false
-                        viewModel.startDeleteFlow()
-                    },
+                    onClick = { showDeleteDialog = false; viewModel.startDeleteFlow() },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
                 ) { Text("Delete") }
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
-            }
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } }
         )
     }
 
+    // --- FLOW DIALOGS ---
     if (saveFlowState == SaveFlowState.PENDING_PASSWORD) {
-        // This Composable is now in ProfileDialogs.kt
         PasswordEntryDialog(
             title = "Enter Your Password",
             description = "Please enter your caregiver password to confirm changes.",
             isLoading = (saveFlowState == SaveFlowState.SAVING),
             onDismiss = { viewModel.resetSaveFlow() },
-            onConfirm = { password ->
-                viewModel.reauthenticateAndSendOtp(password, context)
-            }
+            onConfirm = { password -> viewModel.reauthenticateAndSendOtp(password, context) }
         )
     }
 
     if (saveFlowState == SaveFlowState.PENDING_OTP) {
-        // This Composable is now in ProfileDialogs.kt
         OtpEntryDialog(
             isLoading = (saveFlowState == SaveFlowState.SAVING),
             error = saveError,
             resendCooldownSeconds = saveResendTimer,
             onDismiss = { viewModel.resetSaveFlow() },
-            onConfirm = { otp ->
-                viewModel.verifyOtpAndSave(otp)
-            },
+            onConfirm = { otp -> viewModel.verifyOtpAndSave(otp) },
             onClearError = { viewModel.clearSaveError() },
             onResend = { viewModel.resendOtpForSave(context) }
         )
     }
 
     if (deleteFlowState == DeleteFlowState.PENDING_PASSWORD) {
-        // This Composable is now in ProfileDialogs.kt
         PasswordEntryDialog(
             title = "Confirm Deletion",
             description = "Enter your password to permanently delete this VIU.",
@@ -284,17 +267,10 @@ fun ViuProfileScreen(
                 title = { Text("Edit VIU Profile") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
-                    titleContentColor = Color.Black,
-                    navigationIconContentColor = Color.Black
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White, titleContentColor = Color.Black, navigationIconContentColor = Color.Black)
             )
         },
         containerColor = Color(0xFFF0F0F0)
@@ -309,28 +285,26 @@ fun ViuProfileScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 viu != null -> {
+                    // --- CHANGED STRUCTURE: Root Column is NOT scrollable ---
                     Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(bottom = 200.dp),
+                        modifier = Modifier.fillMaxSize(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // This Composable is now in ProfileHeader.kt
+                        // 1. HEADER (Fixed)
                         ProfileHeader(
                             viuData = viu!!,
                             isUploading = isUploadingImage,
                             onImageClick = {
                                 if (canEdit) onLaunchImagePicker()
-                                else Toast.makeText(context, "View Only Mode", Toast.LENGTH_SHORT)
-                                    .show()
+                                else Toast.makeText(context, "View Only Mode", Toast.LENGTH_SHORT).show()
                             }
                         )
+
                         if (!canEdit) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(Color(0xFFFFF3E0)) // Light Orange
+                                    .background(Color(0xFFFFF3E0))
                                     .padding(8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -343,428 +317,182 @@ fun ViuProfileScreen(
                             }
                         }
 
+                        // 2. TABS (Fixed)
                         TabRow(
-                            selectedTabIndex = 0,
+                            selectedTabIndex = selectedTabIndex,
                             containerColor = Color.White
                         ) {
-                            Tab(selected = true, onClick = { }, text = { Text("Edit Profile") })
-                            Tab(selected = false, onClick = { }, text = { Text("Travel Log") })
+                            Tab(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }, text = { Text("Edit Profile") })
+                            Tab(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }, text = { Text("Travel Log") })
                         }
 
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color.White)
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Text(
-                                "Profile Details",
-                                style = MaterialTheme.typography.titleLarge, // Match header
-                                color = sectionHeaderColor, // Match header
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier
-                                    .padding(bottom = 8.dp)
-                                    .align(Alignment.CenterHorizontally)
-                            )
-                            Text(
-                                "Name",
-                                color = fieldLabelColor,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedTextField(
-                                    value = firstName,
-                                    onValueChange = { firstName = it; viewModel.clearSaveError() },
-                                    label = {
-                                        Text(
-                                            "First Name",
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    },
-                                    readOnly = !canEdit,
-                                    modifier = Modifier.weight(1f),
-                                    singleLine = true,
-                                    colors = customTextFieldColors,
-                                    shape = RoundedCornerShape(12.dp),
-                                    isError = saveError?.contains(
-                                        "First Name",
-                                        ignoreCase = true
-                                    ) == true,
-                                    supportingText = {
-                                        if (saveError?.contains(
-                                                "First Name",
-                                                ignoreCase = true
-                                            ) == true
-                                        ) {
-                                            Text(
-                                                saveError!!,
-                                                color = MaterialTheme.colorScheme.error,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                    }
-                                )
-                                OutlinedTextField(
-                                    value = middleName,
-                                    onValueChange = { middleName = it },
-                                    label = {
-                                        Text(
-                                            "Middle",
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    },
-                                    readOnly = !canEdit,
-                                    modifier = Modifier.weight(1f),
-                                    singleLine = true,
-                                    colors = customTextFieldColors,
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                OutlinedTextField(
-                                    value = lastName,
-                                    onValueChange = { lastName = it; viewModel.clearSaveError() },
-                                    label = {
-                                        Text(
-                                            "Last Name",
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    },
-                                    readOnly = !canEdit,
-                                    modifier = Modifier.weight(1f),
-                                    singleLine = true,
-                                    colors = customTextFieldColors,
-                                    shape = RoundedCornerShape(12.dp),
-                                    isError = saveError?.contains(
-                                        "Last Name",
-                                        ignoreCase = true
-                                    ) == true,
-                                    supportingText = {
-                                        if (saveError?.contains(
-                                                "Last Name",
-                                                ignoreCase = true
-                                            ) == true
-                                        ) {
-                                            Text(
-                                                saveError!!,
-                                                color = MaterialTheme.colorScheme.error,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                    }
-                                )
-                            }
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(
-                                        "Birthday",
-                                        color = fieldLabelColor,
-                                        modifier = Modifier.padding(bottom = 4.dp)
-                                    )
-                                    OutlinedTextField(
-                                        value = birthday,
-                                        onValueChange = { },
-                                        label = {
-                                            Text(
-                                                "Select Date",
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        },
-                                        readOnly = true,
-                                        enabled = canEdit,
-                                        isError = (!isAgeValid && birthday.isNotEmpty()) || saveError?.contains(
-                                            "Birthday",
-                                            ignoreCase = true
-                                        ) == true,
-                                        colors = customTextFieldColors,
-                                        shape = RoundedCornerShape(12.dp),
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { showDatePicker = true },
-                                        trailingIcon = {
-                                            Icon(
-                                                Icons.Default.DateRange,
-                                                contentDescription = "Select Date",
-                                                tint = unfocusedColor.copy(alpha = 0.7f),
-                                                modifier = Modifier.clickable {
-                                                    showDatePicker = true
-                                                }
-                                            )
-                                        },
-                                        supportingText = {
-                                            if (!isAgeValid && birthday.isNotEmpty()) {
-                                                Text(
-                                                    "Must be 18-60",
-                                                    color = MaterialTheme.colorScheme.error,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            } else if (saveError?.contains(
-                                                    "Birthday",
-                                                    ignoreCase = true
-                                                ) == true
-                                            ) {
-                                                Text(
-                                                    saveError!!,
-                                                    color = MaterialTheme.colorScheme.error,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                        }
-                                    )
-                                }
-                                Column(Modifier.weight(1f)) {
-                                    Text(
-                                        "Sex",
-                                        color = fieldLabelColor,
-                                        modifier = Modifier.padding(bottom = 4.dp)
-                                    )
-                                    ExposedDropdownMenuBox(
-                                        expanded = isSexDropdownExpanded && canEdit, // <--- Only expand if canEdit
-                                        onExpandedChange = {
-                                            if (canEdit) isSexDropdownExpanded =
-                                                !isSexDropdownExpanded
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        OutlinedTextField(
-                                            value = sex,
-                                            onValueChange = {},
-                                            readOnly = true,
-                                            enabled = canEdit,
-                                            isError = saveError?.contains(
-                                                "Sex",
-                                                ignoreCase = true
-                                            ) == true,
-                                            colors = customTextFieldColors,
-                                            shape = RoundedCornerShape(12.dp),
-                                            trailingIcon = {
-                                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = isSexDropdownExpanded)
-                                            },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .menuAnchor(),
-                                            supportingText = {
-                                                if (saveError?.contains(
-                                                        "Sex",
-                                                        ignoreCase = true
-                                                    ) == true
-                                                ) {
-                                                    Text(
-                                                        saveError!!,
-                                                        color = MaterialTheme.colorScheme.error,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
-                                                }
-                                            }
-                                        )
-                                        ExposedDropdownMenu(
-                                            expanded = isSexDropdownExpanded,
-                                            onDismissRequest = { isSexDropdownExpanded = false }
-                                        ) {
-                                            sexOptions.forEach { option ->
-                                                DropdownMenuItem(
-                                                    text = { Text(option) },
-                                                    onClick = {
-                                                        sex = option
-                                                        isSexDropdownExpanded = false
-                                                        viewModel.clearSaveError()
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Contact Info (Full Width)
-                            Text(
-                                "Contact Info",
-                                color = fieldLabelColor,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                            OutlinedTextField(
-                                value = phone,
-                                onValueChange = {
-                                    if (it.all { c -> c.isDigit() } && it.length <= 11) {
-                                        phone = it; viewModel.clearSaveError()
-                                    }
-                                },
-                                label = {
-                                    Text(
-                                        "Phone Number",
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                },
-                                readOnly = !canEdit,
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Phone,
-                                    imeAction = ImeAction.Next
-                                ),
-                                singleLine = true,
-                                colors = customTextFieldColors,
-                                shape = RoundedCornerShape(12.dp),
-                                isError = saveError?.contains("Phone", ignoreCase = true) == true,
-                                supportingText = {
-                                    if (saveError?.contains("Phone", ignoreCase = true) == true) {
-                                        Text(
-                                            saveError!!,
-                                            color = MaterialTheme.colorScheme.error,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
-                            )
-
-                            // Address (Full Width)
-                            Text(
-                                "Address",
-                                color = fieldLabelColor,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                            OutlinedTextField(
-                                value = address,
-                                onValueChange = { address = it },
-                                label = {
-                                    Text(
-                                        "Address",
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                },
-                                readOnly = !canEdit,
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                                singleLine = true,
-                                colors = customTextFieldColors,
-                                shape = RoundedCornerShape(12.dp)
-                            )
-
-                            // Status (Full Width)
-                            Text(
-                                "Status",
-                                color = fieldLabelColor,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                            OutlinedTextField(
-                                value = status,
-                                onValueChange = { status = it },
-                                readOnly = !canEdit,
-                                label = {
-                                    Text(
-                                        "Status (e.g., Partially Blind)",
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                singleLine = true,
-                                colors = customTextFieldColors,
-                                shape = RoundedCornerShape(12.dp)
-                            )
-
-                            // Save Button
-                            if (canEdit) {
-                                Button(
-                                    onClick = {
-                                        viewModel.startSaveFlow(
-                                            firstName = firstName,
-                                            middleName = middleName,
-                                            lastName = lastName,
-                                            birthday = birthday,
-                                            sex = sex,
-                                            phone = phone,
-                                            address = address,
-                                            status = status
-                                        )
-                                    },
+                        // 3. CONTENT (Fills remaining space)
+                        when (selectedTabIndex) {
+                            0 -> {
+                                // === TAB 0: EDIT FORM (Scrolls internally) ===
+                                Column(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = 8.dp)
-                                        .height(50.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color.Transparent,
-                                        contentColor = Color.White
-                                    ),
-                                    shape = RoundedCornerShape(12.dp),
-                                    enabled = hasChanges && !isLoading && saveFlowState == SaveFlowState.IDLE && deleteFlowState == DeleteFlowState.IDLE,
-                                    contentPadding = PaddingValues()
+                                        .weight(1f) // Takes remaining space
+                                        .verticalScroll(rememberScrollState()) // Scrolling happens here
+                                        .background(Color.White)
+                                        .padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .background(
-                                                brush = gradientBrush,
-                                                shape = RoundedCornerShape(12.dp)
-                                            )
-                                            .fillMaxSize(),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            "SAVE CHANGES",
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Bold
+                                    Text("Profile Details", style = MaterialTheme.typography.titleLarge, color = sectionHeaderColor, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp).align(Alignment.CenterHorizontally))
+
+                                    // ... FIELDS ...
+                                    Text("Name", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedTextField(
+                                            value = firstName, onValueChange = { firstName = it; viewModel.clearSaveError() },
+                                            label = { Text("First Name", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                            readOnly = !canEdit, modifier = Modifier.weight(1f), singleLine = true, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp),
+                                            isError = saveError?.contains("First Name", ignoreCase = true) == true
+                                        )
+                                        OutlinedTextField(
+                                            value = middleName, onValueChange = { middleName = it },
+                                            label = { Text("Middle", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                            readOnly = !canEdit, modifier = Modifier.weight(1f), singleLine = true, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp)
+                                        )
+                                        OutlinedTextField(
+                                            value = lastName, onValueChange = { lastName = it; viewModel.clearSaveError() },
+                                            label = { Text("Last Name", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                            readOnly = !canEdit, modifier = Modifier.weight(1f), singleLine = true, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp),
+                                            isError = saveError?.contains("Last Name", ignoreCase = true) == true
                                         )
                                     }
+
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text("Birthday", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
+                                            OutlinedTextField(
+                                                value = birthday, onValueChange = { },
+                                                label = { Text("Select Date", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                                readOnly = true, enabled = canEdit,
+                                                isError = (!isAgeValid && birthday.isNotEmpty()) || saveError?.contains("Birthday", ignoreCase = true) == true,
+                                                colors = customTextFieldColors, shape = RoundedCornerShape(12.dp),
+                                                modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true },
+                                                trailingIcon = { Icon(Icons.Default.DateRange, "Select Date", tint = unfocusedColor.copy(alpha = 0.7f), modifier = Modifier.clickable { showDatePicker = true }) }
+                                            )
+                                        }
+                                        Column(Modifier.weight(1f)) {
+                                            Text("Sex", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
+                                            ExposedDropdownMenuBox(
+                                                expanded = isSexDropdownExpanded && canEdit,
+                                                onExpandedChange = { if (canEdit) isSexDropdownExpanded = !isSexDropdownExpanded },
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                OutlinedTextField(
+                                                    value = sex, onValueChange = {}, readOnly = true, enabled = canEdit,
+                                                    isError = saveError?.contains("Sex", ignoreCase = true) == true,
+                                                    colors = customTextFieldColors, shape = RoundedCornerShape(12.dp),
+                                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isSexDropdownExpanded) },
+                                                    modifier = Modifier.fillMaxWidth().menuAnchor()
+                                                )
+                                                ExposedDropdownMenu(
+                                                    expanded = isSexDropdownExpanded,
+                                                    onDismissRequest = { isSexDropdownExpanded = false }
+                                                ) {
+                                                    sexOptions.forEach { option ->
+                                                        DropdownMenuItem(
+                                                            text = { Text(option) },
+                                                            onClick = { sex = option; isSexDropdownExpanded = false; viewModel.clearSaveError() }
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Text("Contact Info", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
+                                    OutlinedTextField(
+                                        value = phone,
+                                        onValueChange = { if (it.all { c -> c.isDigit() } && it.length <= 11) { phone = it; viewModel.clearSaveError() } },
+                                        label = { Text("Phone Number", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                        readOnly = !canEdit, modifier = Modifier.fillMaxWidth(),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
+                                        singleLine = true, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp),
+                                        isError = saveError?.contains("Phone", ignoreCase = true) == true
+                                    )
+
+                                    Text("Address", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
+                                    OutlinedTextField(
+                                        value = address, onValueChange = { address = it },
+                                        label = { Text("Address", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                        readOnly = !canEdit, modifier = Modifier.fillMaxWidth(),
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                        singleLine = true, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp)
+                                    )
+
+                                    Text("Status", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
+                                    OutlinedTextField(
+                                        value = status, onValueChange = { status = it },
+                                        readOnly = !canEdit,
+                                        label = { Text("Status (e.g., Partially Blind)", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                        singleLine = true, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp)
+                                    )
+
+                                    if (canEdit) {
+                                        Button(
+                                            onClick = { viewModel.startSaveFlow(firstName, middleName, lastName, birthday, sex, phone, address, status) },
+                                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(50.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = Color.White),
+                                            shape = RoundedCornerShape(12.dp),
+                                            enabled = hasChanges && !isLoading && saveFlowState == SaveFlowState.IDLE && deleteFlowState == DeleteFlowState.IDLE,
+                                            contentPadding = PaddingValues()
+                                        ) {
+                                            Box(
+                                                modifier = Modifier.background(brush = gradientBrush, shape = RoundedCornerShape(12.dp)).fillMaxSize(),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text("SAVE CHANGES", color = Color.White, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+
+                                    if (canEdit) {
+                                        SecuritySettingsCard(
+                                            viewModel = viewModel,
+                                            viuEmail = viu!!.email,
+                                            securityError = securityError,
+                                            emailResendTimer = emailResendTimer
+                                        )
+                                    }
+
+                                    if (canEdit) {
+                                        Button(
+                                            onClick = { showDeleteDialog = true },
+                                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp).height(50.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                                            shape = RoundedCornerShape(12.dp),
+                                            enabled = !isLoading && saveFlowState == SaveFlowState.IDLE && deleteFlowState == DeleteFlowState.IDLE && emailFlowState == SecurityFlowState.IDLE && !isUploadingImage
+                                        ) {
+                                            Text("DELETE VIU", color = Color.White, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+
+                                    // Space for bottom nav
+                                    Spacer(modifier = Modifier.height(80.dp))
                                 }
                             }
-                        }
-
-                        if (canEdit) {
-                            SecuritySettingsCard(
-                                viewModel = viewModel,
-                                viuEmail = viu!!.email,
-                                securityError = securityError,
-                                emailResendTimer = emailResendTimer
-                            )
-                        }
-
-                        if (canEdit) {
-                            Button(
-                                onClick = { showDeleteDialog = true },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 24.dp)
-                                    .height(50.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                                shape = RoundedCornerShape(12.dp),
-                                enabled = !isLoading &&
-                                        saveFlowState == SaveFlowState.IDLE &&
-                                        deleteFlowState == DeleteFlowState.IDLE &&
-                                        emailFlowState == SecurityFlowState.IDLE &&
-                                        !isUploadingImage
-                            ) {
-                                Text(
-                                    "DELETE VIU",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
-                                )
+                            1 -> {
+                                // === TAB 1: TRAVEL LOG (Embeds its own list) ===
+                                // We wrap it in a Box that takes remaining space
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    TravelLogScreen(
+                                        viuUid = viu!!.uid,
+                                        viuName = "${viu!!.firstName} ${viu!!.lastName}",
+                                        viewModel = travelLogViewModel
+                                    )
+                                }
                             }
                         }
                     }
                 }
                 error != null && viu == null -> {
-                    Text(
-                        text = "Failed to load profile",
-                        modifier = Modifier.align(Alignment.Center),
-                        color = Color.Red
-                    )
+                    Text(text = "Failed to load profile", modifier = Modifier.align(Alignment.Center), color = Color.Red)
                 }
             }
         }
