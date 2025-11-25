@@ -3,11 +3,18 @@ package edu.capstone.navisight.caregiver.ui.feature_notification
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -18,12 +25,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.capstone.navisight.R
+import edu.capstone.navisight.caregiver.model.GeofenceActivity
 import edu.capstone.navisight.caregiver.model.SecondaryPairingRequest
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
     var selectedTab by remember { mutableStateOf("Activity") }
 
+    // Observers
+    val activities by viewModel.activities.collectAsState() // NEW
     val requests by viewModel.pendingRequests.collectAsState()
     val loading by viewModel.isLoading.collectAsState()
     val error by viewModel.errorMessage.collectAsState()
@@ -38,16 +50,14 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
             .background(Color(0xFFF9FAFB))
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        // Header
+        // --- Header ---
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_notification),
-                contentDescription = "Notification Icon",
+                contentDescription = null,
                 tint = Color(0xFF6041EC),
                 modifier = Modifier.size(28.dp)
             )
@@ -57,86 +67,138 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color(0xFF202833),
-                style = TextStyle(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFFB644F1), Color(0xFF6041EC))
-                    )
-                )
+                style = TextStyle(brush = Brush.verticalGradient(colors = listOf(Color(0xFFB644F1), Color(0xFF6041EC))))
             )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tabs
+        // --- Tabs ---
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            TabButton(
-                text = "Activity",
-                isSelected = selectedTab == "Activity",
-                onClick = { selectedTab = "Activity" },
-                modifier = Modifier.weight(1f)
-            )
-            TabButton(
-                text = "Request",
-                isSelected = selectedTab == "Request",
-                onClick = { selectedTab = "Request" },
-                modifier = Modifier.weight(1f)
-            )
+            TabButton("Activity", selectedTab == "Activity", { selectedTab = "Activity" }, Modifier.weight(1f))
+            TabButton("Request", selectedTab == "Request", { selectedTab = "Request" }, Modifier.weight(1f))
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Tab Content
+        // --- Tab Content ---
         when (selectedTab) {
             "Activity" -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("No recent activity", color = Color.Gray)
+                if (activities.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No recent activity", color = Color.Gray)
+                    }
+                } else {
+                    // LazyColumn automatically handles lists
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(activities) { activity ->
+                            ActivityRow(
+                                activity = activity,
+                                onDelete = { viewModel.deleteActivity(activity.id) }
+                            )
+                        }
+                    }
                 }
             }
             "Request" -> {
                 when {
-                    loading -> Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) { CircularProgressIndicator() }
-
-                    error != null -> Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) { Text(text = error ?: "", color = Color.Red) }
-
-                    requests.isEmpty() -> Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) { Text("No pending requests", color = Color.Gray) }
-
+                    loading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    error != null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(text = error ?: "", color = Color.Red) }
+                    requests.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No pending requests", color = Color.Gray) }
                     else -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        LazyColumn( // Changed Column to LazyColumn for scrolling
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            contentPadding = PaddingValues(bottom = 16.dp)
                         ) {
-                            requests.forEachIndexed { idx, request ->
+                            items(requests) { request ->
                                 RequestRow(
                                     request = request,
                                     onApprove = { viewModel.approveRequest(request) },
                                     onDeny = { viewModel.denyRequest(request.id) }
                                 )
-                                if (idx < requests.lastIndex) {
-                                    Divider(color = Color(0x11000000), thickness = 1.dp)
-                                }
+                                Divider(color = Color(0x11000000), thickness = 1.dp)
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun ActivityRow(
+    activity: GeofenceActivity,
+    onDelete: () -> Unit
+) {
+    val isEnter = activity.eventType == "ENTER"
+    val iconColor = if (isEnter) Color(0xFF4CAF50) else Color(0xFFF44336)
+
+    // Format Timestamp
+    val dateString = activity.timestamp?.toDate()?.let {
+        SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault()).format(it)
+    } ?: "Just now"
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(16.dp))
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Icon Bubble
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(iconColor.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Text Info
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "${activity.viuName} ${if(isEnter) "arrived at" else "left"} ${activity.geofenceName}",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    color = Color(0xFF202833)
+                )
+                Text(
+                    text = dateString,
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+            }
+
+            // Delete Button
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Delete",
+                    tint = Color.LightGray,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }

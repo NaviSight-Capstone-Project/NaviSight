@@ -1,21 +1,29 @@
 package edu.capstone.navisight.caregiver.ui.feature_notification
 
-import android.util.Log
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import edu.capstone.navisight.caregiver.domain.connectionUseCase.SecondaryConnectionUseCase
+import edu.capstone.navisight.caregiver.domain.notificationUseCase.DismissActivityUseCase
+import edu.capstone.navisight.caregiver.domain.notificationUseCase.GetActivityFeedUseCase
 import edu.capstone.navisight.caregiver.model.RequestStatus
 import edu.capstone.navisight.caregiver.model.SecondaryPairingRequest
 import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import edu.capstone.navisight.caregiver.model.GeofenceActivity
 
 class NotificationViewModel(
     private val secondaryConnectionUseCase: SecondaryConnectionUseCase = SecondaryConnectionUseCase(),
-    private val getCurrentUidUseCase: GetCurrentUserUidUseCase = GetCurrentUserUidUseCase()
+    private val getCurrentUidUseCase: GetCurrentUserUidUseCase = GetCurrentUserUidUseCase(),
+
+    private val getActivityFeedUseCase: GetActivityFeedUseCase = GetActivityFeedUseCase(),
+    private val dismissActivityUseCase: DismissActivityUseCase = DismissActivityUseCase()
 ) : ViewModel() {
 
+    private val _activities = MutableStateFlow<List<GeofenceActivity>>(emptyList())
+    val activities = _activities.asStateFlow()
     private val _pendingRequests = MutableStateFlow<List<SecondaryPairingRequest>>(emptyList())
     val pendingRequests = _pendingRequests.asStateFlow()
 
@@ -27,6 +35,21 @@ class NotificationViewModel(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage = _errorMessage.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            getActivityFeedUseCase().collect { feedList ->
+                _activities.value = feedList
+            }
+        }
+    }
+
+
+    fun deleteActivity(activityId: String) {
+        viewModelScope.launch {
+            dismissActivityUseCase(activityId)
+        }
+    }
 
     fun loadPendingRequests() {
         _isLoading.value = true
