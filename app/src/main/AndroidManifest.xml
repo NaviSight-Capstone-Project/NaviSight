@@ -49,7 +49,6 @@
 
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
-            android:screenOrientation="portrait"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
         <activity
@@ -61,7 +60,6 @@
             android:theme="@style/Theme.AppCompat.NoActionBar"
             android:name=".caregiver.ui.call.CaregiverCallActivity"
             android:exported="false" />
-
 
         <service
             android:name=".webrtc.service.MainService"

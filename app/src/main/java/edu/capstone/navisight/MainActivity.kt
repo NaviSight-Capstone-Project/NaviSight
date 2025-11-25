@@ -60,14 +60,10 @@ class MainActivity : AppCompatActivity() {
 
         // Setup all permissions using this helper, begin if set properly
         val permissionHandler = PermissionsHelper(this)
-        if (permissionHandler.checkAndRequestInitialPermissions()) {
-            beginAppFlow()
-        } else {
-            Toast.makeText(
-                this,
-                "Please allow all permissions in NaviSight to make it work!",
-                Toast.LENGTH_LONG). show()
-        }
+        permissionHandler.checkAndRequestInitialPermissions()
+
+        // Start
+        beginAppFlow()
     }
 
     private fun beginAppFlow() {

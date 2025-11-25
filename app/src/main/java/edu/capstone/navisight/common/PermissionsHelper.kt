@@ -47,17 +47,14 @@ class PermissionsHelper (private val mainActivity: AppCompatActivity) {
         ) { granted -> }
     }
 
-    fun checkAndRequestInitialPermissions(): Boolean {
+    fun checkAndRequestInitialPermissions() {
         val permissionsToRequest = initialPermissions.filter {
             ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
         }.toTypedArray()
-
         if (permissionsToRequest.isNotEmpty()) {
             initialPermissionsLauncher.launch(permissionsToRequest)
             checkAndRequestBackgroundLocation()
-            return true
         }
-        return false
     }
 
     private fun checkAndRequestBackgroundLocation() {

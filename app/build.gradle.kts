@@ -102,7 +102,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.material)
 
-    //fragment
+    // Fragment
     implementation("androidx.fragment:fragment-ktx:1.7.1")
 
     // Compose
@@ -114,8 +114,6 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.7.3")
     implementation("androidx.compose.ui:ui-text")
-
-
 
     // Compose lifecycle
     implementation("androidx.activity:activity-compose:1.9.3")
