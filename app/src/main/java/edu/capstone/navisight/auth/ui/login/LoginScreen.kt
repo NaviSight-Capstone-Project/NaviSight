@@ -251,7 +251,23 @@ fun LoginScreen(
                 }
             }
 
-            Text("Forgot Password?", color = Color(0xFF4A4A4A), fontSize = 14.sp, modifier = Modifier.padding(top = 20.dp).clickable { })
+            Text(
+                "Forgot Password?",
+                color = Color(0xFF4A4A4A),
+                fontSize = 14.sp,
+                modifier = Modifier
+                    .padding(top = 20.dp)
+                    .clickable {
+                        if(email.isNotBlank()) {
+                            voiceHandler.speak("Sending reset email.")
+                            viewModel.resetPassword(email)
+                        } else {
+                            val msg = "Please enter your email first."
+                            voiceHandler.speak("Please enter your email first.")
+                            viewModel.setError(msg)
+                        }
+                    }
+            )
 
             Row(Modifier.padding(top = 60.dp), horizontalArrangement = Arrangement.Center) {
                 Text("New User? ", color = Color(0xFF4A4A4A), fontSize = 14.sp)

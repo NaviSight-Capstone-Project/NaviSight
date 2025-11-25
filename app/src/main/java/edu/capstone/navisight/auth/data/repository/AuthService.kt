@@ -24,4 +24,7 @@ class AuthService(
 
         return null
     }
+    suspend fun resetPassword(email: String) {
+        remote.sendPasswordResetEmail(email)
+    }
 }

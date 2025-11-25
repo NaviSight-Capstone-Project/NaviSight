@@ -2,6 +2,7 @@ package edu.capstone.navisight.auth.ui.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import edu.capstone.navisight.auth.domain.ForgotPasswordUseCase
 import edu.capstone.navisight.auth.domain.LoginUseCase
 import edu.capstone.navisight.auth.model.LoginResult
 import edu.capstone.navisight.auth.util.CaptchaHandler
@@ -13,7 +14,8 @@ import kotlinx.coroutines.launch
 private const val LOGIN_LOCKOUT_DURATION_MS = 5 * 60 * 1000L // 5 minutes
 
 class LoginViewModel(
-    private val loginUseCase: LoginUseCase = LoginUseCase()
+    private val loginUseCase: LoginUseCase = LoginUseCase(),
+    private val forgotPasswordUseCase: ForgotPasswordUseCase = ForgotPasswordUseCase()
 ) : ViewModel() {
 
     private val _error = MutableStateFlow<String?>(null)
@@ -143,5 +145,45 @@ class LoginViewModel(
         val unsafeChars = listOf(" ", ";", "'", "\"", "--")
         if (unsafeChars.any { email.contains(it) || password.contains(it) }) return "Inputs contain invalid characters."
         return null
+    }
+    fun resetPassword(email: String) {
+        viewModelScope.launch {
+            _error.value = null
+
+            if (email.isBlank()) {
+                _error.value = "Please enter your email."
+                return@launch
+            }
+
+            _isLoading.value = true
+
+            // This calls Domain -> Repo -> DataSource (REST API)
+            val result = forgotPasswordUseCase(email)
+
+            _isLoading.value = false
+
+            result.fold(
+                onSuccess = {
+                    _error.value = "Reset link sent! Check your email."
+                },
+                onFailure = { exception ->
+                    // The exception message will contain the raw server error
+                    // (e.g., "EMAIL_NOT_FOUND" or "MISSING_RECAPTCHA")
+                    val rawError = exception.message ?: "Unknown error"
+
+                    // Optional: Make messages prettier for the user
+                    if (rawError.contains("EMAIL_NOT_FOUND")) {
+                        _error.value = "User not found."
+                    } else if (rawError.contains("MISSING_RECAPTCHA")) {
+                        _error.value = "Server Config Error: Recaptcha is ON."
+                    } else {
+                        _error.value = rawError
+                    }
+                }
+            )
+        }
+    }
+    fun setError(message: String) {
+        _error.value = message
     }
 }

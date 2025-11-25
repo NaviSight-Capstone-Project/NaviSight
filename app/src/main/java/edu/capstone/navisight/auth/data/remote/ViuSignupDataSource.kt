@@ -18,6 +18,7 @@ class ViuSignupDataSource(
 
     private val viusCollection = firestore.collection("vius")
     private val caregiversCollection = firestore.collection("caregivers")
+    private val relationshipsCollection = firestore.collection("relationships")
     private val otpDataSource: OtpDataSource = OtpDataSource(auth, firestore)
 
     private suspend fun getCaregiverUidByEmail(email: String): String? {
@@ -108,6 +109,17 @@ class ViuSignupDataSource(
         if (verificationResult == OtpResult.OtpVerificationResult.Success) {
             try {
 
+                // Create the relationship data map matching your screenshot
+                val relationshipData = hashMapOf(
+                    "caregiverUid" to caregiverUid,
+                    "viuUid" to viuUid,
+                    "primaryCaregiver" to true, // Automatically set as primary
+                    "createdAt" to FieldValue.serverTimestamp()
+                )
+
+                // Create the document in the relationships collection
+                relationshipsCollection.add(relationshipData).await()
+
                 viusCollection.document(viuUid).update("caregiverId", caregiverUid).await()
                 caregiversCollection.document(caregiverUid).update("viuIds", FieldValue.arrayUnion(viuUid)).await()
 
@@ -120,6 +132,8 @@ class ViuSignupDataSource(
                 )
             } catch (e: Exception) {
                 e.printStackTrace()
+                // Consider if you want to fail the verification if the DB write fails,
+                // or just log it. Currently, it returns failure.
                 return OtpResult.OtpVerificationResult.FailureExpiredOrCooledDown
             }
         }
