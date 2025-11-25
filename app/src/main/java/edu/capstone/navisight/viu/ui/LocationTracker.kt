@@ -11,29 +11,45 @@ import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
 
+sealed interface LocationEvent {
+    data class Success(val lat: Double, val lon: Double) : LocationEvent
+    object GpsDisabled : LocationEvent
+}
+
 class LocationTracker(
     private val context: Context,
-    private val onLocationUpdate: (Double, Double) -> Unit
+    private val onEvent: (LocationEvent) -> Unit
 ) {
     private val fusedLocationClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context)
 
+    // Setup high accuracy request
     private val locationRequest = LocationRequest.Builder(
         Priority.PRIORITY_HIGH_ACCURACY, 1000
     ).apply {
         setMinUpdateIntervalMillis(1000)
-        setWaitForAccurateLocation(false)
+        setWaitForAccurateLocation(false) //nagbabasa kaya kayo ng comment '_' wally kalbsss
     }.build()
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             for (location: Location in result.locations) {
-                Log.d("LocationTracker", "GPS Update: ${location.latitude}, ${location.longitude}")
-                onLocationUpdate(location.latitude, location.longitude)
+                // Send coordinates to UI
+                onEvent(LocationEvent.Success(location.latitude, location.longitude))
+            }
+        }
+
+        override fun onLocationAvailability(availability: LocationAvailability) {
+            super.onLocationAvailability(availability)
+            // Notify if GPS is disabled
+            if (!availability.isLocationAvailable) {
+                Log.d("LocationTracker", "GPS unavailable")
+                onEvent(LocationEvent.GpsDisabled)
             }
         }
     }
 
+    // Check if GPS is on, if not request to turn it on
     fun checkSettingsAndStart(activity: Activity, resolveRequestCode: Int) {
         val builder = LocationSettingsRequest.Builder()
             .addLocationRequest(locationRequest)

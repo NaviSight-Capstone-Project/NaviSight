@@ -14,14 +14,13 @@ import androidx.fragment.app.viewModels
 import edu.capstone.navisight.R
 import edu.capstone.navisight.viu.ui.camera.CameraFragment
 import edu.capstone.navisight.viu.ViuHomeViewModel
+import edu.capstone.navisight.viu.ui.LocationEvent
 import edu.capstone.navisight.viu.ui.LocationTracker
 
 class ViuHomeFragment : Fragment() {
 
     private val viewModel: ViuHomeViewModel by viewModels()
-
     private lateinit var locationTracker: LocationTracker
-
     private val REQUEST_CHECK_SETTINGS = 1001
 
     private val requestPermissionLauncher =
@@ -32,9 +31,7 @@ class ViuHomeFragment : Fragment() {
         }
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
         return inflater.inflate(R.layout.fragment_viu_home, container, false)
     }
@@ -42,8 +39,16 @@ class ViuHomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        locationTracker = LocationTracker(requireContext()) { lat, lon ->
-            viewModel.updateLocation(lat, lon)
+        // Listen for Location AND Status events
+        locationTracker = LocationTracker(requireContext()) { event ->
+            when (event) {
+                is LocationEvent.Success -> {
+                    viewModel.updateLocation(event.lat, event.lon)
+                }
+                is LocationEvent.GpsDisabled -> {
+                    viewModel.setOffline() // Mark offline if GPS dies
+                }
+            }
         }
 
         checkPermissionsAndStart()
@@ -58,8 +63,7 @@ class ViuHomeFragment : Fragment() {
 
     private fun checkPermissionsAndStart() {
         if (ContextCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION
+                requireContext(), Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             locationTracker.checkSettingsAndStart(requireActivity(), REQUEST_CHECK_SETTINGS)
@@ -70,6 +74,7 @@ class ViuHomeFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Stop tracker to save battery
         if (::locationTracker.isInitialized) {
             locationTracker.stopTracking()
         }

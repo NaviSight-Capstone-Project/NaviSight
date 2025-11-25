@@ -21,10 +21,16 @@ class ViuHomeViewModel : ViewModel() {
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
+    // New function called by Fragment when GPS is disabled
+    fun setOffline() {
         viewModelScope.launch {
             updateUserLocationUseCase.setOffline()
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Ensure we mark offline when the ViewModel is destroyed
+        setOffline()
     }
 }
