@@ -7,14 +7,21 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ServerValue
 import com.google.firebase.database.ValueEventListener
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+import edu.capstone.navisight.viu.model.GeofenceEvent
+import edu.capstone.navisight.viu.model.GeofenceItem
 import edu.capstone.navisight.viu.model.ViuLocation
+import kotlinx.coroutines.tasks.await
 
 class LocationDataSource {
 
     private val db = FirebaseDatabase.getInstance().getReference("viu_location")
+    private val firestore = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
     private var connectedListener: ValueEventListener? = null
+    private var geofenceListener: ListenerRegistration? = null
 
     suspend fun setupPresenceSystem() {
         val user = auth.currentUser ?: return
@@ -24,30 +31,20 @@ class LocationDataSource {
         connectedListener = connectionRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val connected = snapshot.getValue(Boolean::class.java) ?: false
-
                 if (connected) {
-                    Log.d("RTDB", "Device connected to Firebase. Arming presence.")
-
                     statusRef.child("state").onDisconnect().setValue("offline")
                     statusRef.child("last_seen").onDisconnect().setValue(ServerValue.TIMESTAMP)
-
                     statusRef.child("state").setValue("online")
                     statusRef.child("last_seen").setValue(ServerValue.TIMESTAMP)
-                } else {
-                    Log.d("RTDB", "Device disconnected from Firebase.")
                 }
             }
-
-            override fun onCancelled(error: DatabaseError) {
-                Log.e("RTDB", "Listener was cancelled: ${error.message}")
-            }
+            override fun onCancelled(error: DatabaseError) {}
         })
     }
 
     suspend fun updateUserLocation(location: ViuLocation) {
         val user = auth.currentUser ?: return
         val userRef = db.child(user.uid)
-
         val updateMap = mapOf(
             "location/latitude" to location.latitude,
             "location/longitude" to location.longitude,
@@ -55,19 +52,38 @@ class LocationDataSource {
             "status/last_seen" to ServerValue.TIMESTAMP,
             "status/state" to "online"
         )
-
-        try {
-            userRef.updateChildren(updateMap)
-        } catch (e: Exception) {
-            Log.e("RTDB", "Failed to update location: ${e.message}")
-        }
+        try { userRef.updateChildren(updateMap).await() } catch (e: Exception) { }
     }
 
     suspend fun setUserOffline() {
         val user = auth.currentUser ?: return
-        val statusRef = db.child(user.uid).child("status")
+        db.child(user.uid).child("status").child("state").setValue("offline")
+    }
 
-        statusRef.child("state").setValue("offline")
-        statusRef.child("last_seen").setValue(ServerValue.TIMESTAMP)
+    fun listenToGeofences(onGeofencesUpdated: (List<GeofenceItem>) -> Unit) {
+        val user = auth.currentUser ?: return
+        val query = firestore.collection("geofences").whereEqualTo("viuUid", user.uid)
+
+        geofenceListener = query.addSnapshotListener { snapshot, e ->
+            if (e != null || snapshot == null) return@addSnapshotListener
+
+            val fences = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(GeofenceItem::class.java)?.copy(id = doc.id)
+            }
+            onGeofencesUpdated(fences)
+        }
+    }
+    suspend fun uploadGeofenceEvent(event: GeofenceEvent) {
+        try {
+            firestore.collection("geofence_events").add(event).await()
+            Log.d("Remote", "Geofence Event Sent: ${event.eventType}")
+        } catch (e: Exception) {
+            Log.e("Remote", "Failed to send event: ${e.message}")
+        }
+    }
+
+    fun cleanup() {
+        geofenceListener?.remove()
+        connectedListener?.let { /* remove RTDB listener if needed */ }
     }
 }

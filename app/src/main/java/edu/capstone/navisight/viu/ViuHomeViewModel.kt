@@ -2,26 +2,36 @@ package edu.capstone.navisight.viu
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import edu.capstone.navisight.viu.data.repository.LocationRepository
 import edu.capstone.navisight.viu.domain.locationUseCase.UpdateUserLocationUseCase
+import edu.capstone.navisight.viu.domain.MonitorGeofenceUseCase
 import kotlinx.coroutines.launch
 
 class ViuHomeViewModel : ViewModel() {
 
-    private val updateUserLocationUseCase = UpdateUserLocationUseCase()
+    private val repository = LocationRepository()
+
+    private val updateUserLocationUseCase = UpdateUserLocationUseCase(repository)
+
+    private val monitorGeofenceUseCase = MonitorGeofenceUseCase(repository)
+
+    private val currentViuName = "  try"
 
     init {
         viewModelScope.launch {
             updateUserLocationUseCase.startPresence()
+            monitorGeofenceUseCase.startMonitoring()
         }
     }
 
     fun updateLocation(lat: Double, lon: Double) {
         viewModelScope.launch {
             updateUserLocationUseCase(lat, lon)
+
+            monitorGeofenceUseCase(lat, lon, currentViuName)
         }
     }
 
-    // New function called by Fragment when GPS is disabled
     fun setOffline() {
         viewModelScope.launch {
             updateUserLocationUseCase.setOffline()
@@ -30,7 +40,6 @@ class ViuHomeViewModel : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
-        // Ensure we mark offline when the ViewModel is destroyed
         setOffline()
     }
 }
