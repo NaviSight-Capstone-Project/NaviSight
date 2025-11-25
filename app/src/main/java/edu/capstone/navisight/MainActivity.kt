@@ -67,7 +67,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun beginAppFlow() {
-        auth = FirebaseAuth.getInstance()
         val currentUser = auth.currentUser
         if (currentUser != null) {
             handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
@@ -103,12 +102,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun navigateToHomeFragment(isCaregiver: Boolean) {
+
         val fragment = if (isCaregiver) {
             CaregiverHomeFragment()
         } else {
             ViuHomeFragment()
         }
-
         supportFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, fragment)
             .commit()

@@ -34,7 +34,6 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import edu.capstone.navisight.R
-import edu.capstone.navisight.auth.AuthActivity
 import edu.capstone.navisight.databinding.FragmentCameraBinding
 import edu.capstone.navisight.viu.detectors.ObjectDetection
 import edu.capstone.navisight.viu.ui.call.ViuCallActivity
@@ -97,7 +96,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
         if (result.resultCode == AppCompatActivity.RESULT_OK) {
             // Check for a specific result code if needed, but RESULT_OK is usually enough
             Log.d(TAG, "CallActivity finished. Re-binding camera use cases.")
-            // 4. Handle the result: Reinitialize camera here
+            // Reinitialize camera here
             setUpCamera()
             doAutoScreensaver() // Re-start the screensaver timer
         } else {
@@ -107,24 +106,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
             doAutoScreensaver()
         }
     }
-
-
-    // Handle menu
-    private val longPressDuration = 3_000L
-    private val longPressHandler = Handler(Looper.getMainLooper())
-    private val longPressRunnable = Runnable {
-        context?.let { safeContext ->
-            TTSHelper.speak(safeContext, "Navigating to Profile Page")
-            if (isAdded) {
-                requireActivity().supportFragmentManager.commit {
-                    setReorderingAllowed(true)
-                    replace(R.id.fragment_container, ProfileFragment())
-                    addToBackStack(null)
-                }
-            }
-        }
-    }
-
 
     // Setup onPause/onResume for WebRTC
     override fun onPause() {
@@ -151,7 +132,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
 
     override fun onDestroyView() {
         idleHandler.removeCallbacks(idleRunnable)
-        longPressHandler.removeCallbacks(longPressRunnable)
         _fragmentCameraBinding = null
         super.onDestroyView()
         cameraExecutor.shutdown()
@@ -163,7 +143,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
     override fun onStop() {
         super.onStop()
         idleHandler.removeCallbacks(idleRunnable)
-        longPressHandler.removeCallbacks(longPressRunnable)
     }
 
     @SuppressLint("MissingPermission", "ClickableViewAccessibility")
@@ -172,7 +151,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
 
         // Link Main Service listener
         MainService.listener = this
-
 
         // Start camera bind with object detector
         _fragmentCameraBinding = FragmentCameraBinding.bind(view)
@@ -190,44 +168,31 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
         toggleScreenSaver(requireContext()) // Begin screen saving
         fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
             doAutoScreensaver()
-//            when (event.action) {
-//                MotionEvent.ACTION_DOWN -> {
-//                    longPressHandler.postDelayed(longPressRunnable, longPressDuration)
-//                    clickCount++
-//                    if (clickCount >= 3) {
-//                        context?.let { safeContext -> toggleScreenSaver(safeContext) }
-//                        clickCount = 0
-//                    }
-//                }
-//                MotionEvent.ACTION_UP -> {
-//                    longPressHandler.removeCallbacks(longPressRunnable)
-//                }
-//            }
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-
                     quadrupleTapHandler.removeCallbacks(quadrupleTapRunnable)
                     clickCount++
-
                     if (clickCount == 4) {
                         context?.let { safeContext ->
-                            TTSHelper.speak(safeContext, "Navigating to Login Page")
                             if (isAdded) {
-                                // Start activity to Login.
-                                val intent = Intent(
-                                    requireContext(),
-                                    AuthActivity::class.java
-                                )
-                                startActivity(intent)
+                                // Start profile.
+                                context?.let { safeContext ->
+                                    TTSHelper.speak(safeContext, "Navigating to Profile Page")
+                                    if (isAdded) {
+                                        requireActivity().supportFragmentManager.commit {
+                                            setReorderingAllowed(true)
+                                            replace(R.id.fragment_container, ProfileFragment())
+                                            addToBackStack(null)
+                                        }
+                                    }
+                                }
                             }
                         }
                         clickCount = 0
                     }
-
                     if (clickCount >= 3 && clickCount < 4) {
                         context?.let { safeContext -> toggleScreenSaver(safeContext) }
                     }
-
                     if (clickCount > 0 && clickCount < 4) {
                         quadrupleTapHandler.postDelayed(quadrupleTapRunnable, QUADRUPLE_TAP_TIMEOUT)
                     }
@@ -236,79 +201,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
             true
         }
     }
-
-//    private fun initBottomSheetControls() {
-//        fragmentCameraBinding?.bottomSheetLayout?.apply {
-//            thresholdMinus.setOnClickListener {
-//                if (objectDetectorHelper.threshold >= 0.1) {
-//                    objectDetectorHelper.threshold -= 0.1f
-//                    updateControlsUi()
-//                }
-//            }
-//            thresholdPlus.setOnClickListener {
-//                if (objectDetectorHelper.threshold <= 0.8) {
-//                    objectDetectorHelper.threshold += 0.1f
-//                    updateControlsUi()
-//                }
-//            }
-//            maxResultsMinus.setOnClickListener {
-//                if (objectDetectorHelper.maxResults > 1) {
-//                    objectDetectorHelper.maxResults--
-//                    updateControlsUi()
-//                }
-//            }
-//            maxResultsPlus.setOnClickListener {
-//                if (objectDetectorHelper.maxResults < 5) {
-//                    objectDetectorHelper.maxResults++
-//                    updateControlsUi()
-//                }
-//            }
-//            threadsMinus.setOnClickListener {
-//                if (objectDetectorHelper.numThreads > 1) {
-//                    objectDetectorHelper.numThreads--
-//                    updateControlsUi()
-//                }
-//            }
-//            threadsPlus.setOnClickListener {
-//                if (objectDetectorHelper.numThreads < 4) {
-//                    objectDetectorHelper.numThreads++
-//                    updateControlsUi()
-//                }
-//            }
-//            spinnerDelegate.setSelection(0, false)
-//            spinnerDelegate.onItemSelectedListener =
-//                object : AdapterView.OnItemSelectedListener {
-//                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-//                        objectDetectorHelper.currentDelegate = p2
-//                        updateControlsUi()
-//                    }
-//                    override fun onNothingSelected(p0: AdapterView<*>?) {}
-//                }
-//            spinnerModel.setSelection(0, false)
-//            spinnerModel.onItemSelectedListener =
-//                object : AdapterView.OnItemSelectedListener {
-//                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-//                        objectDetectorHelper.currentModel = p2
-//                        updateControlsUi()
-//                    }
-//                    override fun onNothingSelected(p0: AdapterView<*>?) {}
-//                }
-//        }
-//    }
-//
-//    private fun updateControlsUi() {
-//        fragmentCameraBinding?.let { binding ->
-//            binding.bottomSheetLayout.maxResultsValue.text =
-//                objectDetectorHelper.maxResults.toString()
-//            binding.bottomSheetLayout.thresholdValue.text =
-//                String.format("%.2f", objectDetectorHelper.threshold)
-//            binding.bottomSheetLayout.threadsValue.text =
-//                objectDetectorHelper.numThreads.toString()
-//
-//            objectDetectorHelper.clearObjectDetector()
-//            binding.overlay.clear()
-//        }
-//    }
 
     private fun setUpCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())

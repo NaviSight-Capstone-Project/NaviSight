@@ -13,7 +13,6 @@ import androidx.fragment.app.commit
 import androidx.fragment.app.viewModels
 import edu.capstone.navisight.R
 import edu.capstone.navisight.viu.ui.camera.CameraFragment
-import edu.capstone.navisight.viu.ViuHomeViewModel
 import edu.capstone.navisight.viu.ui.LocationEvent
 import edu.capstone.navisight.viu.ui.LocationTracker
 
