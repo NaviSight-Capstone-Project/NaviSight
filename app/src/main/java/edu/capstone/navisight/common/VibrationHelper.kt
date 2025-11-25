@@ -5,6 +5,7 @@ package edu.capstone.navisight.common
 VibrationHelper.kt
 
 Set all vibration properties here.
+Defaults to 500 milliseconds (0.5)
 
  */
 
@@ -15,25 +16,21 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
 
-class VibrationHelper (private var context: Context){
+class VibrationHelper (private var context: Context?){
     private val tag = "VibrationHelper"
-    private var vibrationValue = 500L // Set to milliseconds, long
+    private val defaultVibrationMilliseconds = 500L // Modify default here
 
-    fun setVibration(milliseconds: Long) {
-        vibrationValue = milliseconds
-    }
-
-    fun vibrate(){
-        val vibrator = context.getSystemService(Vibrator::class.java)
+    fun vibrate(milliseconds:Long=defaultVibrationMilliseconds){
+        val vibrator = context?.getSystemService(Vibrator::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator.vibrate(
-                VibrationEffect.createOneShot(vibrationValue,
-                VibrationEffect.DEFAULT_AMPLITUDE))
+            vibrator?.vibrate(
+                VibrationEffect.createOneShot(milliseconds,
+                    VibrationEffect.DEFAULT_AMPLITUDE))
             Log.i(tag, "I just vibrated - New API (>=26) used.")
 
         } else {
             @Suppress("DEPRECATION")
-            vibrator.vibrate(vibrationValue)
+            (vibrator?.vibrate(milliseconds))
             Log.i(tag, "I just vibrated - Old API (<26) used.")
         }
     }

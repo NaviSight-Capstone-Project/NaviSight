@@ -6,20 +6,17 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
 import android.util.AttributeSet
 import android.util.DisplayMetrics
 import android.view.View
 import android.view.WindowManager
-import android.widget.Toast
 import androidx.core.content.ContextCompat
 import edu.capstone.navisight.viu.detectors.ObjectDetection
 import java.util.LinkedList
 import kotlin.math.abs
 import kotlin.math.max
 import edu.capstone.navisight.R
+import edu.capstone.navisight.common.VibrationHelper
 
 class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs) {
 
@@ -41,6 +38,9 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
     private val areaThresholds = listOf(0.70F, 0.35F, 0.10F) // In percentages
     private val redundancyDelay = 3000L // Default to three (3) seconds
     private val speechQueueThreshold = 5 // Speeches per queue until it auto-skips
+
+    // Init. vibration helper
+    private val vibrationHelper = VibrationHelper(context)
 
     init {
         initPaints()
@@ -196,19 +196,6 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
             lastLabel = currentLabel
             lastDetectedArea = currentDetectedArea
         }
+        vibrationHelper.vibrate()
     }
-
-//    fun vibrate(){
-//        val vibrator = context.getSystemService(Vibrator::class.java)
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//            // For API 26 and above
-//            vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
-//            Toast.makeText(context, "I just vibrated - New API (>=26)", Toast.LENGTH_SHORT).show()
-//        } else {
-//            // For older APIs
-//            @Suppress("DEPRECATION")
-//            vibrator.vibrate(500) // Vibrate for 500 milliseconds
-//            Toast.makeText(context, "I just vibrated - Old API (<26)", Toast.LENGTH_SHORT).show()
-//        }
-//    }
 }

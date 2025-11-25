@@ -24,7 +24,6 @@ import android.util.Size
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.View
-import android.widget.AdapterView
 import android.widget.Toast
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
@@ -151,79 +150,6 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
         }
     }
 
-//    private fun initBottomSheetControls() {
-//        fragmentCameraBinding?.bottomSheetLayout?.apply {
-//            thresholdMinus.setOnClickListener {
-//                if (objectDetectorHelper.threshold >= 0.1) {
-//                    objectDetectorHelper.threshold -= 0.1f
-//                    updateControlsUi()
-//                }
-//            }
-//            thresholdPlus.setOnClickListener {
-//                if (objectDetectorHelper.threshold <= 0.8) {
-//                    objectDetectorHelper.threshold += 0.1f
-//                    updateControlsUi()
-//                }
-//            }
-//            maxResultsMinus.setOnClickListener {
-//                if (objectDetectorHelper.maxResults > 1) {
-//                    objectDetectorHelper.maxResults--
-//                    updateControlsUi()
-//                }
-//            }
-//            maxResultsPlus.setOnClickListener {
-//                if (objectDetectorHelper.maxResults < 5) {
-//                    objectDetectorHelper.maxResults++
-//                    updateControlsUi()
-//                }
-//            }
-//            threadsMinus.setOnClickListener {
-//                if (objectDetectorHelper.numThreads > 1) {
-//                    objectDetectorHelper.numThreads--
-//                    updateControlsUi()
-//                }
-//            }
-//            threadsPlus.setOnClickListener {
-//                if (objectDetectorHelper.numThreads < 4) {
-//                    objectDetectorHelper.numThreads++
-//                    updateControlsUi()
-//                }
-//            }
-//            spinnerDelegate.setSelection(0, false)
-//            spinnerDelegate.onItemSelectedListener =
-//                object : AdapterView.OnItemSelectedListener {
-//                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-//                        objectDetectorHelper.currentDelegate = p2
-//                        updateControlsUi()
-//                    }
-//                    override fun onNothingSelected(p0: AdapterView<*>?) {}
-//                }
-//            spinnerModel.setSelection(0, false)
-//            spinnerModel.onItemSelectedListener =
-//                object : AdapterView.OnItemSelectedListener {
-//                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-//                        objectDetectorHelper.currentModel = p2
-//                        updateControlsUi()
-//                    }
-//                    override fun onNothingSelected(p0: AdapterView<*>?) {}
-//                }
-//        }
-//    }
-
-    private fun updateControlsUi() {
-        fragmentCameraBinding?.let { binding ->
-            binding.bottomSheetLayout.maxResultsValue.text =
-                objectDetectorHelper.maxResults.toString()
-            binding.bottomSheetLayout.thresholdValue.text =
-                String.format("%.2f", objectDetectorHelper.threshold)
-            binding.bottomSheetLayout.threadsValue.text =
-                objectDetectorHelper.numThreads.toString()
-
-            objectDetectorHelper.clearObjectDetector()
-            binding.overlay.clear()
-        }
-    }
-
     private fun setUpCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
         cameraProviderFuture.addListener(
@@ -332,14 +258,14 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
                 currentBrightness = Settings.System.getInt(
                     context.contentResolver, Settings.System.SCREEN_BRIGHTNESS
                 ) / 255f
-                changeScreenBrightness(context, 0.0F)
+                changeScreenBrightness( 0.0F)
                 binding.previewModeOverlay.setBackgroundColor(resources.getColor(R.color.screensaver_color))
                 binding.tooltipTitle.setText(R.string.screensaver_mode_tooltip_title)
                 binding.tooltipDescription1.setText(R.string.screensaver_mode_tooltip_1)
                 binding.tooltipDescription2.setText(R.string.screensaver_mode_tooltip_2)
             } else {
                 isScreensaverActive = false
-                changeScreenBrightness(context, currentBrightness)
+                changeScreenBrightness(currentBrightness)
                 binding.previewModeOverlay.setBackgroundColor(0)
                 binding.tooltipTitle.setText(R.string.preview_mode_tooltip_title)
                 binding.tooltipDescription1.setText(R.string.preview_mode_tooltip_1)
@@ -348,7 +274,7 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
         }
     }
 
-    fun changeScreenBrightness(context: Context, screenBrightnessValue: Float) {
+    fun changeScreenBrightness(screenBrightnessValue: Float) {
         val window = requireActivity().window
         val layoutParams = window.attributes
         layoutParams.screenBrightness = screenBrightnessValue
