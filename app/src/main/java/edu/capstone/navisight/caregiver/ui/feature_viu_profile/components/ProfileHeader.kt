@@ -1,26 +1,14 @@
-package edu.capstone.navisight.caregiver.ui.feature_editViuProfile
+package edu.capstone.navisight.caregiver.ui.feature_viu_profile.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -41,28 +29,28 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 @Composable
-internal fun ProfileHeader(
+fun ProfileHeader(
     viuData: Viu,
     isUploading: Boolean,
     onImageClick: () -> Unit
 ) {
-
     val inputFormat = remember { SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()) }
     val outputFormat = remember { SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()) }
 
     val formattedBirthday = remember(viuData.birthday) {
-        if (viuData.birthday.isNullOrEmpty()) {
-            "N/A"
-        } else {
-            try {
-                val date = inputFormat.parse(viuData.birthday)
-                date?.let { outputFormat.format(it) } ?: "N/A"
-            } catch (e: Exception) {
-                viuData.birthday
-            }
+        if (viuData.birthday.isNullOrEmpty()) "N/A"
+        else try {
+            val date = inputFormat.parse(viuData.birthday)
+            date?.let { outputFormat.format(it) } ?: "N/A"
+        } catch (e: Exception) {
+            viuData.birthday
         }
     }
-    // Root Row layout
+
+    val fullName = remember(viuData.firstName, viuData.middleName, viuData.lastName) {
+        "${viuData.firstName} ${viuData.middleName.ifEmpty { "" }} ${viuData.lastName}".replace("\\s+".toRegex(), " ")
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -70,8 +58,7 @@ internal fun ProfileHeader(
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-
-        // IMAGE BOX (LEFT)
+        // --- PROFILE IMAGE ---
         Box(
             modifier = Modifier
                 .size(120.dp)
@@ -86,92 +73,69 @@ internal fun ProfileHeader(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        if (isUploading) Color.Black.copy(alpha = 0.5f)
-                        else Color.Transparent
-                    )
-            )
 
+            // Uploading Overlay
             if (isUploading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
-                    color = Color.White
-                )
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color.White)
+                }
             } else {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit Image",
-                    tint = Color.White,
+                // Edit Icon Overlay
+                Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .background(Color.Black.copy(alpha = 0.4f))
-                        .padding(4.dp)
                         .fillMaxWidth()
-                )
+                        .background(Color.Black.copy(alpha = 0.4f))
+                        .padding(4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White, modifier = Modifier.size(16.dp))
+                }
             }
         }
 
-        // SPACER
         Spacer(modifier = Modifier.width(16.dp))
 
-        // INFO COLUMN (RIGHT)
+        // --- INFO COLUMN ---
         Column(
-            modifier = Modifier.weight(1f), // Takes up remaining space
+            modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "${viuData.firstName} ${viuData.middleName.ifEmpty { "" }} ${viuData.lastName}".replace("  ", " "),
+                text = fullName,
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
             )
+
             if (!viuData.category.isNullOrEmpty()) {
                 Box(
                     modifier = Modifier
                         .background(Color(0xFFE8E4FF), RoundedCornerShape(12.dp))
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
-                    Text(
-                        text = viuData.category,
-                        color = Color(0xFF6041EC),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Text(text = viuData.category, color = Color(0xFF6041EC), fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 }
             }
 
             InfoRow(icon = Icons.Filled.Phone, text = viuData.phone)
             InfoRow(icon = Icons.Filled.LocationOn, text = viuData.address ?: "No address set")
 
-            // Sex and Birthday Row
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth() // Added to help with truncation
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Sex: ", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                Text(
-                    text = viuData.sex ?: "N/A",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFFD81B60), // Pinkish color from reference
-                    fontWeight = FontWeight.Medium
-                )
+                Text(text = viuData.sex ?: "N/A", style = MaterialTheme.typography.bodyMedium, color = Color(0xFFD81B60), fontWeight = FontWeight.Medium)
+
                 Spacer(Modifier.width(16.dp))
+
+                Text("Birthday: ", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                 Text(
-                    "Birthday: ",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray,
-                    maxLines = 1 // Added
-                )
-                Text(
-                    // Use formatted date
                     text = formattedBirthday,
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Black,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f) // Allow truncation
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -184,17 +148,8 @@ private fun InfoRow(icon: ImageVector, text: String) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(vertical = 2.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = Color(0xFF6041EC),
-            modifier = Modifier.size(16.dp)
-        )
+        Icon(imageVector = icon, contentDescription = null, tint = Color(0xFF6041EC), modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.DarkGray
-        )
+        Text(text = text, style = MaterialTheme.typography.bodyMedium, color = Color.DarkGray, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

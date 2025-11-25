@@ -25,7 +25,7 @@ import androidx.lifecycle.lifecycleScope
 import edu.capstone.navisight.R
 import edu.capstone.navisight.caregiver.data.remote.ViuDataSource
 import edu.capstone.navisight.caregiver.ui.call.CaregiverCallActivity
-import edu.capstone.navisight.caregiver.ui.feature_editViuProfile.ViuProfileFragment
+import edu.capstone.navisight.caregiver.ui.feature_viu_profile.ViuProfileFragment
 import edu.capstone.navisight.caregiver.ui.feature_map.MapFragment
 import edu.capstone.navisight.caregiver.ui.feature_notification.NotificationFragment
 import edu.capstone.navisight.caregiver.ui.feature_records.RecordsFragment

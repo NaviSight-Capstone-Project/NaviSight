@@ -1,4 +1,4 @@
-package edu.capstone.navisight.caregiver.ui.feature_editViuProfile
+package edu.capstone.navisight.caregiver.ui.feature_edit_viu_profile
 
 import android.content.Context
 import android.net.Uri
@@ -22,6 +22,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+// Enums for UI State management
 enum class SecurityFlowState { IDLE, PENDING_OTP, LOADING }
 
 enum class SaveFlowState {
@@ -33,33 +34,29 @@ enum class SaveFlowState {
 
 enum class DeleteFlowState { IDLE, PENDING_PASSWORD, DELETING }
 
-
-class ViuProfileViewModel(
+class EditViuProfileViewModel(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
+    // Retrieved from Navigation Arguments
     private val viuUid: String = checkNotNull(savedStateHandle["viuUid"])
 
-    private val checkEditPermissionUseCase: CheckEditPermissionUseCase = CheckEditPermissionUseCase()
+    // UseCases
+    private val checkEditPermissionUseCase = CheckEditPermissionUseCase()
+    private val getViuDetailsUseCase = GetViuDetailsUseCase()
+    private val deleteViuUseCase = DeleteViuUseCase()
+    private val updateViuUseCase = UpdateViuUseCase()
+    private val sendViuPasswordResetUseCase = SendViuPasswordResetUseCase()
+    private val requestViuEmailChangeUseCase = RequestViuEmailChangeUseCase()
+    private val verifyViuEmailChangeUseCase = VerifyViuEmailChangeUseCase()
+    private val cancelViuEmailChangeUseCase = CancelViuEmailChangeUseCase()
+    private val reauthenticateCaregiverUseCase = ReauthenticateCaregiverUseCase()
+    private val sendVerificationOtpToCaregiverUseCase = SendVerificationOtpToCaregiverUseCase()
+    private val verifyCaregiverOtpUseCase = VerifyCaregiverOtpUseCase()
+    private val cancelViuProfileUpdateUseCase = CancelViuProfileUpdateUseCase()
+    private val uploadViuProfileImageUseCase = UploadViuProfileImageUseCase()
 
-    private val dateFormatter = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
-    private val getViuDetailsUseCase: GetViuDetailsUseCase = GetViuDetailsUseCase()
-    private val deleteViuUseCase: DeleteViuUseCase = DeleteViuUseCase()
-    private val updateViuUseCase: UpdateViuUseCase = UpdateViuUseCase()
-
-    private val sendViuPasswordResetUseCase: SendViuPasswordResetUseCase = SendViuPasswordResetUseCase()
-    private val requestViuEmailChangeUseCase: RequestViuEmailChangeUseCase = RequestViuEmailChangeUseCase()
-    private val verifyViuEmailChangeUseCase: VerifyViuEmailChangeUseCase = VerifyViuEmailChangeUseCase()
-
-    private val cancelViuEmailChangeUseCase: CancelViuEmailChangeUseCase = CancelViuEmailChangeUseCase()
-
-    private val reauthenticateCaregiverUseCase: ReauthenticateCaregiverUseCase = ReauthenticateCaregiverUseCase()
-    private val sendVerificationOtpToCaregiverUseCase: SendVerificationOtpToCaregiverUseCase = SendVerificationOtpToCaregiverUseCase()
-    private val verifyCaregiverOtpUseCase: VerifyCaregiverOtpUseCase = VerifyCaregiverOtpUseCase()
-
-    private val cancelViuProfileUpdateUseCase: CancelViuProfileUpdateUseCase = CancelViuProfileUpdateUseCase()
-    private val uploadViuProfileImageUseCase: UploadViuProfileImageUseCase = UploadViuProfileImageUseCase()
-
+    // --- State Flows ---
     private val _viu = MutableStateFlow<Viu?>(null)
     val viu: StateFlow<Viu?> = _viu.asStateFlow()
 
@@ -99,17 +96,21 @@ class ViuProfileViewModel(
     private val _isUploadingImage = MutableStateFlow(false)
     val isUploadingImage: StateFlow<Boolean> = _isUploadingImage.asStateFlow()
 
+    private val _canEdit = MutableStateFlow(false)
+    val canEdit: StateFlow<Boolean> = _canEdit.asStateFlow()
+
+    // --- Internal State ---
+    private val dateFormatter = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
     private var pendingViuUpdate: Viu? = null
     private var pendingNewEmail: String? = null
 
+    // --- Timers ---
     private var saveResendTimerJob: Job? = null
     private val _saveResendTimer = MutableStateFlow(0)
     val saveResendTimer: StateFlow<Int> = _saveResendTimer.asStateFlow()
 
     private var emailResendTimerJob: Job? = null
     private val _emailResendTimer = MutableStateFlow(0)
-    private val _canEdit = MutableStateFlow(false)
-    val canEdit: StateFlow<Boolean> = _canEdit.asStateFlow()
     val emailResendTimer: StateFlow<Int> = _emailResendTimer.asStateFlow()
 
     init {
@@ -117,40 +118,14 @@ class ViuProfileViewModel(
         checkPermissions()
     }
 
-    private fun startSaveResendTimer() {
-        saveResendTimerJob?.cancel()
-        saveResendTimerJob = viewModelScope.launch {
-            val durationSeconds = 60 // 1 minute
-            _saveResendTimer.value = durationSeconds
-            (durationSeconds - 1 downTo 0).asFlow()
-                .onEach { delay(1000) }
-                .collect { secondsRemaining ->
-                    _saveResendTimer.value = secondsRemaining
-                }
+    private fun checkPermissions() {
+        viewModelScope.launch {
+            val result = checkEditPermissionUseCase(viuUid)
+            result.fold(
+                onSuccess = { isPrimary -> _canEdit.value = isPrimary },
+                onFailure = { _canEdit.value = false }
+            )
         }
-    }
-
-    private fun stopSaveResendTimer() {
-        saveResendTimerJob?.cancel()
-        _saveResendTimer.value = 0
-    }
-
-    private fun startEmailResendTimer() {
-        emailResendTimerJob?.cancel()
-        emailResendTimerJob = viewModelScope.launch {
-            val durationSeconds = 60 // 1 minute
-            _emailResendTimer.value = durationSeconds
-            (durationSeconds - 1 downTo 0).asFlow()
-                .onEach { delay(1000) }
-                .collect { secondsRemaining ->
-                    _emailResendTimer.value = secondsRemaining
-                }
-        }
-    }
-
-    private fun stopEmailResendTimer() {
-        emailResendTimerJob?.cancel()
-        _emailResendTimer.value = 0
     }
 
     private fun loadViuDetails() {
@@ -163,6 +138,7 @@ class ViuProfileViewModel(
         }
     }
 
+    // --- Image Upload ---
     fun uploadProfileImage(imageUri: Uri) {
         if (!_canEdit.value) {
             _error.value = "Only the Primary Caregiver can change the photo."
@@ -171,13 +147,9 @@ class ViuProfileViewModel(
         viewModelScope.launch {
             _isUploadingImage.value = true
             _error.value = null
-
             val result = uploadViuProfileImageUseCase(viuUid, imageUri)
-
             result.fold(
-                onSuccess = {
-                    _isUploadingImage.value = false
-                },
+                onSuccess = { _isUploadingImage.value = false },
                 onFailure = {
                     _isUploadingImage.value = false
                     _error.value = it.message ?: "Failed to upload image"
@@ -186,6 +158,36 @@ class ViuProfileViewModel(
         }
     }
 
+    // --- Timer Logic ---
+    private fun startSaveResendTimer() {
+        saveResendTimerJob?.cancel()
+        saveResendTimerJob = viewModelScope.launch {
+            val duration = 60
+            _saveResendTimer.value = duration
+            (duration - 1 downTo 0).asFlow().onEach { delay(1000) }.collect { _saveResendTimer.value = it }
+        }
+    }
+
+    private fun stopSaveResendTimer() {
+        saveResendTimerJob?.cancel()
+        _saveResendTimer.value = 0
+    }
+
+    private fun startEmailResendTimer() {
+        emailResendTimerJob?.cancel()
+        emailResendTimerJob = viewModelScope.launch {
+            val duration = 60
+            _emailResendTimer.value = duration
+            (duration - 1 downTo 0).asFlow().onEach { delay(1000) }.collect { _emailResendTimer.value = it }
+        }
+    }
+
+    private fun stopEmailResendTimer() {
+        emailResendTimerJob?.cancel()
+        _emailResendTimer.value = 0
+    }
+
+    // --- Validations ---
     private fun validateName(name: String, fieldName: String): String? {
         if (name.isBlank()) return "$fieldName cannot be empty."
         if (name.any { it.isDigit() }) return "$fieldName cannot contain numbers."
@@ -212,11 +214,8 @@ class ViuProfileViewModel(
             val today = Calendar.getInstance()
             val birthCal = Calendar.getInstance()
             birthCal.time = birthDate
-
             var age = today.get(Calendar.YEAR) - birthCal.get(Calendar.YEAR)
-            if (today.get(Calendar.DAY_OF_YEAR) < birthCal.get(Calendar.DAY_OF_YEAR)) {
-                age--
-            }
+            if (today.get(Calendar.DAY_OF_YEAR) < birthCal.get(Calendar.DAY_OF_YEAR)) age--
             if (age !in 18..60) return "Age must be between 18 and 60."
         } catch (e: Exception) {
             return "Invalid birthday format."
@@ -224,41 +223,17 @@ class ViuProfileViewModel(
         return null
     }
 
-    private fun validateSex(sex: String): String? {
-        if (sex.isBlank()) return "Sex cannot be empty."
-        return null
-    }
-    private fun checkPermissions() {
-        viewModelScope.launch {
-            val result = checkEditPermissionUseCase(viuUid)
-            result.fold(
-                onSuccess = { isPrimary ->
-                    _canEdit.value = isPrimary
-                },
-                onFailure = {
-                    _canEdit.value = false // Default to no edit if error
-                }
-            )
-        }
-    }
-
+    // --- Save Flow (Edit Profile) ---
     fun startSaveFlow(
-        firstName: String,
-        middleName: String,
-        lastName: String,
-        birthday: String,
-        sex: String,
-        phone: String,
-        address: String,
-        status: String
+        firstName: String, middleName: String, lastName: String,
+        birthday: String, sex: String, phone: String, address: String, status: String
     ) {
         if (!_canEdit.value) {
             _saveError.value = "Only the Primary Caregiver can edit this profile."
             return
         }
-        _saveError.value = null // Clear previous errors
+        _saveError.value = null
 
-        // Perform Validations
         val firstNameError = validateName(firstName, "First Name")
         if (firstNameError != null) { _saveError.value = firstNameError; return }
 
@@ -268,22 +243,16 @@ class ViuProfileViewModel(
         val birthdayError = validateBirthday(birthday)
         if (birthdayError != null) { _saveError.value = birthdayError; return }
 
-        val sexError = validateSex(sex)
-        if (sexError != null) { _saveError.value = sexError; return }
+        if (sex.isBlank()) { _saveError.value = "Sex cannot be empty"; return }
 
         val phoneError = validatePhone(phone)
         if (phoneError != null) { _saveError.value = phoneError; return }
 
         val currentViu = _viu.value ?: return
-
-        val hasChanges = firstName != currentViu.firstName ||
-                middleName != currentViu.middleName ||
-                lastName != currentViu.lastName ||
-                birthday != (currentViu.birthday ?: "") ||
-                sex != (currentViu.sex ?: "") ||
-                phone != currentViu.phone ||
-                address != (currentViu.address ?: "") ||
-                status != (currentViu.category ?: "")
+        val hasChanges = firstName != currentViu.firstName || middleName != currentViu.middleName ||
+                lastName != currentViu.lastName || birthday != (currentViu.birthday ?: "") ||
+                sex != (currentViu.sex ?: "") || phone != currentViu.phone ||
+                address != (currentViu.address ?: "") || status != (currentViu.category ?: "")
 
         if (!hasChanges) {
             _saveError.value = "No changes to save"
@@ -309,11 +278,9 @@ class ViuProfileViewModel(
             _saveFlowState.value = SaveFlowState.SAVING
             _saveError.value = null
 
-            val reauthResult = reauthenticateCaregiverUseCase(password)
-            reauthResult.fold(
+            reauthenticateCaregiverUseCase(password).fold(
                 onSuccess = {
-                    val otpResult = sendVerificationOtpToCaregiverUseCase(context)
-                    otpResult.fold(
+                    sendVerificationOtpToCaregiverUseCase(context).fold(
                         onSuccess = { resendResult ->
                             when (resendResult) {
                                 OtpResult.ResendOtpResult.Success -> {
@@ -352,9 +319,7 @@ class ViuProfileViewModel(
         viewModelScope.launch {
             _saveFlowState.value = SaveFlowState.SAVING
             _saveError.value = null
-
-            val otpResult = sendVerificationOtpToCaregiverUseCase(context)
-            otpResult.fold(
+            sendVerificationOtpToCaregiverUseCase(context).fold(
                 onSuccess = { resendResult ->
                     _saveFlowState.value = SaveFlowState.PENDING_OTP
                     when (resendResult) {
@@ -362,15 +327,9 @@ class ViuProfileViewModel(
                             _saveError.value = "New OTP sent"
                             startSaveResendTimer()
                         }
-                        OtpResult.ResendOtpResult.FailureCooldown -> {
-                            _saveError.value = "Max resends reached. Please wait 5 minutes."
-                        }
-                        OtpResult.ResendOtpResult.FailureGeneric -> {
-                            _saveError.value = "Please wait 1 minute before resending."
-                        }
-                        OtpResult.ResendOtpResult.FailureEmailAlreadyInUse -> {
-                            _saveError.value = "An unexpected error occurred."
-                        }
+                        OtpResult.ResendOtpResult.FailureCooldown -> _saveError.value = "Max resends reached. Please wait 5 minutes."
+                        OtpResult.ResendOtpResult.FailureGeneric -> _saveError.value = "Please wait 1 minute before resending."
+                        OtpResult.ResendOtpResult.FailureEmailAlreadyInUse -> _saveError.value = "An unexpected error occurred."
                     }
                 },
                 onFailure = {
@@ -383,19 +342,15 @@ class ViuProfileViewModel(
 
     fun verifyOtpAndSave(otp: String) {
         val viuToSave = pendingViuUpdate ?: return
-
         viewModelScope.launch {
             _saveFlowState.value = SaveFlowState.SAVING
             _saveError.value = null
 
-            val verifyResult = verifyCaregiverOtpUseCase(otp)
-            verifyResult.fold(
+            verifyCaregiverOtpUseCase(otp).fold(
                 onSuccess = { verificationResult ->
                     when (verificationResult) {
                         OtpResult.OtpVerificationResult.Success -> {
-                            // OTP is good, proceed to save
-                            val updateResult = updateViuUseCase(viuToSave)
-                            updateResult.fold(
+                            updateViuUseCase(viuToSave).fold(
                                 onSuccess = {
                                     _saveFlowState.value = SaveFlowState.IDLE
                                     _saveSuccess.value = true
@@ -412,14 +367,9 @@ class ViuProfileViewModel(
                             _saveFlowState.value = SaveFlowState.PENDING_OTP
                             _saveError.value = "Invalid OTP. Please try again."
                         }
-                        OtpResult.OtpVerificationResult.FailureMaxAttempts -> {
+                        else -> {
                             _saveFlowState.value = SaveFlowState.IDLE
-                            _saveError.value = "Max attempts reached. Please wait 5 minutes."
-                            stopSaveResendTimer()
-                        }
-                        OtpResult.OtpVerificationResult.FailureExpiredOrCooledDown -> {
-                            _saveFlowState.value = SaveFlowState.IDLE
-                            _saveError.value = "OTP expired or on cooldown. Please try again."
+                            _saveError.value = "OTP Expired or limit reached."
                             stopSaveResendTimer()
                         }
                     }
@@ -437,17 +387,11 @@ class ViuProfileViewModel(
         _saveError.value = null
         pendingViuUpdate = null
         stopSaveResendTimer()
-        viewModelScope.launch {
-            cancelViuProfileUpdateUseCase()
-        }
+        viewModelScope.launch { cancelViuProfileUpdateUseCase() }
     }
 
-    fun clearSaveError() {
-        _saveError.value = null
-    }
-
+    // --- Delete Flow ---
     fun startDeleteFlow() {
-        // SECURITY CHECK
         if (!_canEdit.value) {
             _deleteError.value = "Only the Primary Caregiver can delete this profile."
             return
@@ -461,11 +405,9 @@ class ViuProfileViewModel(
             _deleteFlowState.value = DeleteFlowState.DELETING
             _deleteError.value = null
 
-            val reauthResult = reauthenticateCaregiverUseCase(password)
-            reauthResult.fold(
+            reauthenticateCaregiverUseCase(password).fold(
                 onSuccess = {
-                    val deleteResult = deleteViuUseCase(viuUid)
-                    deleteResult.fold(
+                    deleteViuUseCase(viuUid).fold(
                         onSuccess = {
                             _deleteFlowState.value = DeleteFlowState.IDLE
                             onSuccess()
@@ -485,32 +427,26 @@ class ViuProfileViewModel(
     }
 
     fun resetDeleteFlow() {
-        if (!_canEdit.value) {
-            _deleteError.value = "Only the Primary Caregiver can delete this profile."
-            return
-        }
         _deleteFlowState.value = DeleteFlowState.IDLE
         _deleteError.value = null
     }
 
-    fun clearDeleteError() {
-        _deleteError.value = null
-    }
-
-    fun onSaveSuccessShown() { _saveSuccess.value = false }
-    fun onPasswordResetSuccessShown() { _passwordResetSuccess.value = false }
-    fun onEmailChangeSuccessShown() { _emailChangeSuccess.value = false }
-    fun clearSecurityError() { _securityError.value = null }
-
+    // --- Security / Email Change Flow ---
     fun sendPasswordReset() {
         val viuEmail = _viu.value?.email ?: return
         viewModelScope.launch {
             _emailFlowState.value = SecurityFlowState.LOADING
             _securityError.value = null
             _passwordResetSuccess.value = false
-            val result = sendViuPasswordResetUseCase(viuEmail)
-            result.fold(onSuccess = { _emailFlowState.value = SecurityFlowState.IDLE; _passwordResetSuccess.value = true },
-                onFailure = { _emailFlowState.value = SecurityFlowState.IDLE; _securityError.value = it.message ?: "Failed to send reset email" }
+            sendViuPasswordResetUseCase(viuEmail).fold(
+                onSuccess = {
+                    _emailFlowState.value = SecurityFlowState.IDLE
+                    _passwordResetSuccess.value = true
+                },
+                onFailure = {
+                    _emailFlowState.value = SecurityFlowState.IDLE
+                    _securityError.value = it.message ?: "Failed to send reset email"
+                }
             )
         }
     }
@@ -521,34 +457,26 @@ class ViuProfileViewModel(
             return
         }
         _securityError.value = null
-
         val emailError = validateEmail(newEmail)
         if (emailError != null) { _securityError.value = emailError; return }
 
         pendingNewEmail = newEmail
-
         viewModelScope.launch {
             _emailFlowState.value = SecurityFlowState.LOADING
-
-            val result = requestViuEmailChangeUseCase(context, viuUid, newEmail)
-            result.fold(
+            requestViuEmailChangeUseCase(context, viuUid, newEmail).fold(
                 onSuccess = { resendResult ->
-                    when(resendResult) {
+                    when (resendResult) {
                         OtpResult.ResendOtpResult.Success -> {
                             _emailFlowState.value = SecurityFlowState.PENDING_OTP
                             startEmailResendTimer()
                         }
                         OtpResult.ResendOtpResult.FailureCooldown -> {
                             _emailFlowState.value = SecurityFlowState.IDLE
-                            _securityError.value = "Max resends reached. Please wait 5 minutes."
+                            _securityError.value = "Max resends reached. Wait 5 minutes."
                         }
-                        OtpResult.ResendOtpResult.FailureGeneric -> {
+                        else -> {
                             _emailFlowState.value = SecurityFlowState.IDLE
-                            _securityError.value = "Failed to send OTP. Please wait 1 minute."
-                        }
-                        OtpResult.ResendOtpResult.FailureEmailAlreadyInUse -> {
-                            _emailFlowState.value = SecurityFlowState.IDLE
-                            _securityError.value = "This email is already in use by another account."
+                            _securityError.value = "Failed to send OTP."
                         }
                     }
                 },
@@ -561,50 +489,25 @@ class ViuProfileViewModel(
     }
 
     fun resendEmailChangeOtp(context: Context) {
-        val email = pendingNewEmail
-        if (email == null) {
-            _securityError.value = "Error: Email not found. Please cancel and try again."
-            return
-        }
+        val email = pendingNewEmail ?: run { _securityError.value = "Error: Email missing"; return }
         viewModelScope.launch {
             _emailFlowState.value = SecurityFlowState.LOADING
-            _securityError.value = null
-
-            val result = requestViuEmailChangeUseCase(context, viuUid, email)
-            result.fold(
+            requestViuEmailChangeUseCase(context, viuUid, email).fold(
                 onSuccess = { resendResult ->
                     _emailFlowState.value = SecurityFlowState.PENDING_OTP
-                    when (resendResult) {
+                    when(resendResult) {
                         OtpResult.ResendOtpResult.Success -> {
                             _securityError.value = "New OTP sent"
                             startEmailResendTimer()
                         }
-                        OtpResult.ResendOtpResult.FailureCooldown -> {
-                            _securityError.value = "Max resends reached. Please wait 5 minutes."
-                        }
-                        OtpResult.ResendOtpResult.FailureGeneric -> {
-                            _securityError.value = "Please wait 1 minute before resending."
-                        }
-                        OtpResult.ResendOtpResult.FailureEmailAlreadyInUse -> {
-                            _securityError.value = "This email is already in use by another account."
-                        }
+                        else -> _securityError.value = "Wait before resending."
                     }
                 },
                 onFailure = {
                     _emailFlowState.value = SecurityFlowState.PENDING_OTP
-                    _securityError.value = it.message ?: "Failed to resend OTP"
+                    _securityError.value = it.message
                 }
             )
-        }
-    }
-
-    fun cancelEmailChangeFlow() {
-        _emailFlowState.value = SecurityFlowState.IDLE
-        _securityError.value = null
-        pendingNewEmail = null
-        stopEmailResendTimer()
-        viewModelScope.launch {
-            cancelViuEmailChangeUseCase(viuUid)
         }
     }
 
@@ -615,29 +518,15 @@ class ViuProfileViewModel(
             _securityError.value = null
             _emailChangeSuccess.value = false
 
-            val result = verifyViuEmailChangeUseCase(viuUid, otp)
-            result.fold(
-                onSuccess = { verificationResult ->
-                    when (verificationResult) {
-                        OtpResult.OtpVerificationResult.Success -> {
-                            _emailFlowState.value = SecurityFlowState.IDLE
-                            _emailChangeSuccess.value = true
-                            stopEmailResendTimer()
-                        }
-                        OtpResult.OtpVerificationResult.FailureInvalid -> {
-                            _emailFlowState.value = SecurityFlowState.PENDING_OTP
-                            _securityError.value = "Invalid OTP. Please try again."
-                        }
-                        OtpResult.OtpVerificationResult.FailureMaxAttempts -> {
-                            _emailFlowState.value = SecurityFlowState.IDLE
-                            _securityError.value = "Max attempts reached. Please wait 5 minutes."
-                            stopEmailResendTimer()
-                        }
-                        OtpResult.OtpVerificationResult.FailureExpiredOrCooledDown -> {
-                            _emailFlowState.value = SecurityFlowState.IDLE
-                            _securityError.value = "OTP expired or on cooldown. Please try again."
-                            stopEmailResendTimer()
-                        }
+            verifyViuEmailChangeUseCase(viuUid, otp).fold(
+                onSuccess = { result ->
+                    if (result == OtpResult.OtpVerificationResult.Success) {
+                        _emailFlowState.value = SecurityFlowState.IDLE
+                        _emailChangeSuccess.value = true
+                        stopEmailResendTimer()
+                    } else {
+                        _emailFlowState.value = SecurityFlowState.PENDING_OTP
+                        _securityError.value = "Invalid OTP or Expired."
                     }
                 },
                 onFailure = {
@@ -647,4 +536,20 @@ class ViuProfileViewModel(
             )
         }
     }
+
+    fun cancelEmailChangeFlow() {
+        _emailFlowState.value = SecurityFlowState.IDLE
+        _securityError.value = null
+        pendingNewEmail = null
+        stopEmailResendTimer()
+        viewModelScope.launch { cancelViuEmailChangeUseCase(viuUid) }
+    }
+
+    // --- Cleanup/Reset helpers ---
+    fun clearSaveError() { _saveError.value = null }
+    fun clearDeleteError() { _deleteError.value = null }
+    fun clearSecurityError() { _securityError.value = null }
+    fun onSaveSuccessShown() { _saveSuccess.value = false }
+    fun onPasswordResetSuccessShown() { _passwordResetSuccess.value = false }
+    fun onEmailChangeSuccessShown() { _emailChangeSuccess.value = false }
 }

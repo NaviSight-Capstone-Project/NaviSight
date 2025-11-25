@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,9 +23,7 @@ import java.util.Locale
 fun TravelLogScreen(
     viuUid: String,
     viuName: String,
-    viewModel: TravelLogViewModel,
-    // Make onBack optional. Default is null (Hidden).
-    onBack: (() -> Unit)? = null
+    viewModel: TravelLogViewModel
 ) {
     val logs by viewModel.logs.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -37,34 +34,18 @@ fun TravelLogScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
-
-        // --- Header / Actions ---
+        // Actions
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Only show Back button if the function is provided
-                if (onBack != null) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                }
-
-                Text(
-                    text = "History: $viuName",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
             IconButton(onClick = { viewModel.exportToCsv(context, viuName) }) {
                 Icon(Icons.Default.Share, contentDescription = "Export CSV", tint = Color(0xFF6041EC))
             }
         }
 
-        // --- Table Headers ---
+        // Table Headers
         Row(
             modifier = Modifier.fillMaxWidth().background(Color(0xFFF0F0F0)).padding(12.dp)
         ) {
@@ -74,7 +55,7 @@ fun TravelLogScreen(
         }
         Divider()
 
-        // --- Table Body ---
+        // Table Body
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         } else if (logs.isEmpty()) {
@@ -94,7 +75,6 @@ fun TravelLogScreen(
 fun LogRows(log: GeofenceActivity) {
     val dateFormat = SimpleDateFormat("MM/dd HH:mm", Locale.getDefault())
     val dateStr = log.timestamp?.toDate()?.let { dateFormat.format(it) } ?: "-"
-
     val isEnter = log.eventType == "ENTER"
     val color = if (isEnter) Color(0xFF2E7D32) else Color(0xFFC62828)
     val actionText = if (isEnter) "Arrived" else "Left"
