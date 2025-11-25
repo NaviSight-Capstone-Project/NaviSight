@@ -263,8 +263,10 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
                 binding.tooltipTitle.setText(R.string.screensaver_mode_tooltip_title)
                 binding.tooltipDescription1.setText(R.string.screensaver_mode_tooltip_1)
                 binding.tooltipDescription2.setText(R.string.screensaver_mode_tooltip_2)
+                binding.screensaverEye.setVisibility(View.VISIBLE)
             } else {
                 isScreensaverActive = false
+                binding.screensaverEye.setVisibility(View.INVISIBLE)
                 changeScreenBrightness(currentBrightness)
                 binding.previewModeOverlay.setBackgroundColor(0)
                 binding.tooltipTitle.setText(R.string.preview_mode_tooltip_title)

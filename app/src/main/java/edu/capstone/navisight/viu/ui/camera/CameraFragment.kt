@@ -310,6 +310,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
                 currentBrightness = Settings.System.getInt(
                     context.contentResolver, Settings.System.SCREEN_BRIGHTNESS
                 ) / 255f
+                binding.screensaverEye.setVisibility(View.VISIBLE)
                 changeScreenBrightness(context, 0.0F)
                 binding.previewModeOverlay.setBackgroundColor(resources.getColor(R.color.screensaver_color))
                 binding.tooltipTitle.setText(R.string.screensaver_mode_tooltip_title)
@@ -317,6 +318,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
                 binding.tooltipDescription2.setText(R.string.screensaver_mode_tooltip_2)
             } else {
                 isScreensaverActive = false
+                binding.screensaverEye.setVisibility(View.INVISIBLE)
                 changeScreenBrightness(context, currentBrightness)
                 binding.previewModeOverlay.setBackgroundColor(0)
                 binding.tooltipTitle.setText(R.string.preview_mode_tooltip_title)
