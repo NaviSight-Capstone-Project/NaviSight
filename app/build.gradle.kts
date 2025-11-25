@@ -135,13 +135,12 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.3.4")
     implementation("androidx.camera:camera-view:1.3.4")
 
-    // TensorFlow Lite
-    implementation("com.google.ai.edge.litert:litert:1.4.0")
-    implementation("com.google.ai.edge.litert:litert-api:1.4.0")
-    implementation("com.google.ai.edge.litert:litert-support:1.4.0")
-    implementation("com.google.ai.edge.litert:litert-metadata:1.4.0")
-    implementation("com.google.ai.edge.litert:litert-gpu:1.4.0")
-    implementation("com.google.ai.edge.litert:litert-gpu-api:1.4.0")
+    // LiteRT/Tensorflow Lite
+    implementation("com.google.ai.edge.litert:litert:1.4.1")
+    implementation("com.google.ai.edge.litert:litert-support:1.4.1")
+    implementation("com.google.ai.edge.litert:litert-metadata:1.4.1")
+    implementation("com.google.ai.edge.litert:litert-gpu:1.4.1")
+    implementation("com.google.ai.edge.litert:litert-gpu-api:1.4.1")
 
     // Firebase
     implementation(platform("com.google.firebase:firebase-bom:33.4.0"))

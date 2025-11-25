@@ -2,8 +2,7 @@ cmake_minimum_required(VERSION 3.4.1)
 
 project("image_processing")
 
-# ✅ Enforce 16 KB page alignment for Android 15+ native libs
-# This ensures generated .so files are compatible with devices that use 16 KB memory pages
+# Force 16KB Alignment
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
 
 add_library(

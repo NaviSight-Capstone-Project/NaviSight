@@ -1,7 +1,6 @@
 package com.ultralytics.yolo.predict.detect;
 
 import android.graphics.RectF;
-
 import androidx.annotation.Keep;
 
 public class DetectedObject {
