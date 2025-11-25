@@ -62,7 +62,7 @@
             android:exported="false" />
 
         <service
-            android:name=".webrtc.service.MainService"
+            android:name=".common.webrtc.service.MainService"
             android:exported="false"
             tools:targetApi="34"
             android:foregroundServiceType="dataSync|mediaProjection|camera|microphone|location" />
