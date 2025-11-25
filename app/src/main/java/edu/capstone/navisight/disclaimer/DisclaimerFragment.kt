@@ -21,12 +21,12 @@ import com.google.firebase.auth.FirebaseAuth
 import edu.capstone.navisight.R
 import edu.capstone.navisight.common.TTSHelper
 import edu.capstone.navisight.disclaimer.audioVisualizer.AudioVisualizerViewModel
-import edu.capstone.navisight.ui.feature_camera.CameraFragment
-import edu.capstone.navisight.ui.guest_mode.GuestCameraFragment
+import edu.capstone.navisight.guest.GuestFragment
+import edu.capstone.navisight.viu.ViuHomeFragment
 import java.util.*
 
 class DisclaimerFragment : Fragment() {
-
+    private val defaultSharePreferencesName = "NaviData" // Set default preferences name
     private val audioViewModel = AudioVisualizerViewModel()
     private var speechRecognizer: SpeechRecognizer? = null
     private var isConfirming = false
@@ -171,18 +171,17 @@ class DisclaimerFragment : Fragment() {
     }
 
     private fun saveDisclaimerAgreement() {
-        val prefs = requireContext().getSharedPreferences("NaviData", Context.MODE_PRIVATE)
+        val prefs = requireContext().getSharedPreferences(defaultSharePreferencesName, Context.MODE_PRIVATE)
         prefs.edit().putBoolean("IsDisclaimerAgreed", true).apply()
     }
 
     private fun navigateNext() {
         val currentUser = auth.currentUser
         val nextFragment = if (currentUser != null) {
-            CameraFragment()
+            ViuHomeFragment()
         } else {
-            GuestCameraFragment()
+            GuestFragment()
         }
-
         parentFragmentManager.commit {
             replace(R.id.fragment_container, nextFragment)
         }

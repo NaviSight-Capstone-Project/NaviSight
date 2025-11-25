@@ -9,6 +9,7 @@ Please do not delete necessary comments or TODOs unless finished or unneeded.
 
  */
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -22,7 +23,8 @@ import edu.capstone.navisight.auth.AuthActivity
 import edu.capstone.navisight.auth.data.remote.CloudinaryDataSource
 import edu.capstone.navisight.auth.domain.GetUserCollectionUseCase
 import edu.capstone.navisight.caregiver.CaregiverHomeFragment
- import edu.capstone.navisight.viu.ViuHomeFragment
+import edu.capstone.navisight.disclaimer.DisclaimerFragment
+import edu.capstone.navisight.viu.ViuHomeFragment
 import edu.capstone.navisight.guest.GuestFragment
 import edu.capstone.navisight.webrtc.repository.MainRepository
 import edu.capstone.navisight.webrtc.service.MainService
@@ -68,25 +70,30 @@ class MainActivity : AppCompatActivity() {
 
     private fun beginAppFlow() {
         val currentUser = auth.currentUser
-        if (currentUser != null) {
-            handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
-            lifecycleScope.launch {
-                try {
-                    getUserCollectionUseCase = GetUserCollectionUseCase()
-                    val collection = getUserCollectionUseCase(currentUser.uid)
-                    when (collection) {
-                        "caregivers" -> navigateToHomeFragment(isCaregiver = true)
-                        "vius" -> navigateToHomeFragment(isCaregiver = false)
-                        else -> navigateToAuth()
+        if (isDisclaimerAgreed()){
+            if (currentUser != null) {
+                handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
+                lifecycleScope.launch {
+                    try {
+                        getUserCollectionUseCase = GetUserCollectionUseCase()
+                        val collection = getUserCollectionUseCase(currentUser.uid)
+                        when (collection) {
+                            "caregivers" -> navigateToHomeFragment(isCaregiver = true)
+                            "vius" -> navigateToHomeFragment(isCaregiver = false)
+                            else -> navigateToAuth()
+                        }
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "Error fetching user collection", e)
+                        navigateToAuth()
                     }
-                } catch (e: Exception) {
-                    Log.e("MainActivity", "Error fetching user collection", e)
-                    navigateToAuth()
                 }
-            }
-        } else {
-            navigateToGuestMode()
-        }
+            } else navigateToGuestMode()
+        } else navigateToDisclaimer()
+    }
+
+    private fun isDisclaimerAgreed() : Boolean {
+        val prefs = getSharedPreferences("NaviData", Context.MODE_PRIVATE)
+        return prefs.getBoolean("IsDisclaimerAgreed", false)
     }
 
     private fun navigateToAuth() {
@@ -98,6 +105,12 @@ class MainActivity : AppCompatActivity() {
     private fun navigateToGuestMode() {
         supportFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, GuestFragment())
+            .commit()
+    }
+
+    private fun navigateToDisclaimer() {
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, DisclaimerFragment())
             .commit()
     }
 
