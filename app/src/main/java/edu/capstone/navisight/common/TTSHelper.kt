@@ -1,4 +1,4 @@
-package edu.capstone.navisight.viu.utils
+package edu.capstone.navisight.common
 
 import android.content.Context
 import android.os.Handler

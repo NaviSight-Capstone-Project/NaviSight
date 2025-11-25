@@ -14,7 +14,7 @@ import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import edu.capstone.navisight.MainActivity
 import edu.capstone.navisight.R
-import edu.capstone.navisight.viu.utils.TTSHelper
+import edu.capstone.navisight.common.TTSHelper
 import edu.capstone.navisight.webrtc.service.MainServiceActions.*
 import edu.capstone.navisight.webrtc.model.DataModel
 import edu.capstone.navisight.webrtc.model.DataModelType

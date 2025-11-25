@@ -30,7 +30,7 @@ import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.viu.domain.usecase.GenerateOrFetchQrUseCase
 import edu.capstone.navisight.viu.domain.usecase.GetViuProfileUseCase
 import edu.capstone.navisight.viu.ui.call.ViuCallActivity
-import edu.capstone.navisight.viu.utils.TTSHelper
+import edu.capstone.navisight.common.TTSHelper
 import edu.capstone.navisight.webrtc.model.DataModel
 import edu.capstone.navisight.webrtc.model.DataModelType
 import edu.capstone.navisight.webrtc.repository.MainRepository

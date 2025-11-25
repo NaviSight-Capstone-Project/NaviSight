@@ -16,6 +16,7 @@ import java.util.LinkedList
 import kotlin.math.abs
 import kotlin.math.max
 import edu.capstone.navisight.R
+import edu.capstone.navisight.common.TTSHelper
 import edu.capstone.navisight.common.VibrationHelper
 
 class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs) {
