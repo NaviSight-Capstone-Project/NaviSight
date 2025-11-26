@@ -8,6 +8,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +24,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import edu.capstone.navisight.viu.model.Viu
 import edu.capstone.navisight.viu.model.QR
@@ -31,7 +36,8 @@ fun ProfileScreen(
     uiState: ProfileUiState,
     onLogout: () -> Unit,
     onVideoCall: () -> Unit,
-    onAudioCall: () -> Unit
+    onAudioCall: () -> Unit,
+    onBackClick: () -> Unit
 ) {
     when {
         uiState.isLoading -> {
@@ -47,24 +53,25 @@ fun ProfileScreen(
         }
 
         uiState.user != null -> {
-            // MODIFICATION 1: Pass the uiState.qr object
             ProfileContent(
                 user = uiState.user,
-                qr = uiState.qr, // <-- ADDED THIS
+                qr = uiState.qr,
                 qrBitmap = uiState.qrBitmap,
                 onLogout = onLogout,
                 onVideoCall = onVideoCall,
-                onAudioCall = onAudioCall
+                onAudioCall = onAudioCall,
+                onBackClick = onBackClick
             )
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-// MODIFICATION 2: Add the 'qr: QR?' parameter
 fun ProfileContent(user: Viu, qr: QR?, qrBitmap: Bitmap?,
                    onLogout: () -> Unit, onVideoCall: () -> Unit,
-                   onAudioCall: () -> Unit) {
+                   onAudioCall: () -> Unit,
+                   onBackClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -72,7 +79,14 @@ fun ProfileContent(user: Viu, qr: QR?, qrBitmap: Bitmap?,
             .background(Color(0xFFF9FAFB))
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
+        TopAppBar(
+            title = { Text("Your Profile") },
+            navigationIcon = {
+                IconButton(onClick = onBackClick) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+            }
+        )
 
         // Profile Card
         ProfileCard(user = user)

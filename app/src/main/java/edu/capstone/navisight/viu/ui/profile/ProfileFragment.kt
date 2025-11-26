@@ -24,6 +24,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.Navigation.findNavController
 import edu.capstone.navisight.R
 import edu.capstone.navisight.guest.GuestFragment
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
@@ -36,6 +37,7 @@ import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.model.DataModel
 import edu.capstone.navisight.common.webrtc.model.DataModelType
 import edu.capstone.navisight.common.webrtc.utils.getCameraAndMicPermission
+import edu.capstone.navisight.viu.ui.camera.CameraFragment
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -93,6 +95,12 @@ class ProfileFragment : Fragment(), MainService.Listener {
                     onAudioCall = {
                         targetCaregiverUid?.let { uid -> viewModel.audioCall(uid) }
                             ?: Toast.makeText(context, "No caregiver linked.", Toast.LENGTH_SHORT).show()
+                    },
+                    onBackClick = {
+                        requireActivity().supportFragmentManager.commit {
+                            replace(R.id.fragment_container, CameraFragment()) // Replace with your actual CameraFragment class
+                            setReorderingAllowed(true)
+                        }
                     }
                 )
             }
