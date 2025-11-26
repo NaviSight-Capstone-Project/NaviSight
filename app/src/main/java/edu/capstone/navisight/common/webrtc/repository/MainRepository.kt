@@ -80,7 +80,7 @@ class MainRepository private constructor(
                             )
                         )
                         webRTCClient.answer(target!!)
-                        abortSignalTargetUidToCheck = event.sender
+                        abortSignalTargetUidToCheck = event.sender // Trigger on receiving
                     }
                     Answer -> {
                         Log.d("MainRepository", "Detected an answer.")

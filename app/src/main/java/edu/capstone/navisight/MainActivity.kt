@@ -152,4 +152,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (MainService.listener == this) {
+            MainService.listener = null
+        }
+        mainRepository.setOffline()
+    }
 }
