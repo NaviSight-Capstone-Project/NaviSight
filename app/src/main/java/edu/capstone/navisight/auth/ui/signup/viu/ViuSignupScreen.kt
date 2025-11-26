@@ -63,6 +63,9 @@ fun ViuSignupScreen(
     var category by remember { mutableStateOf("") }
     var caregiverEmail by remember { mutableStateOf("") }
 
+    var isCategoryExpanded by remember { mutableStateOf(false) }
+    val categoryOptions = listOf("Partially Blind", "Totally Blind")
+
     //  State for validation
     var isEmailValid by remember { mutableStateOf(true) }
     var isPasswordValid by remember { mutableStateOf(true) }
@@ -140,7 +143,7 @@ fun ViuSignupScreen(
                     )
                 }
                 Text(
-                    text = "Create VIU Account", // <-- Changed
+                    text = "Create VIU Account",
                     style = MaterialTheme.typography.titleLarge,
                     color = Color.White,
                     fontWeight = FontWeight.Bold
@@ -199,7 +202,38 @@ fun ViuSignupScreen(
 
                 // category
                 Text("Category", color = fieldLabelColor, modifier = Modifier.align(Alignment.Start).padding(bottom = 4.dp))
-                OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category (e.g., Student, Employed)", maxLines = 1, overflow = TextOverflow.Ellipsis) }, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth(), singleLine = true)
+                ExposedDropdownMenuBox(
+                    expanded = isCategoryExpanded,
+                    onExpandedChange = { isCategoryExpanded = !isCategoryExpanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = {}, // ReadOnly
+                        readOnly = true,
+                        label = { Text("Select Category") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isCategoryExpanded) },
+                        colors = customTextFieldColors,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = isCategoryExpanded,
+                        onDismissRequest = { isCategoryExpanded = false },
+                        modifier = Modifier.background(Color.White)
+                    ) {
+                        categoryOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    category = option
+                                    isCategoryExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
                 Spacer(Modifier.height(24.dp))
 
                 // Account Information Header

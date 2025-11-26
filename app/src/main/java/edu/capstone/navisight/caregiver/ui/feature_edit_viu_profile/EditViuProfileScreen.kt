@@ -72,6 +72,8 @@ fun EditViuProfileScreen(
     var sex by remember { mutableStateOf("") }
     var isSexDropdownExpanded by remember { mutableStateOf(false) }
     val sexOptions = listOf("Male", "Female", "Prefer not to say")
+    var isStatusDropdownExpanded by remember { mutableStateOf(false) }
+    val statusOptions = listOf("Partially Blind", "Totally Blind")
     var showDatePicker by remember { mutableStateOf(false) }
     var selectedBirthdayMillis by remember { mutableStateOf<Long?>(null) }
     val dateFormatter = remember { SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()) }
@@ -281,13 +283,30 @@ fun EditViuProfileScreen(
             label = { Text("Address") }, readOnly = !canEdit, modifier = Modifier.fillMaxWidth(),
             colors = customTextFieldColors, shape = RoundedCornerShape(12.dp)
         )
-
-        OutlinedTextField(
-            value = status, onValueChange = { status = it },
-            label = { Text("Status (e.g., Partially Blind)") }, readOnly = !canEdit, modifier = Modifier.fillMaxWidth(),
-            colors = customTextFieldColors, shape = RoundedCornerShape(12.dp)
-        )
-
+        ExposedDropdownMenuBox(
+            expanded = isStatusDropdownExpanded && canEdit,
+            onExpandedChange = { if (canEdit) isStatusDropdownExpanded = !isStatusDropdownExpanded },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = status, onValueChange = { status = it },
+                label = { Text("Status (e.g., Partially Blind)") }, readOnly = !canEdit, modifier = Modifier.fillMaxWidth().menuAnchor(),
+                trailingIcon = if (canEdit) {
+                    { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isStatusDropdownExpanded) }
+                } else null
+            )
+            ExposedDropdownMenu(
+                expanded = isStatusDropdownExpanded,
+                onDismissRequest = { isStatusDropdownExpanded = false }
+            ) {
+                statusOptions.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = { status = option; isStatusDropdownExpanded = false; viewModel.clearSaveError() }
+                    )
+                }
+            }
+        }
         // Save Button
         if (canEdit) {
             val hasChanges = viu?.let {
