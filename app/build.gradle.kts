@@ -20,7 +20,7 @@ android {
 
     defaultConfig {
         applicationId = "edu.capstone.navisight"
-        minSdk = 33
+        minSdk = 29 // Minimum Android 10
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
