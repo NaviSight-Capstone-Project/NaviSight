@@ -80,7 +80,7 @@ class MainRepository private constructor(
                             )
                         )
                         webRTCClient.answer(target!!)
-                        abortSignalTargetUidToCheck = event.target
+                        abortSignalTargetUidToCheck = event.sender
                     }
                     Answer -> {
                         Log.d("MainRepository", "Detected an answer.")
@@ -143,6 +143,7 @@ class MainRepository private constructor(
         abortSignalTargetUidToCheck = target // Trigger on receiving
         justSentACallRequest = true
         Log.d("MainRepository", "Triggered send connection request")
+        Log.d("EndCallProblem", "Current abortSignalTargetUidToCheck is: $abortSignalTargetUidToCheck")
     }
 
     interface Listener {
