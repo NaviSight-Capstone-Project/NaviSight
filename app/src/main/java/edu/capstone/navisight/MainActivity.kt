@@ -148,14 +148,6 @@ class MainActivity : AppCompatActivity() {
             putExtra("username", currentUser)
         }
         startForegroundService(intent)
-
-        // TODO: Optimize code to something more efficient
-        if (firstTimeLaunched) {
-            CoroutineScope(Dispatchers.Main).launch {
-                delay(5500)
-                firstTimeLaunched = false
-            }
-        }
     }
 
     override fun onDestroy() {
