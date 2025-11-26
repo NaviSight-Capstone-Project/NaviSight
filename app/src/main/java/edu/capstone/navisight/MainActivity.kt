@@ -71,9 +71,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun beginAppFlow() {
-        currentUser = auth.currentUser!!
         if (isDisclaimerAgreed()){
-            if (currentUser != null) {
+            if (auth.currentUser != null) {
+                currentUser = auth.currentUser!!
                 handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
                 lifecycleScope.launch {
                     try {
