@@ -1,5 +1,6 @@
 package edu.capstone.navisight.common.webrtc.service
 
+import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -12,8 +13,8 @@ import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
-import edu.capstone.navisight.MainActivity
 import edu.capstone.navisight.R
+import edu.capstone.navisight.MainActivity
 import edu.capstone.navisight.common.TTSHelper
 import edu.capstone.navisight.common.webrtc.vendor.RTCAudioManager
 import edu.capstone.navisight.common.webrtc.service.MainServiceActions.*
@@ -39,6 +40,7 @@ class MainService : Service(), MainRepository.Listener {
     private var isPreviousCallStateVideo = true
 
     private lateinit var mainRepository : MainRepository
+    private lateinit var mainActivity : MainActivity
 
     private fun showToastOnMainThreadAndTTS(message: String) {
         Handler(Looper.getMainLooper()).post {
@@ -72,6 +74,7 @@ class MainService : Service(), MainRepository.Listener {
         Log.d("CallSignal", "making mainservice")
         INSTANCE = this
         mainRepository = MainRepository.getInstance(applicationContext)
+//        mainActivity = mainRepository.getMainActivity()
         rtcAudioManager = RTCAudioManager.create(this)
         rtcAudioManager.setDefaultAudioDevice(RTCAudioManager.AudioDevice.SPEAKER_PHONE)
         notificationManager = getSystemService(
@@ -290,7 +293,7 @@ class MainService : Service(), MainRepository.Listener {
                 this, "channel1"
             ).setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("Welcome to NaviSight")
-                .setContentText("NaviSight successfully booted! Live Calling is now active")
+                .setContentText("NaviSight successfully booted! Live calling is now active")
 
             notificationManager.createNotificationChannel(notificationChannel)
 
@@ -389,10 +392,13 @@ class MainService : Service(), MainRepository.Listener {
     }
 
     override fun missCall() {
+        val currentUserType = mainRepository.getUserType()
         MainActivity.firstTimeLaunched.let {
             if (!it) {
-                // TODO: Add tts
-                showToastOnMainThreadAndTTS("Caregiver missed your call. Try again?")
+                val textToSay =
+                    if (currentUserType == "viu") "Caregiver missed your call. Try again?"
+                    else "VIU missed your call. Try again?"
+                showToastOnMainThreadAndTTS(textToSay)
                 endCallAndRestartRepository()
             }
         }

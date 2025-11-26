@@ -12,6 +12,7 @@ import org.webrtc.IceCandidate
 import edu.capstone.navisight.common.webrtc.vendor.MyPeerObserver
 import edu.capstone.navisight.common.webrtc.vendor.WebRTCClient
 import com.google.gson.Gson
+import edu.capstone.navisight.MainActivity
 import edu.capstone.navisight.caregiver.model.Viu
 import org.webrtc.MediaStream
 import org.webrtc.PeerConnection
@@ -36,21 +37,27 @@ class MainRepository private constructor(
     private var remoteView: SurfaceViewRenderer? = null
     private lateinit var currentLatestEvent: DataModel
     private var caregiverStatusListener: (() -> Unit)? = null
-    private lateinit var mainActivity : Activity
+    private lateinit var mainActivity : MainActivity
 
     fun login(username: String, isDone: (Boolean, String?) -> Unit) {
         firebaseClient.checkRTDB(username, isDone)
     }
 
     // TODO: Improve these code
-    // Get and Set for Notification Helper
-    fun setMainActivity(currentActivity: Activity) {
-        mainActivity = currentActivity
-    }
-    fun getMainActivity(): Activity {
-        return mainActivity
+    // Get and Set for Notification Helper and access to what current user type
+//    fun setMainActivity(currentActivity: MainActivity) {
+//        mainActivity = currentActivity
+//    }
+//
+//    fun getMainActivity(): MainActivity {
+//        return mainActivity
+//    }
+
+    fun getUserType(): String{
+        return firebaseClient.getUserType()
     }
 
+    // TODO: Remove once optimized
     fun observeUsersStatus(status: (List<Pair<Viu?, String>>) -> Unit) {
         firebaseClient.observeUsersStatus(status)
     }

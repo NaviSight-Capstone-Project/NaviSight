@@ -19,6 +19,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.firebase.FirebaseApp
 import edu.capstone.navisight.common.PermissionsHelper
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import edu.capstone.navisight.auth.AuthActivity
 import edu.capstone.navisight.auth.data.remote.CloudinaryDataSource
 import edu.capstone.navisight.auth.domain.GetUserCollectionUseCase
@@ -43,6 +44,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var mainServiceRepository: MainServiceRepository
     private lateinit var mainRepository: MainRepository
+    private lateinit var currentUser : FirebaseUser
 
     companion object {
         var firstTimeLaunched: Boolean = true
@@ -60,6 +62,9 @@ class MainActivity : AppCompatActivity() {
         mainRepository = MainRepository.getInstance(applicationContext)
         auth = FirebaseAuth.getInstance()
 
+        // Pass Main Activity to Main Repository for further access
+//        mainRepository.setMainActivity(this)
+
         // Setup all permissions using this helper, begin if set properly
         val permissionHandler = PermissionsHelper(this)
         permissionHandler.checkAndRequestInitialPermissions()
@@ -68,8 +73,8 @@ class MainActivity : AppCompatActivity() {
         beginAppFlow()
     }
 
-    private fun beginAppFlow() {
-        val currentUser = auth.currentUser
+    fun beginAppFlow() {
+        currentUser = auth.currentUser!!
         if (isDisclaimerAgreed()){
             if (currentUser != null) {
                 handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)

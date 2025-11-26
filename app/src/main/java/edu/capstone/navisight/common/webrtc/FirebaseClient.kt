@@ -37,8 +37,10 @@ class FirebaseClient private constructor(
     private fun setUID(uid: String) {
         this.currentUID = uid
     }
-
     private val viuRemoteDataSource = ViuDataSource()
+
+    // For checking if the user is a VIU or Caregiver
+    private lateinit var userType : String
 
     // Tracking listeners for removal, mapping Reference -> Listener
     private val statusListeners = mutableMapOf<DatabaseReference, ValueEventListener>()
@@ -167,12 +169,19 @@ class FirebaseClient private constructor(
         return viuRemoteDataSource.getViuDetails(uid).first()
     }
 
+    fun getUserType(): String {
+        return userType
+    }
+
     // Formerly login.
     fun checkRTDB(uid: String, done: (Boolean, String?) -> Unit) {
         Log.d("AuthenticationCheck", "Passing through checkRTDB with UID $uid...")
         dbRef.addListenerForSingleValueEvent(object : EventListener() {
             override fun onDataChange(snapshot: DataSnapshot) {
+                // First retrieval
+                userType = snapshot.ref.parent?.key.toString()
                 if (snapshot.hasChild(uid)) {
+
                     dbRef.child(uid).child(FirebaseFieldNames.STATUS)
                         .setValue(UserStatus.ONLINE)
                         .addOnCompleteListener {
