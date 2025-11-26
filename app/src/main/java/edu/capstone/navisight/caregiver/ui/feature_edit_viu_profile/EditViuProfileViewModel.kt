@@ -8,8 +8,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import edu.capstone.navisight.auth.model.OtpResult
+import edu.capstone.navisight.caregiver.domain.connectionUseCase.TransferPrimaryUseCase
+import edu.capstone.navisight.caregiver.domain.connectionUseCase.UnpairViuUseCase
 import edu.capstone.navisight.caregiver.model.Viu
 import edu.capstone.navisight.caregiver.domain.viuUseCase.*
+import edu.capstone.navisight.caregiver.model.RequestStatus
+import edu.capstone.navisight.caregiver.model.TransferPrimaryRequest
+import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +37,15 @@ enum class SaveFlowState {
     SAVING
 }
 
+enum class TransferFlowState {
+    IDLE,
+    SELECTING_CANDIDATE, // Showing the list
+    CONFIRMING_PASSWORD, // Showing the password dialog
+    SENDING              // Network call
+}
 enum class DeleteFlowState { IDLE, PENDING_PASSWORD, DELETING }
+
+enum class UnpairFlowState { IDLE, CONFIRMING_PASSWORD, UNPAIRING }
 
 class EditViuProfileViewModel(
     savedStateHandle: SavedStateHandle
@@ -55,6 +68,9 @@ class EditViuProfileViewModel(
     private val verifyCaregiverOtpUseCase = VerifyCaregiverOtpUseCase()
     private val cancelViuProfileUpdateUseCase = CancelViuProfileUpdateUseCase()
     private val uploadViuProfileImageUseCase = UploadViuProfileImageUseCase()
+    private val transferPrimaryUseCase = TransferPrimaryUseCase()
+    private val getCurrentUserUidUseCase = GetCurrentUserUidUseCase()
+    private val unpairViuUseCase = UnpairViuUseCase()
 
     // --- State Flows ---
     private val _viu = MutableStateFlow<Viu?>(null)
@@ -98,6 +114,28 @@ class EditViuProfileViewModel(
 
     private val _canEdit = MutableStateFlow(false)
     val canEdit: StateFlow<Boolean> = _canEdit.asStateFlow()
+
+    private val _transferCandidates = MutableStateFlow<List<TransferPrimaryRequest>>(emptyList())
+    val transferCandidates: StateFlow<List<TransferPrimaryRequest>> = _transferCandidates.asStateFlow()
+
+    private val _transferFlowState = MutableStateFlow(TransferFlowState.IDLE)
+    val transferFlowState: StateFlow<TransferFlowState> = _transferFlowState.asStateFlow()
+
+    private val _transferError = MutableStateFlow<String?>(null)
+    val transferError: StateFlow<String?> = _transferError.asStateFlow()
+
+    private val _passwordRetryCount = MutableStateFlow(0)
+    val passwordRetryCount: StateFlow<Int> = _passwordRetryCount.asStateFlow()
+
+    private var pendingCandidate: TransferPrimaryRequest? = null
+    private val _unpairFlowState = MutableStateFlow(UnpairFlowState.IDLE)
+    val unpairFlowState: StateFlow<UnpairFlowState> = _unpairFlowState.asStateFlow()
+
+    private val _unpairError = MutableStateFlow<String?>(null)
+    val unpairError: StateFlow<String?> = _unpairError.asStateFlow()
+
+    private val _unpairSuccess = MutableStateFlow(false)
+    val unpairSuccess: StateFlow<Boolean> = _unpairSuccess.asStateFlow()
 
     // --- Internal State ---
     private val dateFormatter = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
@@ -543,6 +581,202 @@ class EditViuProfileViewModel(
         pendingNewEmail = null
         stopEmailResendTimer()
         viewModelScope.launch { cancelViuEmailChangeUseCase(viuUid) }
+    }
+
+    fun startTransferFlow() {
+        val currentUid = getCurrentUserUidUseCase() ?: return
+        viewModelScope.launch {
+            _isLoading.value = true
+            val candidates = transferPrimaryUseCase.getCandidates(viuUid, currentUid)
+            _transferCandidates.value = candidates
+            _isLoading.value = false
+            _transferFlowState.value = TransferFlowState.SELECTING_CANDIDATE
+        }
+    }
+
+    // 2. Candidate Selected: Move to Password Confirmation
+    fun onCandidateSelected(candidate: TransferPrimaryRequest) {
+        pendingCandidate = candidate
+        _passwordRetryCount.value = 0
+        _transferError.value = null
+        _transferFlowState.value = TransferFlowState.CONFIRMING_PASSWORD
+    }
+
+    // 3. Confirm Password & Send
+    fun confirmTransferPassword(password: String) {
+        if (password.isBlank()) {
+            _transferError.value = "Password cannot be empty"
+            return
+        }
+
+        if (_passwordRetryCount.value >= 5) {
+            _transferError.value = "Too many attempts. Please try again later."
+            return
+        }
+
+        viewModelScope.launch {
+            _transferFlowState.value = TransferFlowState.SENDING // Show loading in dialog
+
+            reauthenticateCaregiverUseCase(password).fold(
+                onSuccess = {
+                    // Password Correct -> Send Request
+                    performTransferRequest()
+                },
+                onFailure = {
+                    // Password Wrong
+                    _passwordRetryCount.value += 1
+                    val remaining = 5 - _passwordRetryCount.value
+                    _transferFlowState.value = TransferFlowState.CONFIRMING_PASSWORD // Go back to input
+
+                    if (remaining <= 0) {
+                        _transferError.value = "Too many failed attempts. Action cancelled."
+                        cancelTransferFlow()
+                    } else {
+                        _transferError.value = "Incorrect password. $remaining attempts left."
+                    }
+                }
+            )
+        }
+    }
+
+    private suspend fun performTransferRequest() {
+        val candidate = pendingCandidate ?: return
+        val currentUid = getCurrentUserUidUseCase() ?: return
+        val currentViu = _viu.value ?: return
+
+        // Fetch name
+        val actualName = transferPrimaryUseCase.getCurrentCaregiverName(currentUid)
+
+        val request = candidate.copy(
+            createdAt = com.google.firebase.Timestamp.now(),
+            currentPrimaryCaregiverUid = currentUid,
+            currentPrimaryCaregiverName = actualName,
+            viuUid = currentViu.uid,
+            viuName = "${currentViu.firstName} ${currentViu.lastName}",
+            status = "pending"
+        )
+
+        val result = transferPrimaryUseCase.sendRequest(request)
+
+        if (result is RequestStatus.Error) {
+            _transferError.value = result.message
+            _transferFlowState.value = TransferFlowState.CONFIRMING_PASSWORD // Stay on dialog to show error
+        } else {
+            _saveSuccess.value = true // Trigger success toast
+            cancelTransferFlow() // Reset states
+        }
+    }
+
+    // 4. Cancel / Close Dialogs
+    fun cancelTransferFlow() {
+        _transferFlowState.value = TransferFlowState.IDLE
+        pendingCandidate = null
+        _passwordRetryCount.value = 0
+        _transferError.value = null
+    }
+
+    fun loadTransferCandidates() {
+        val currentUid = getCurrentUserUidUseCase() ?: return
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            // Call UseCase
+            val candidates = transferPrimaryUseCase.getCandidates(viuUid, currentUid)
+            _transferCandidates.value = candidates
+            _isLoading.value = false
+        }
+    }
+
+    fun sendTransferRequest(candidate: TransferPrimaryRequest) {
+        val currentUid = getCurrentUserUidUseCase() ?: return
+        val currentViu = _viu.value ?: return
+
+        viewModelScope.launch {
+            _isLoading.value = true
+
+            val caregiverName = transferPrimaryUseCase.getCurrentCaregiverName(currentUid)
+
+            val request = candidate.copy(
+                createdAt = com.google.firebase.Timestamp.now(),
+                currentPrimaryCaregiverUid = currentUid,
+                currentPrimaryCaregiverName = caregiverName,
+                viuUid = currentViu.uid,
+                viuName = "${currentViu.firstName} ${currentViu.lastName}",
+                status = "pending"
+            )
+
+            val result = transferPrimaryUseCase.sendRequest(request)
+
+            if (result is RequestStatus.Error) {
+                _error.value = result.message
+            } else {
+                _saveSuccess.value = true
+            }
+            _isLoading.value = false
+        }
+    }
+
+    fun startUnpairFlow() {
+        if (_canEdit.value) { // Safety check: Primary cannot do this
+            _unpairError.value = "Primary caregivers cannot unpair. Use Transfer instead."
+            return
+        }
+        _passwordRetryCount.value = 0
+        _unpairError.value = null
+        _unpairFlowState.value = UnpairFlowState.CONFIRMING_PASSWORD
+    }
+
+    fun confirmUnpairPassword(password: String) {
+        if (password.isBlank()) {
+            _unpairError.value = "Password cannot be empty"
+            return
+        }
+        if (_passwordRetryCount.value >= 5) {
+            _unpairError.value = "Too many attempts. Action cancelled."
+            return
+        }
+
+        viewModelScope.launch {
+            _unpairFlowState.value = UnpairFlowState.UNPAIRING // Loading state
+
+            reauthenticateCaregiverUseCase(password).fold(
+                onSuccess = {
+                    performUnpair()
+                },
+                onFailure = {
+                    _passwordRetryCount.value += 1
+                    val remaining = 5 - _passwordRetryCount.value
+
+                    if (remaining <= 0) {
+                        _unpairError.value = "Too many failed attempts. Action cancelled."
+                        cancelUnpairFlow()
+                    } else {
+                        _unpairFlowState.value = UnpairFlowState.CONFIRMING_PASSWORD // Go back to dialog
+                        _unpairError.value = "Incorrect password. $remaining attempts left."
+                    }
+                }
+            )
+        }
+    }
+
+    private suspend fun performUnpair() {
+        val currentUid = getCurrentUserUidUseCase() ?: return
+
+        val result = unpairViuUseCase.invoke(currentUid, viuUid)
+
+        if (result is RequestStatus.Error) {
+            _unpairError.value = result.message
+            _unpairFlowState.value = UnpairFlowState.CONFIRMING_PASSWORD
+        } else {
+            _unpairSuccess.value = true
+            _unpairFlowState.value = UnpairFlowState.IDLE
+        }
+    }
+
+    fun cancelUnpairFlow() {
+        _unpairFlowState.value = UnpairFlowState.IDLE
+        _unpairError.value = null
+        _passwordRetryCount.value = 0
     }
 
     // --- Cleanup/Reset helpers ---

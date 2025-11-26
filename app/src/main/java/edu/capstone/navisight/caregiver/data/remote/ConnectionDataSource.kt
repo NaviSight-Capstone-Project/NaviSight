@@ -9,6 +9,7 @@ import edu.capstone.navisight.caregiver.model.Viu
 import edu.capstone.navisight.caregiver.model.Relationship
 import edu.capstone.navisight.caregiver.model.RequestStatus
 import edu.capstone.navisight.caregiver.model.SecondaryPairingRequest
+import edu.capstone.navisight.caregiver.model.TransferPrimaryRequest
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -240,7 +241,162 @@ class ConnectionDataSource(
             RequestStatus.Error(e.message ?: "Unknown error")
         }
     }
+    suspend fun getTransferCandidates(viuUid: String, currentUid: String): List<TransferPrimaryRequest> {
+        return try {
+            // Get all relationships for this VIU
+            val relSnapshot = firestore.collection("relationships")
+                .whereEqualTo("viuUid", viuUid)
+                .get()
+                .await()
 
+            val otherCaregiverUids = relSnapshot.documents
+                .mapNotNull { it.getString("caregiverUid") }
+                .filter { it != currentUid }
 
+            if (otherCaregiverUids.isEmpty()) return emptyList()
 
+            // Fetch caregiver names
+            val usersSnapshot = firestore.collection("caregivers")
+                .whereIn("uid", otherCaregiverUids)
+                .get()
+                .await()
+
+            usersSnapshot.documents.map { doc ->
+                TransferPrimaryRequest(
+                    recipientUid = doc.getString("uid") ?: "",
+                    recipientName = "${doc.getString("firstName")} ${doc.getString("lastName")}",
+                    recipientEmail = doc.getString("email") ?: "",
+                    viuUid = viuUid
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching candidates", e)
+            emptyList()
+        }
+    }
+
+    suspend fun sendTransferRequest(request: TransferPrimaryRequest): RequestStatus {
+        return try {
+            // Check for duplicate pending requests
+            val existing = firestore.collection("transferPrimaryRequests")
+                .whereEqualTo("viuUid", request.viuUid)
+                .whereEqualTo("recipientUid", request.recipientUid)
+                .whereEqualTo("status", "pending")
+                .get().await()
+
+            if (!existing.isEmpty) return RequestStatus.Error("Request already pending")
+
+            firestore.collection("transferPrimaryRequests").add(request).await()
+            RequestStatus.Success
+        } catch (e: Exception) {
+            RequestStatus.Error(e.message ?: "Failed to send")
+        }
+    }
+
+    fun getIncomingTransferRequests(myUid: String): Flow<List<TransferPrimaryRequest>> = callbackFlow {
+        val listener = firestore.collection("transferPrimaryRequests")
+            .whereEqualTo("recipientUid", myUid)
+            .whereEqualTo("status", "pending")
+            .addSnapshotListener { snap, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val items = snap?.toObjects(TransferPrimaryRequest::class.java) ?: emptyList()
+                // Ensure ID is attached
+                items.forEachIndexed { i, item -> item.id = snap!!.documents[i].id }
+                trySend(items)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun approveTransferRequest(request: TransferPrimaryRequest): RequestStatus {
+        return try {
+            val relRef = firestore.collection("relationships")
+            val senderSnapshot = relRef
+                .whereEqualTo("caregiverUid", request.currentPrimaryCaregiverUid)
+                .whereEqualTo("viuUid", request.viuUid)
+                .limit(1)
+                .get()
+                .await()
+
+            // Find the Receiver's Relationship Document
+            val receiverSnapshot = relRef
+                .whereEqualTo("caregiverUid", request.recipientUid)
+                .whereEqualTo("viuUid", request.viuUid)
+                .limit(1)
+                .get()
+                .await()
+
+            // Check if documents exist before starting transaction
+            if (senderSnapshot.isEmpty || receiverSnapshot.isEmpty) {
+                return RequestStatus.Error("Relationship documents not found")
+            }
+
+            // Get the References
+            val senderDocRef = senderSnapshot.documents[0].reference
+            val receiverDocRef = receiverSnapshot.documents[0].reference
+            val requestDocRef = firestore.collection("transferPrimaryRequests").document(request.id)
+
+            firestore.runTransaction { transaction ->
+                transaction.get(senderDocRef)
+                transaction.get(receiverDocRef)
+                transaction.update(senderDocRef, "primaryCaregiver", false)
+                transaction.update(receiverDocRef, "primaryCaregiver", true)
+                transaction.update(requestDocRef, "status", "approved")
+            }.await()
+
+            RequestStatus.Success
+        } catch (e: Exception) {
+            e.printStackTrace()
+            RequestStatus.Error(e.message ?: "Transaction failed")
+        }
+    }
+
+    suspend fun denyTransferRequest(requestId: String): RequestStatus {
+        return try {
+            firestore.collection("transferPrimaryRequests")
+                .document(requestId)
+                .update("status", "denied")
+                .await()
+            RequestStatus.Success
+        } catch (e: Exception) {
+            RequestStatus.Error(e.message ?: "Error denying request")
+        }
+    }
+    suspend fun getCaregiverName(uid: String): String {
+        return try {
+            val document = firestore.collection("caregivers").document(uid).get().await()
+            if (document.exists()) {
+                val firstName = document.getString("firstName") ?: ""
+                val lastName = document.getString("lastName") ?: ""
+                "$firstName $lastName".trim()
+            } else {
+                "Unknown Caregiver"
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching caregiver name", e)
+            "Unknown Caregiver"
+        }
+    }
+    suspend fun unpairViu(caregiverUid: String, viuUid: String): RequestStatus {
+        return try {
+            val snapshot = firestore.collection("relationships")
+                .whereEqualTo("caregiverUid", caregiverUid)
+                .whereEqualTo("viuUid", viuUid)
+                .limit(1)
+                .get()
+                .await()
+
+            if (snapshot.isEmpty) {
+                return RequestStatus.Error("Relationship not found")
+            }
+
+            // Delete the document
+            snapshot.documents[0].reference.delete().await()
+            RequestStatus.Success
+        } catch (e: Exception) {
+            RequestStatus.Error(e.message ?: "Failed to unpair")
+        }
+    }
 }

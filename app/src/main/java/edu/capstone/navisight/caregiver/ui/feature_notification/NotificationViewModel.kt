@@ -4,10 +4,12 @@ package edu.capstone.navisight.caregiver.ui.feature_notification
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import edu.capstone.navisight.caregiver.domain.connectionUseCase.SecondaryConnectionUseCase
+import edu.capstone.navisight.caregiver.domain.connectionUseCase.TransferPrimaryUseCase
 import edu.capstone.navisight.caregiver.domain.notificationUseCase.DismissActivityUseCase
 import edu.capstone.navisight.caregiver.domain.notificationUseCase.GetActivityFeedUseCase
 import edu.capstone.navisight.caregiver.model.RequestStatus
 import edu.capstone.navisight.caregiver.model.SecondaryPairingRequest
+import edu.capstone.navisight.caregiver.model.TransferPrimaryRequest
 import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,16 +18,21 @@ import edu.capstone.navisight.caregiver.model.GeofenceActivity
 
 class NotificationViewModel(
     private val secondaryConnectionUseCase: SecondaryConnectionUseCase = SecondaryConnectionUseCase(),
+    private val transferPrimaryUseCase: TransferPrimaryUseCase = TransferPrimaryUseCase(), // NEW UseCase
     private val getCurrentUidUseCase: GetCurrentUserUidUseCase = GetCurrentUserUidUseCase(),
-
     private val getActivityFeedUseCase: GetActivityFeedUseCase = GetActivityFeedUseCase(),
     private val dismissActivityUseCase: DismissActivityUseCase = DismissActivityUseCase()
 ) : ViewModel() {
 
     private val _activities = MutableStateFlow<List<GeofenceActivity>>(emptyList())
     val activities = _activities.asStateFlow()
+
     private val _pendingRequests = MutableStateFlow<List<SecondaryPairingRequest>>(emptyList())
     val pendingRequests = _pendingRequests.asStateFlow()
+
+    // NEW: Transfer Requests Flow
+    private val _transferRequests = MutableStateFlow<List<TransferPrimaryRequest>>(emptyList())
+    val transferRequests = _transferRequests.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
@@ -63,14 +70,23 @@ class NotificationViewModel(
                 return@launch
             }
 
-
             try {
-                secondaryConnectionUseCase.getPendingRequests(caregiverUid).collect { requests ->
-                    _pendingRequests.value = requests
-                    _isLoading.value = false
+                // 1. Get Secondary Requests (Existing)
+                launch {
+                    secondaryConnectionUseCase.getPendingRequests(caregiverUid).collect { requests ->
+                        _pendingRequests.value = requests
+                    }
+                }
+
+                // 2. Get Transfer Requests (NEW)
+                launch {
+                    transferPrimaryUseCase.getIncomingRequests(caregiverUid).collect { requests ->
+                        _transferRequests.value = requests
+                    }
                 }
             } catch (e: Exception) {
-                _errorMessage.value = "Failed to load pending requests: ${e.message}"
+                _errorMessage.value = "Failed to load requests: ${e.message}"
+            } finally {
                 _isLoading.value = false
             }
         }
@@ -115,6 +131,38 @@ class NotificationViewModel(
                 else -> {}
             }
 
+            _isLoading.value = false
+        }
+    }
+
+    fun approveTransfer(request: TransferPrimaryRequest) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            when (val result = transferPrimaryUseCase.approveRequest(request)) {
+                is RequestStatus.Success -> {
+                    _message.value = "You are now the Primary Caregiver."
+                }
+                is RequestStatus.Error -> {
+                    _errorMessage.value = result.message
+                }
+                else -> {}
+            }
+            _isLoading.value = false
+        }
+    }
+
+    fun denyTransfer(requestId: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            when (val result = transferPrimaryUseCase.denyRequest(requestId)) {
+                is RequestStatus.Success -> {
+                    _message.value = "Transfer request denied."
+                }
+                is RequestStatus.Error -> {
+                    _errorMessage.value = result.message
+                }
+                else -> {}
+            }
             _isLoading.value = false
         }
     }

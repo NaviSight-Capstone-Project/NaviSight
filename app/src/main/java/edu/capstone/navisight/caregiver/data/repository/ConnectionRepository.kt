@@ -4,6 +4,7 @@ import edu.capstone.navisight.caregiver.data.remote.ConnectionDataSource
 import edu.capstone.navisight.caregiver.model.QRModel
 import edu.capstone.navisight.caregiver.model.RequestStatus
 import edu.capstone.navisight.caregiver.model.SecondaryPairingRequest
+import edu.capstone.navisight.caregiver.model.TransferPrimaryRequest
 import edu.capstone.navisight.caregiver.model.Viu
 import kotlinx.coroutines.flow.Flow
 
@@ -26,7 +27,6 @@ class ConnectionRepository(
     suspend fun checkIfPaired(caregiverUid: String, viuUid: String): Boolean {
         return connectionDataSource.checkIfRelationshipExists(caregiverUid, viuUid)
     }
-
     suspend fun requestSecondaryPairing(
         requesterUid: String,
         viuUid: String,
@@ -37,10 +37,31 @@ class ConnectionRepository(
 
     fun getSecondaryPendingRequests(caregiverUid: String) =
         connectionDataSource.getSecondaryPendingRequestsForCaregiver(caregiverUid)
+
     suspend fun approveSecondaryRequest(request: SecondaryPairingRequest): RequestStatus =
         connectionDataSource.approveSecondaryRequest(request)
 
-
     suspend fun denySecondaryRequest(requestId: String): RequestStatus =
         connectionDataSource.denySecondaryRequest(requestId)
+
+    suspend fun getTransferCandidates(viuUid: String, currentUid: String): List<TransferPrimaryRequest> =
+        connectionDataSource.getTransferCandidates(viuUid, currentUid)
+
+    suspend fun sendTransferRequest(request: TransferPrimaryRequest): RequestStatus =
+        connectionDataSource.sendTransferRequest(request)
+
+    fun getIncomingTransferRequests(myUid: String): Flow<List<TransferPrimaryRequest>> =
+        connectionDataSource.getIncomingTransferRequests(myUid)
+
+    suspend fun approveTransferRequest(request: TransferPrimaryRequest): RequestStatus =
+        connectionDataSource.approveTransferRequest(request)
+
+    suspend fun denyTransferRequest(requestId: String): RequestStatus =
+        connectionDataSource.denyTransferRequest(requestId)
+
+    suspend fun getCaregiverName(uid: String): String {
+        return connectionDataSource.getCaregiverName(uid)
+    }
+    suspend fun unpairViu(caregiverUid: String, viuUid: String): RequestStatus {
+        return connectionDataSource.unpairViu(caregiverUid, viuUid)}
 }

@@ -7,10 +7,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,10 +32,16 @@ import java.util.Locale
 fun ProfileHeader(
     viuData: Viu,
     isUploading: Boolean,
-    onImageClick: () -> Unit
+    onImageClick: () -> Unit,
+    showMenu: Boolean = false,
+    isPrimaryCaregiver: Boolean,
+    onTransferRightsClick: () -> Unit = {},
+    onUnpairClick: () -> Unit = {}
 ) {
     val inputFormat = remember { SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()) }
     val outputFormat = remember { SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()) }
+
+    var menuExpanded by remember { mutableStateOf(false) }
 
     val formattedBirthday = remember(viuData.birthday) {
         if (viuData.birthday.isNullOrEmpty()) "N/A"
@@ -104,10 +110,49 @@ fun ProfileHeader(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = fullName,
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = fullName,
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.weight(1f)
+                )
+
+                if (showMenu) {
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }
+                        ) {
+                            if (isPrimaryCaregiver) {
+                                // Option for PRIMARY
+                                DropdownMenuItem(
+                                    text = { Text("Transfer Primary Rights") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onTransferRightsClick()
+                                    }
+                                )
+                            } else {
+                                // Option for SECONDARY (Red Text)
+                                DropdownMenuItem(
+                                    text = { Text("Unpair VIU", color = Color.Red, fontWeight = FontWeight.Bold) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onUnpairClick()
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             if (!viuData.category.isNullOrEmpty()) {
                 Box(

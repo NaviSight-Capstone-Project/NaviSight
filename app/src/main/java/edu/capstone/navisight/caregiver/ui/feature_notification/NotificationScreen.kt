@@ -27,6 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.capstone.navisight.R
 import edu.capstone.navisight.caregiver.model.GeofenceActivity
 import edu.capstone.navisight.caregiver.model.SecondaryPairingRequest
+import edu.capstone.navisight.caregiver.model.TransferPrimaryRequest
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -35,8 +36,9 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
     var selectedTab by remember { mutableStateOf("Activity") }
 
     // Observers
-    val activities by viewModel.activities.collectAsState() // NEW
-    val requests by viewModel.pendingRequests.collectAsState()
+    val activities by viewModel.activities.collectAsState()
+    val secondaryRequests by viewModel.pendingRequests.collectAsState()
+    val transferRequests by viewModel.transferRequests.collectAsState() // NEW
     val loading by viewModel.isLoading.collectAsState()
     val error by viewModel.errorMessage.collectAsState()
 
@@ -92,7 +94,6 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
                         Text("No recent activity", color = Color.Gray)
                     }
                 } else {
-                    // LazyColumn automatically handles lists
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(bottom = 16.dp)
@@ -108,16 +109,25 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
             }
             "Request" -> {
                 when {
-                    loading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    loading && secondaryRequests.isEmpty() && transferRequests.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     error != null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(text = error ?: "", color = Color.Red) }
-                    requests.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No pending requests", color = Color.Gray) }
+                    secondaryRequests.isEmpty() && transferRequests.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No pending requests", color = Color.Gray) }
                     else -> {
-                        LazyColumn( // Changed Column to LazyColumn for scrolling
+                        LazyColumn(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                             contentPadding = PaddingValues(bottom = 16.dp)
                         ) {
-                            items(requests) { request ->
+                            items(transferRequests) { request ->
+                                TransferRequestCard(
+                                    request = request,
+                                    onApprove = { viewModel.approveTransfer(request) },
+                                    onDeny = { viewModel.denyTransfer(request.id) }
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+
+                            items(secondaryRequests) { request ->
                                 RequestRow(
                                     request = request,
                                     onApprove = { viewModel.approveRequest(request) },
@@ -237,6 +247,66 @@ private fun TabButton(
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium
         )
+    }
+}
+
+@Composable
+private fun TransferRequestCard(
+    request: TransferPrimaryRequest,
+    onApprove: () -> Unit,
+    onDeny: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .shadow(elevation = 8.dp, shape = RoundedCornerShape(24.dp)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1)) // Orange tint for urgency
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "Request to become Primary Caregiver",
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = Color(0xFFE65100)
+            )
+            Text(
+                text = "From: ${request.currentPrimaryCaregiverName}",
+                fontSize = 13.sp,
+                color = Color(0xFF414040)
+            )
+            Text(
+                text = "For VIU: ${request.viuName}",
+                fontSize = 13.sp,
+                color = Color(0xFF414040)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onApprove,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE65100)),
+                    shape = RoundedCornerShape(50.dp),
+                    contentPadding = PaddingValues(vertical = 0.dp),
+                    modifier = Modifier.height(32.dp).weight(1f)
+                ) {
+                    Text("ACCEPT", color = Color.White, fontSize = 12.sp)
+                }
+
+                OutlinedButton(
+                    onClick = onDeny,
+                    shape = RoundedCornerShape(50.dp),
+                    contentPadding = PaddingValues(vertical = 0.dp),
+                    modifier = Modifier.height(32.dp).weight(1f)
+                ) {
+                    Text("DENY", color = Color.Black, fontSize = 12.sp)
+                }
+            }
+        }
     }
 }
 
