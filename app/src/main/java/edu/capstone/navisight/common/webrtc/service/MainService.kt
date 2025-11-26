@@ -290,7 +290,7 @@ class MainService : Service(), MainRepository.Listener {
                 this, "channel1"
             ).setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("Welcome to NaviSight")
-                .setContentText("NaviSight successfully booted!")
+                .setContentText("NaviSight successfully booted! Live Calling is now active")
 
             notificationManager.createNotificationChannel(notificationChannel)
 

@@ -84,7 +84,6 @@ class MainRepository private constructor(
                     }
                     Answer -> {
                         Log.d("MainRepository", "Detected an answer.")
-
                         webRTCClient.onRemoteSessionReceived(
                             SessionDescription(
                                 SessionDescription.Type.ANSWER,
