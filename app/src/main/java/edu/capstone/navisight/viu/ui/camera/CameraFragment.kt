@@ -52,6 +52,8 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
 
     private val TAG = "CameraFragment"
 
+    private lateinit var service: MainService
+
     // For WebRTC popup call
     private var callRequestDialog: AlertDialog? = null
 
@@ -151,6 +153,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
 
         // Link Main Service listener
         MainService.listener = this
+        service = MainService.getInstance()
 
         // Start camera bind with object detector
         _fragmentCameraBinding = FragmentCameraBinding.bind(view)
@@ -443,6 +446,9 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
             // Set up the ACCEPT button click listener
             btnAccept.setOnClickListener {
                 releaseMediaPlayer() // Stop ringtone upon user action
+
+                // Stop timer on end/miss call timeout
+                service.stopCallTimeoutTimer()
 
                 Log.w(TAG, "Getting reference for CallActivity...")
                 val activity = requireActivity() as? AppCompatActivity

@@ -31,9 +31,6 @@ import edu.capstone.navisight.common.webrtc.repository.MainRepository
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.service.MainServiceActions
 import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 

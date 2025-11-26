@@ -56,6 +56,7 @@ class CaregiverHomeFragment : Fragment(),
     private val streamFragment = StreamFragment()
     private val notificationsFragment = NotificationFragment()
     private val settingsFragment = SettingsFragment()
+    private lateinit var service: MainService
 
     private val fragmentJob = SupervisorJob()
     private val fragmentScope = CoroutineScope(Dispatchers.Main + fragmentJob)
@@ -82,6 +83,7 @@ class CaregiverHomeFragment : Fragment(),
 
         mainRepository = MainRepository.getInstance(requireContext())
         MainService.listener = this
+        service = MainService.getInstance()
 
         setupBottomNavigation(view)
         observeNavigation()
@@ -161,6 +163,7 @@ class CaregiverHomeFragment : Fragment(),
         (requireActivity() as AppCompatActivity).getCameraAndMicPermission {
             mainRepository.sendConnectionRequest(uid, true) { success ->
                 if (success) {
+                    service.startCallTimeoutTimer() // Begin expiration
                     Log.d("CallSignal", "Video call request successfully sent.")
                     val intent = Intent(requireContext(), CaregiverCallActivity::class.java).apply {
                         putExtra("target", uid)
@@ -181,6 +184,7 @@ class CaregiverHomeFragment : Fragment(),
         (requireActivity() as AppCompatActivity).getCameraAndMicPermission {
             mainRepository.sendConnectionRequest(uid, false) { success ->
                 if (success) {
+                    service.startCallTimeoutTimer() // Begin expiration
                     Log.d("CallSignal", "Audio call request successfully sent.")
                     val intent = Intent(requireContext(), CaregiverCallActivity::class.java).apply {
                         putExtra("target", uid)
@@ -282,6 +286,7 @@ class CaregiverHomeFragment : Fragment(),
         acceptButton.setOnClickListener {
             (requireActivity() as AppCompatActivity).getCameraAndMicPermission{
                 releaseMediaPlayer()
+                service.stopCallTimeoutTimer() // Stop timer on end/miss call timeout
                 callRequestDialog.isVisible = false
                 startActivity(Intent(requireContext(), CaregiverCallActivity::class.java).apply {
                     putExtra("target", model.sender)

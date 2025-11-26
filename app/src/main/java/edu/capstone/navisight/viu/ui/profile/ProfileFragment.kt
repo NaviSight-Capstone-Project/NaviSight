@@ -41,8 +41,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class ProfileFragment : Fragment(), MainService.Listener {
-
     private lateinit var mainRepository : MainRepository
+    private lateinit var service: MainService
     private val viewModel: ProfileViewModel by viewModels {
         ProfileViewModelFactory(ViuDataSource())
     }
@@ -72,6 +72,7 @@ class ProfileFragment : Fragment(), MainService.Listener {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        service = MainService.getInstance()
         val view = inflater.inflate(R.layout.fragment_profile, container, false)
         val composeView = view.findViewById<ComposeView>(R.id.profile_compose_view)
         mainRepository = MainRepository.getInstance(requireContext())
@@ -211,6 +212,10 @@ class ProfileFragment : Fragment(), MainService.Listener {
 
             acceptButton.setOnClickListener {
                 releaseMediaPlayer()
+
+                // Stop timer on end/miss call timeout
+                service.stopCallTimeoutTimer()
+
                 val activity = requireActivity() as? AppCompatActivity
 
                 activity?.getCameraAndMicPermission {
@@ -264,6 +269,7 @@ class ProfileFragment : Fragment(), MainService.Listener {
         (requireActivity() as AppCompatActivity).getCameraAndMicPermission {
             mainRepository.sendConnectionRequest(targetUid, isVideoCall) { success ->
                 if (success) {
+                    service.startCallTimeoutTimer() // Begin expiration
                     val intent = Intent(requireActivity(), ViuCallActivity::class.java).apply {
                         putExtra("target", targetUid)
                         putExtra("isVideoCall", isVideoCall)

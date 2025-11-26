@@ -1,6 +1,5 @@
 package edu.capstone.navisight.common.webrtc.repository
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.util.Log
@@ -31,7 +30,8 @@ class MainRepository private constructor(
 ) : WebRTCClient.Listener {
     var listener: Listener? = null
     private var target: String? = null
-    private var abortSignalTargetUidToCheck: String? = null
+    private var abortSignalSenderUidToCheck: String? = null
+    private var missSignalTargetUidToCheck: String? = null
     private var justSentACallRequest = false
     private var receivedAVideoOrAudioCall = false
     private var remoteView: SurfaceViewRenderer? = null
@@ -71,12 +71,15 @@ class MainRepository private constructor(
                 when (event.type) {
                     StartVideoCall -> {
                         Log.d("MainRepository", "Detected start video call.")
-                        abortSignalTargetUidToCheck = event.sender // Trigger on receiving
+                        abortSignalSenderUidToCheck = event.sender // Trigger on receiving
+                        missSignalTargetUidToCheck = event.target // Trigger on receiving // TODO
                         receivedAVideoOrAudioCall = true
                     }
                     StartAudioCall -> {
                         Log.d("MainRepository", "Detected start video call.")
-                        abortSignalTargetUidToCheck = event.sender // Trigger on receiving
+                        abortSignalSenderUidToCheck = event.sender // Trigger on receiving
+                        missSignalTargetUidToCheck = event.target // Trigger on receiving
+
                         receivedAVideoOrAudioCall = true
                     }
                     Offer -> {
@@ -87,7 +90,7 @@ class MainRepository private constructor(
                             )
                         )
                         webRTCClient.answer(target!!)
-                        abortSignalTargetUidToCheck = event.sender // Trigger on receiving
+                        abortSignalSenderUidToCheck = event.sender // Trigger on receiving
                     }
                     Answer -> {
                         Log.d("MainRepository", "Detected an answer.")
@@ -132,7 +135,7 @@ class MainRepository private constructor(
     fun setOffline() {
         firebaseClient.changeMyStatus(UserStatus.OFFLINE)
         Log.d("abortsignal", "set offline triggered")
-        if (abortSignalTargetUidToCheck != null && justSentACallRequest) {
+        if (abortSignalSenderUidToCheck != null && justSentACallRequest) {
             Log.d("abort", "send abort call should work now")
             sendAbortCall()
         }
@@ -146,10 +149,10 @@ class MainRepository private constructor(
                 target = target
             ), success
         )
-        abortSignalTargetUidToCheck = target // Trigger on receiving
+        abortSignalSenderUidToCheck = target // Trigger on receiving
         justSentACallRequest = true
         Log.d("MainRepository", "Triggered send connection request")
-        Log.d("EndCallProblem", "Current abortSignalTargetUidToCheck is: $abortSignalTargetUidToCheck")
+        Log.d("EndCallProblem", "Current abortSignalSenderUidToCheck is: $abortSignalSenderUidToCheck")
     }
 
     interface Listener {
@@ -253,11 +256,11 @@ class MainRepository private constructor(
     }
 
     fun sendMissCall() {
-        Log.d("misscall", "triggered send misscall, current uid is: $abortSignalTargetUidToCheck")
+        Log.d("misscall", "triggered send misscall, current uid is: $abortSignalSenderUidToCheck")
         onTransferEventToSocket(
             DataModel(
                 type = MissCall,
-                target = abortSignalTargetUidToCheck.toString()
+                target = abortSignalSenderUidToCheck.toString()
             )
         )
         justSentACallRequest = false
@@ -271,7 +274,7 @@ class MainRepository private constructor(
         onTransferEventToSocket(
             DataModel(
                 type = verdict,
-                target = abortSignalTargetUidToCheck.toString()
+                target = abortSignalSenderUidToCheck.toString()
             )
         )
         justSentACallRequest = false
@@ -281,7 +284,7 @@ class MainRepository private constructor(
         onTransferEventToSocket(
             DataModel(
                 type = AbortCall,
-                target = abortSignalTargetUidToCheck.toString()
+                target = abortSignalSenderUidToCheck.toString()
             )
         )
         justSentACallRequest = false

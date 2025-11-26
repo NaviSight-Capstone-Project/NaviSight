@@ -1,6 +1,9 @@
 package edu.capstone.navisight.viu.ui.call
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.widget.Toast
@@ -8,6 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
@@ -28,6 +32,24 @@ class ViuCallActivity : ComponentActivity(), MainService.EndAndDeniedCallListene
     // Declare the ActivityResultLauncher for screen capture
     private lateinit var requestScreenCaptureLauncher: ActivityResultLauncher<Intent>
 
+    private val finishReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "TARGET_MISSED_YOUR_CALL") {
+                Toast.makeText(
+                    context,
+                    "Your caregiver missed your call. Try again?",
+                    Toast.LENGTH_LONG).show()
+
+                serviceRepository.sendEndOrAbortCall() // TODO: Formalize this to Missed Call
+                MainService.remoteSurfaceView?.release()
+                MainService.remoteSurfaceView = null
+                MainService.localSurfaceView?.release()
+                MainService.localSurfaceView = null
+                finish()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -35,6 +57,10 @@ class ViuCallActivity : ComponentActivity(), MainService.EndAndDeniedCallListene
 
         // Set the listener to handle remote end call signals
         MainService.endAndDeniedCallListener = this
+
+        // Register for detecting missed call
+        LocalBroadcastManager.getInstance(this)
+            .registerReceiver(finishReceiver, IntentFilter("TARGET_MISSED_YOUR_CALL"))
 
         // Screen share var init.
         setupScreenCaptureLauncher()

@@ -1,9 +1,9 @@
 package edu.capstone.navisight.common.webrtc.service
 
-import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
@@ -13,6 +13,7 @@ import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import edu.capstone.navisight.R
 import edu.capstone.navisight.MainActivity
 import edu.capstone.navisight.common.TTSHelper
@@ -51,22 +52,48 @@ class MainService : Service(), MainRepository.Listener {
 
         // This Runnable defines the action to take when the 30 seconds expire
     private val callTimeoutRunnable = Runnable {
-        currentIncomingCallerId?.let { senderId ->
-            Log.w(TAG, "Call from $senderId timed out after 30 seconds. Aborting.")
+        Log.w("calltimeout", "callTimeoutRunnable is now working")
+        currentIncomingCallerId?.let { targetId ->
+            Log.w("calltimeout", "Call to $targetId timed out after 30 seconds. Aborting.")
             // Call the existing abort function to dismiss the UI/popup
-            onMissCall(senderId)
+            onMissCall(targetId)
         }
+        val intent2 = Intent("TARGET_MISSED_YOUR_CALL")
+        LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent2)
         currentIncomingCallerId = null
     }
 
     companion object {
+        private const val TAG = "MainServiceCountdown"
+
+        @Volatile // Ensures INSTANCE is up-to-date across all threads
+        private var INSTANCE: MainService? = null
+
+        // This is the public method to get the single instance.
+        // It uses 'synchronized' to be thread-safe.
+        fun getInstance(): MainService {
+            return INSTANCE ?: synchronized(this) {
+                // If INSTANCE is still null (first time), throw an error.
+                // The service must be started via the Android Intent system first.
+                return INSTANCE ?: throw IllegalStateException("MainService must be started via Intent before calling getInstance()")
+            }
+        }
+
+        // Helper function to safely get MainRepository without exposing the Service instance
+        fun getMainRepository(): MainRepository? = INSTANCE?.mainRepository
+
+        // Original companion properties remain for static access
         var listener: Listener? = null
         var endAndDeniedCallListener:EndAndDeniedCallListener?=null
         var localSurfaceView: SurfaceViewRenderer?=null
         var remoteSurfaceView: SurfaceViewRenderer?=null
         var screenPermissionIntent : Intent?=null
-        private var INSTANCE: MainService? = null
-        fun getMainRepository(): MainRepository? = INSTANCE?.mainRepository
+
+        // Public static method to safely start the service via the OS
+        fun start(context: Context, intent: Intent) {
+            intent.setClass(context, MainService::class.java)
+            context.startService(intent)
+        }
     }
 
     override fun onCreate() {
@@ -312,30 +339,27 @@ class MainService : Service(), MainRepository.Listener {
         }
     }
 
-    private fun startCallTimeoutTimer() {
-        // Ensure any previous timer is stopped
-        stopCallTimeoutTimer()
+    // Set to public so this will be accessible the second the callee does accept the call
+    fun startCallTimeoutTimer() {
+        stopCallTimeoutTimer() // Ensure any previous timer is stopped
         Log.d(TAG, "Starting 30-second call timeout timer.")
         // Post the runnable to execute after 30 seconds
         callTimeoutHandler.postDelayed(callTimeoutRunnable, CALL_TIMEOUT_MS)
     }
 
-    private fun stopCallTimeoutTimer() {
+    // Set to public so this will be accessible the second the callee does accept the call
+    fun stopCallTimeoutTimer() {
         Log.d(TAG, "Stopping call timeout timer.")
         // Remove the delayed runnable from the handler's queue
         callTimeoutHandler.removeCallbacks(callTimeoutRunnable)
     }
-
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
 
     override fun onLatestEventReceived(data: DataModel) {
-        Log.d("CallSignal", "onLatestEventReceived found something")
-
         if (data.isValid()) {
-            Log.d("CallSignal", "onLatestEventReceived found valid")
             Log.d("CallSignal", "The data type found valid is: ${data.type}")
             when (data.type) {
                 DataModelType.StartVideoCall,
