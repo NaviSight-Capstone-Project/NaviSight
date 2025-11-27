@@ -34,6 +34,7 @@ class ScanQrFragment : Fragment() {
                 startCamera()
             } else {
                 Toast.makeText(requireContext(), "Camera permission required", Toast.LENGTH_SHORT).show()
+                parentFragmentManager.popBackStack()
             }
         }
 
@@ -56,11 +57,22 @@ class ScanQrFragment : Fragment() {
         composeView.setContent {
             ScanQrScreen(
                 viewModel = viewModel,
-                onNavigateBack = { requireActivity().onBackPressedDispatcher.onBackPressed() }
+                onNavigateBack = { parentFragmentManager.popBackStack() }
             )
         }
 
         return view
+    }
+
+    override fun onResume() {
+        super.onResume()
+        requireActivity().findViewById<View>(R.id.bottom_nav_compose_view)?.visibility = View.GONE
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        requireActivity().findViewById<View>(R.id.bottom_nav_compose_view)?.visibility = View.VISIBLE
+        previewView = null
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -81,9 +93,10 @@ class ScanQrFragment : Fragment() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
 
         cameraProviderFuture.addListener({
+            if (!isAdded || previewView == null) return@addListener
+
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
 
-            // Preview
             val preview = Preview.Builder()
                 .build()
                 .also {
@@ -103,6 +116,7 @@ class ScanQrFragment : Fragment() {
 
             try {
                 cameraProvider.unbindAll()
+
                 cameraProvider.bindToLifecycle(
                     viewLifecycleOwner,
                     cameraSelector,
@@ -116,19 +130,12 @@ class ScanQrFragment : Fragment() {
         }, ContextCompat.getMainExecutor(requireContext()))
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        previewView = null
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
     }
 
     private class QrCodeAnalyzer(private val onQrCodeDetected: (String) -> Unit) : ImageAnalysis.Analyzer {
-
-        //  ML Kit Barcode Scanner
         private val scanner = BarcodeScanning.getClient()
 
         @androidx.annotation.OptIn(ExperimentalGetImage::class)
@@ -136,20 +143,13 @@ class ScanQrFragment : Fragment() {
             val mediaImage = imageProxy.image
             if (mediaImage != null) {
                 val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-
                 scanner.process(image)
                     .addOnSuccessListener { barcodes ->
                         for (barcode in barcodes) {
-                            barcode.rawValue?.let { value ->
-                                onQrCodeDetected(value)
-                            }
+                            barcode.rawValue?.let { value -> onQrCodeDetected(value) }
                         }
                     }
-                    .addOnFailureListener {
-                    }
-                    .addOnCompleteListener {
-                        imageProxy.close()
-                    }
+                    .addOnCompleteListener { imageProxy.close() }
             } else {
                 imageProxy.close()
             }

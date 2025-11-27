@@ -2,10 +2,10 @@ package edu.capstone.navisight.caregiver.ui.feature_scanqr
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,9 +27,23 @@ fun ScanQrScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
 
     Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        modifier = Modifier.fillMaxSize()
     ) {
+        IconButton(
+            onClick = onNavigateBack,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .statusBarsPadding()
+                .padding(16.dp)
+                .background(Color.Black.copy(alpha = 0.5f), shape = CircleShape)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = Color.White
+            )
+        }
+
         if (isLoading) {
             Box(
                 modifier = Modifier
@@ -41,22 +55,27 @@ fun ScanQrScreen(
             }
         }
 
-        successMessage?.let { message ->
-            ScanResultDialog(
-                title = "Success",
-                message = message,
-                isError = false,
-                onDismiss = onNavigateBack
-            )
-        }
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            successMessage?.let { message ->
+                ScanResultDialog(
+                    title = "Success",
+                    message = message,
+                    isError = false,
+                    onDismiss = onNavigateBack
+                )
+            }
 
-        errorMessage?.let { message ->
-            ScanResultDialog(
-                title = "Error",
-                message = message,
-                isError = true,
-                onDismiss = { viewModel.resetState() }
-            )
+            errorMessage?.let { message ->
+                ScanResultDialog(
+                    title = "Error",
+                    message = message,
+                    isError = true,
+                    onDismiss = { viewModel.resetState() }
+                )
+            }
         }
     }
 }
