@@ -46,16 +46,16 @@ class ViuSignupDataSource(
             val caregiverUid = getCaregiverUidByEmail(caregiverEmail)
                 ?: return Result.failure(Exception("No Caregiver account found with that email."))
 
-            // 1. Create VIU Auth
+            // Create VIU Auth
             val authResult = auth.createUserWithEmailAndPassword(email, password).await()
             viuUid = authResult.user?.uid ?: return Result.failure(Exception("VIU user creation failed"))
 
-            // 2. Upload Image
+            // Upload Image
             val imageUrl: String? = if (imageUri != null) {
                 try { CloudinaryDataSource.uploadImage(imageUri) } catch (e: Exception) { null }
             } else { null }
 
-            // 3. Create VIU Profile (Unverified)
+            // Create VIU Profile (Unverified)
             val viu = Viu(
                 uid = viuUid,
                 firstName = firstName, middleName = middleName, lastName = lastName,
@@ -65,10 +65,10 @@ class ViuSignupDataSource(
             )
             viusCollection.document(viuUid).set(viu).await()
 
-            // 4. Request OTP -> Stored in stored_otp/{caregiverUid}_VIU_CREATION
+            // Request OTP
             val otpResult = otpDataSource.requestOtp(
                 context = context,
-                uid = caregiverUid, // The OTP belongs to the Caregiver (they verify it)
+                uid = caregiverUid, // The OTP belongs to the Caregiver
                 emailToSendTo = caregiverEmail,
                 type = OtpDataSource.OtpType.VIU_CREATION,
                 extraData = mapOf("pendingViuId" to viuUid) // Save VIU ID inside the OTP doc
@@ -89,11 +89,11 @@ class ViuSignupDataSource(
 
     suspend fun verifySignupOtp(
         caregiverUid: String,
-        viuUid: String, // Passed from UI, but we should verify it matches stored OTP
+        viuUid: String, // Passed from UI, but should verify it matches stored OTP
         enteredOtp: String
     ): OtpResult.OtpVerificationResult {
 
-        // 1. Verify Code
+        // Verify Code
         val verificationResult = otpDataSource.verifyOtp(
             uid = caregiverUid,
             enteredOtp = enteredOtp,
@@ -102,7 +102,7 @@ class ViuSignupDataSource(
 
         if (verificationResult == OtpResult.OtpVerificationResult.Success) {
             try {
-                // 2. Double check: Does the stored OTP actually belong to this VIU?
+                // Does the stored OTP actually belong to this VIU?
                 val storedPendingViuId = otpDataSource.getExtraDataString(
                     caregiverUid,
                     OtpDataSource.OtpType.VIU_CREATION,
@@ -110,11 +110,10 @@ class ViuSignupDataSource(
                 )
 
                 if (storedPendingViuId != viuUid) {
-                    // Security mismatch
                     return OtpResult.OtpVerificationResult.FailureInvalid
                 }
 
-                // 3. Success: Link Accounts
+                // Link Account
                 val relationshipData = hashMapOf(
                     "caregiverUid" to caregiverUid,
                     "viuUid" to viuUid,
@@ -127,7 +126,7 @@ class ViuSignupDataSource(
                 caregiversCollection.document(caregiverUid).update("viuIds", FieldValue.arrayUnion(viuUid)).await()
                 viusCollection.document(viuUid).update("isEmailVerified", true).await()
 
-                // 4. Cleanup: Delete the OTP document
+                // Delete the OTP document
                 otpDataSource.cleanupOtp(caregiverUid, OtpDataSource.OtpType.VIU_CREATION)
 
             } catch (e: Exception) {
@@ -137,15 +136,12 @@ class ViuSignupDataSource(
         return verificationResult
     }
 
-    // Cancel / Cleanup
     suspend fun deleteUnverifiedUser(viuUid: String): Boolean {
         return try {
             val user = auth.currentUser
             if (user != null && user.uid == viuUid) {
                 viusCollection.document(viuUid).delete().await()
                 user.delete().await()
-                // We don't need to manually delete the OTP here because it's in stored_otp
-                // and will expire naturally, or the user can retry.
                 true
             } else false
         } catch (e: Exception) { false }

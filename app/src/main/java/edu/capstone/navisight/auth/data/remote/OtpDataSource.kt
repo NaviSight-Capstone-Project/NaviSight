@@ -78,29 +78,29 @@ class OtpDataSource(
             var resendCount = doc.getLong("resendCount")?.toInt() ?: 0
             val lastOtpTime = doc.getLong("timestamp") ?: 0L
 
-            // 1. Check Hard Lockout
+            // Check Hard Lockout
             if (currentTime < cooldownUntil) {
                 return ResendOtpResult.FailureCooldown
             }
 
-            // 2. Check Session Expiration (Reset logic if > 5 mins have passed)
+            // Check Session Expiration (Reset logic if > 5 mins have passed)
             if (resendCount > 0 && (currentTime - lastOtpTime > OTP_EXPIRATION_MS)) {
                 resendCount = 0 // Expired, start fresh
             }
 
-            // 3. Check Max Resends (Spam Protection)
+            // Check Max Resends (Spam Protection)
             if (resendCount >= MAX_TOTAL_SENDS) {
                 // Apply Lockout
                 docRef.update("cooldownUntil", currentTime + OTP_COOLDOWN_DURATION_MS).await()
                 return ResendOtpResult.FailureCooldown
             }
 
-            // 4. Check 1-minute wait between clicks
+            // Check 1-minute wait between clicks
             if (resendCount > 0 && currentTime - lastOtpTime < OTP_RESEND_WAIT_MS) {
                 return ResendOtpResult.FailureGeneric // "Please wait"
             }
 
-            // 5. Generate and Store
+            // Generate and Store
             val otp = (100000..999999).random().toString()
             val newResendCount = resendCount + 1
 
@@ -120,7 +120,7 @@ class OtpDataSource(
 
             docRef.set(otpData, SetOptions.merge()).await()
 
-            // 6. Send Email using your EmailSender object
+            // Send Email using EmailSender
             sendEmailForType(context, emailToSendTo, type, otp)
 
             ResendOtpResult.Success

@@ -147,12 +147,12 @@ class CaregiverDataSource(
             val doc = docRef.get().await()
             val currentTime = System.currentTimeMillis()
 
-            // 1. Check OTP Cooldown (from stored_otp)
+            // Check OTP Cooldown (from stored_otp)
             if (otpDataSource.isCooldownActive(uid, OtpDataSource.OtpType.PASSWORD_CHANGE)) {
                 return PasswordChangeRequestResult.FailureCooldown
             }
 
-            // 2. Check Business Logic Cooldown (from User Profile)
+            // Check Business Logic Cooldown (from User Profile)
             val initialPwdCooldownUntil = doc.getTimestamp("passwordAttemptCooldownUntil")?.toDate()?.time ?: 0L
             if (currentTime < initialPwdCooldownUntil) {
                 return PasswordChangeRequestResult.FailureCooldown
@@ -162,7 +162,7 @@ class CaregiverDataSource(
             try {
                 user.reauthenticate(credential).await()
 
-                // Auth Success -> Clear attempt counts on profile
+                // Auth Success
                 docRef.update("passwordAttemptCount", FieldValue.delete()).await()
 
                 // Request OTP

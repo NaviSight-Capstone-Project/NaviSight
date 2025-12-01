@@ -48,7 +48,7 @@ class CaregiverSignupDataSource (
 
             usersCollection.document(uid).set(caregiver).await()
 
-            // Request OTP -> stored_otp/{uid}_SIGNUP_VERIFICATION
+            // Request OTP
             val otpResult = otpDataSource.requestOtp(
                 context = context,
                 uid = uid,
@@ -70,7 +70,6 @@ class CaregiverSignupDataSource (
     }
 
     suspend fun verifySignupOtp(uid: String, enteredOtp: String): OtpResult.OtpVerificationResult {
-        // Verify
         val verificationResult = otpDataSource.verifyOtp(
             uid = uid,
             enteredOtp = enteredOtp,
@@ -80,7 +79,6 @@ class CaregiverSignupDataSource (
         if (verificationResult == OtpResult.OtpVerificationResult.Success) {
             try {
                 usersCollection.document(uid).update("isEmailVerified", true).await()
-                // Cleanup OTP
                 otpDataSource.cleanupOtp(uid, OtpDataSource.OtpType.SIGNUP_VERIFICATION)
             } catch (e: Exception) {
                 return OtpResult.OtpVerificationResult.FailureExpiredOrCooledDown

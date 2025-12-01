@@ -170,12 +170,12 @@ class ViuDataSource(
             val caregiverEmail = auth.currentUser?.email
                 ?: return Result.failure(Exception("Caregiver not signed in"))
 
-            // Check new OTP Cooldown check
+            // Check OTP Cooldown
             if (otpDataSource.isCooldownActive(viuUid, OtpDataSource.OtpType.VIU_EMAIL_CHANGE)) {
                 return Result.success(ResendOtpResult.FailureCooldown)
             }
 
-            // Store pendingEmail in extraData (goes to stored_otp doc)
+            // Store pendingEmail
             val otpResult = otpDataSource.requestOtp(
                 context = context,
                 uid = viuUid,
@@ -190,7 +190,6 @@ class ViuDataSource(
     }
 
     suspend fun cancelViuEmailChange(viuUid: String) {
-        // Updated to use cleanupOtp
         otpDataSource.cleanupOtp(viuUid, OtpDataSource.OtpType.VIU_EMAIL_CHANGE)
     }
 
@@ -255,7 +254,6 @@ class ViuDataSource(
 
     suspend fun cancelViuProfileUpdate() {
         val caregiverUid = auth.currentUser?.uid ?: return
-        // Updated to cleanupOtp
         otpDataSource.cleanupOtp(caregiverUid, OtpDataSource.OtpType.VIU_PROFILE_UPDATE)
     }
 
