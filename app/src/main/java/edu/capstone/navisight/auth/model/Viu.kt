@@ -9,5 +9,7 @@ data class Viu(
     val phone: String = "",
     var profileImageUrl: String? = null,
     val category : String? = null,
-    val address: String? = null
+    val address: String? = null,
+    val isEmailVerified: Boolean = false, // Defaults to false
+    val caregiverId: String? = null, // To store the ID of their primary caregiver
 )

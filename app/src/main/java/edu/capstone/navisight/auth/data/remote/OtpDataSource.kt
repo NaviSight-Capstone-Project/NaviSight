@@ -2,19 +2,13 @@ package edu.capstone.navisight.auth.data.remote
 
 import android.content.Context
 import android.util.Log
-import edu.capstone.navisight.auth.model.OtpResult.OtpVerificationResult
-import edu.capstone.navisight.auth.model.OtpResult.PasswordChangeRequestResult
-import edu.capstone.navisight.auth.model.OtpResult.ResendOtpResult
-import edu.capstone.navisight.common.EmailSender
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.DocumentReference
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
-import com.google.firebase.Timestamp // Keep for reading timestamps
+import edu.capstone.navisight.auth.model.OtpResult.OtpVerificationResult
+import edu.capstone.navisight.auth.model.OtpResult.ResendOtpResult
+import edu.capstone.navisight.common.EmailSender
 import kotlinx.coroutines.tasks.await
-import java.util.Date
 
 class OtpDataSource(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -22,342 +16,199 @@ class OtpDataSource(
 ) {
 
     companion object {
-        // 5-minute (300,000 ms) lockout for spamming
-        const val OTP_COOLDOWN_DURATION_MS = 5 * 60 * 1000L
+        private const val COLLECTION_NAME = "stored_otp"
+        private const val TAG = "OtpDataSource"
 
-        // 5-minute (300,000 ms) expiration for a single code
-        const val OTP_EXPIRATION_MS = 5 * 60 * 1000L
-
-        // 1-minute (60,000 ms) wait between resend clicks
-        const val OTP_RESEND_WAIT_MS = 60 * 1000L
-
-        // Max 3 wrong attempts for a single OTP code
+        // Constants for limits
+        const val OTP_EXPIRATION_MS = 5 * 60 * 1000L        // 5 Minutes
+        const val OTP_COOLDOWN_DURATION_MS = 5 * 60 * 1000L // 5 Minutes Lockout
+        const val OTP_RESEND_WAIT_MS = 60 * 1000L           // 1 Minute between resends
         const val MAX_OTP_ATTEMPTS = 3
-
-        // Max 3 total sends (1 initial + 2 resends)
         const val MAX_TOTAL_SENDS = 3
-
-        private const val TAG = "OtpDataSource_DEBUG"
     }
 
-    private val usersCollection = firestore.collection("caregivers")
-    private val viusCollection = firestore.collection("vius")
+    private val otpCollection = firestore.collection(COLLECTION_NAME)
 
+    // Defines the "Instance" of the OTP
+    enum class OtpType {
+        SIGNUP_VERIFICATION,      // Caregiver Signup
+        VIU_CREATION,             // VIU Signup (Sent to Caregiver)
+        EMAIL_CHANGE,             // Change Caregiver Email
+        PASSWORD_CHANGE,          // Reset Password
+        VIU_PROFILE_UPDATE,       // Edit VIU Profile
+        TRANSFER_PRIMARY,         // Transfer Caregiver
+        VIU_EMAIL_CHANGE          // <--- ADDED THIS (Change VIU Email)
+    }
 
-    enum class OtpType(
-        val collection: String,
-        val otpField: String,
-        val timestampField: String,
-        val attemptCountField: String,
-        val resendCountField: String,
-        val cooldownField: String
-    ) {
-
-        VIU_CREATION(
-            collection = "caregivers", // Stores OTP on the Caregiver's doc
-            otpField = "otp",
-            timestampField = "otpTimestamp",
-            attemptCountField = "otpAttemptCount",
-            resendCountField = "otpResendCount",
-            cooldownField = "otpCooldownUntil"
-        ),
-
-        SIGNUP_VERIFICATION(
-            collection = "caregivers",
-            otpField = "otp", // Use existing field
-            timestampField = "otpTimestamp", // Use existing field
-            attemptCountField = "otpAttemptCount",
-            resendCountField = "otpResendCount",
-            cooldownField = "otpCooldownUntil"
-        ),
-        EMAIL_CHANGE(
-            collection = "caregivers",
-            otpField = "otp",
-            timestampField = "otpTimestamp",
-            attemptCountField = "otpAttemptCount",
-            resendCountField = "otpResendCount",
-            cooldownField = "otpCooldownUntil"
-        ),
-        PASSWORD_CHANGE(
-            collection = "caregivers",
-            otpField = "passwordChangeOtp",
-            timestampField = "passwordChangeOtpTimestamp",
-            attemptCountField = "passwordChangeOtpAttemptCount",
-            resendCountField = "passwordResendCount",
-            cooldownField = "passwordCooldownUntil"
-        ),
-
-        VIU_SIGNUP_VERIFICATION(
-            collection = "vius",
-            otpField = "otp",
-            timestampField = "otpTimestamp",
-            attemptCountField = "otpAttemptCount",
-            resendCountField = "otpResendCount",
-            cooldownField = "otpCooldownUntil"
-        ),
-
-        VIU_EMAIL_CHANGE(
-            collection = "vius",
-            otpField = "otp",
-            timestampField = "otpTimestamp",
-            attemptCountField = "otpAttemptCount",
-            resendCountField = "otpResendCount",
-            cooldownField = "otpCooldownUntil"
-        ),
-        VIU_PROFILE_UPDATE(
-            collection = "caregivers",
-            otpField = "verificationOtp",
-            timestampField = "verificationOtpTimestamp",
-            attemptCountField = "verificationOtpAttemptCount",
-            resendCountField = "verificationOtpResendCount",
-            cooldownField = "verificationOtpCooldownUntil"
-        )
+    private fun getOtpDocId(uid: String, type: OtpType): String {
+        return "${uid}_${type.name}"
     }
 
     /**
-     * Gets the correct DocumentReference based on the OtpType.
-     */
-    private fun getDocRef(uid: String, type: OtpType): DocumentReference {
-        return when (type.collection) {
-            "vius" -> viusCollection.document(uid)
-            "caregivers" -> usersCollection.document(uid)
-            else -> throw IllegalArgumentException("Invalid collection type")
-        }
-    }
-
-    /**
-     * Public function to check if a cooldown is active.
+     * Checks if the user is currently locked out from requesting this specific OTP type.
      */
     suspend fun isCooldownActive(uid: String, type: OtpType): Boolean {
         return try {
-            val doc = getDocRef(uid, type).get().await() // Use helper
-            val currentTime = System.currentTimeMillis()
-            val cooldownUntilTime = doc.getTimestamp(type.cooldownField)?.toDate()?.time ?: 0L
-
-            if (currentTime < cooldownUntilTime) {
-                Log.w(TAG, "[${type.name}] Cooldown is ACTIVE until ${Date(cooldownUntilTime)}")
-                true // Cooldown is active
-            } else {
-                Log.d(TAG, "[${type.name}] Cooldown is INACTIVE.")
-                false // Cooldown is not active
-            }
+            val docId = getOtpDocId(uid, type)
+            val doc = otpCollection.document(docId).get().await()
+            val cooldownUntil = doc.getLong("cooldownUntil") ?: 0L
+            System.currentTimeMillis() < cooldownUntil
         } catch (e: Exception) {
-            Log.e(TAG, "[${type.name}] Error checking cooldown", e)
-            false // Fail open
+            false
         }
     }
 
     /**
-     * Requests an OTP. Handles resend logic and sets cooldown on final failed attempt.
+     * Requests an OTP: Generates it, stores it in `stored_otp`, and sends the email.
      */
     suspend fun requestOtp(
         context: Context,
-        uid: String, // UID of the document where OTP will be stored
-        emailToSendTo: String, // Email to send to
+        uid: String,
+        emailToSendTo: String,
         type: OtpType,
         extraData: Map<String, Any?> = emptyMap()
     ): ResendOtpResult {
         return try {
-            val docRef = getDocRef(uid, type) // Use helper
+            val docId = getOtpDocId(uid, type)
+            val docRef = otpCollection.document(docId)
             val doc = docRef.get().await()
+
             val currentTime = System.currentTimeMillis()
-            Log.d(TAG, "[${type.name}] Requesting OTP. Current Time: ${Date(currentTime)}")
+            val cooldownUntil = doc.getLong("cooldownUntil") ?: 0L
+            var resendCount = doc.getLong("resendCount")?.toInt() ?: 0
+            val lastOtpTime = doc.getLong("timestamp") ?: 0L
 
-            val cooldownUntil = doc.getTimestamp(type.cooldownField)?.toDate()?.time ?: 0L
-            var resendCount = doc.getLong(type.resendCountField)?.toInt() ?: 0
-            val lastOtpTime = doc.getLong(type.timestampField) ?: 0L
-
-            // Check for 5-minute (300s) SPAM COOLDOWN first
-            // This is a "hard" lockout from previous spam (either resends or attempts)
+            // 1. Check Hard Lockout
             if (currentTime < cooldownUntil) {
-                Log.w(TAG, "[${type.name}] Resend failed: On 5-min cooldown until ${Date(cooldownUntil)}")
                 return ResendOtpResult.FailureCooldown
             }
 
-            // If the last OTP was > 5 min ago, it's an expired session.
-            // Reset the count so the user can start fresh.
+            // 2. Check Session Expiration (Reset logic if > 5 mins have passed)
             if (resendCount > 0 && (currentTime - lastOtpTime > OTP_EXPIRATION_MS)) {
-                Log.d(TAG, "[${type.name}] Previous OTP session expired (> 5 min old). Resetting resend count to 0.")
-                resendCount = 0
-            }
-            // Note: If cooldown expired AND resendCount was >= 3, this also resets it.
-            else if (cooldownUntil > 0 && currentTime >= cooldownUntil && resendCount >= MAX_TOTAL_SENDS) {
-                Log.d(TAG, "[${type.name}] Previous 5-min cooldown expired. Resetting resend count to 0.")
-                resendCount = 0
+                resendCount = 0 // Expired, start fresh
             }
 
-            // If count is at or over the limit, this is the 4th+ attempt.
-            // Start the 5-minute cooldown and fail.
+            // 3. Check Max Resends (Spam Protection)
             if (resendCount >= MAX_TOTAL_SENDS) {
-                Log.w(TAG, "[${type.name}] Resend failed: Max sends (${MAX_TOTAL_SENDS}) reached. Starting 5-min cooldown.")
-                val cooldownTime = Date(currentTime + OTP_COOLDOWN_DURATION_MS)
-                docRef.update(type.cooldownField, cooldownTime).await()
+                // Apply Lockout
+                docRef.update("cooldownUntil", currentTime + OTP_COOLDOWN_DURATION_MS).await()
                 return ResendOtpResult.FailureCooldown
             }
 
-            // This is for the 2nd and 3rd sends.
-            val newResendCount = resendCount + 1
+            // 4. Check 1-minute wait between clicks
             if (resendCount > 0 && currentTime - lastOtpTime < OTP_RESEND_WAIT_MS) {
-                Log.w(TAG, "[${type.name}] Resend (Send #${newResendCount}) failed: Must wait 1 minute.")
-                return ResendOtpResult.FailureGeneric
+                return ResendOtpResult.FailureGeneric // "Please wait"
             }
 
-            val otp = generateOtp()
-            Log.d("generateOtp", "Current OTP is: $otp") // TODO: Remove when under production
-            val otpData = mutableMapOf<String, Any?>()
-            otpData.putAll(extraData)
-            otpData[type.otpField] = otp
-            otpData[type.timestampField] = currentTime
-            otpData[type.attemptCountField] = 0 // Reset attempt count
-            otpData[type.resendCountField] = newResendCount // Increment resend count
+            // 5. Generate and Store
+            val otp = (100000..999999).random().toString()
+            val newResendCount = resendCount + 1
 
-            // Explicitly delete any cooldown, as we are starting a new valid session
-            otpData[type.cooldownField] = FieldValue.delete()
-            Log.d(TAG, "[${type.name}] Sending OTP (Send #${newResendCount}).")
+            // Prepare the data for stored_otp collection
+            val otpData = mutableMapOf<String, Any?>(
+                "uid" to uid,
+                "otp" to otp,
+                "type" to type.name,
+                "timestamp" to currentTime,
+                "expiresAt" to currentTime + OTP_EXPIRATION_MS,
+                "attemptCount" to 0,
+                "resendCount" to newResendCount,
+                "cooldownUntil" to 0 // Clear any previous cooldown
+            )
+            // Add extra data (like pendingViuId) directly to the OTP document
+            otpData.putAll(extraData)
 
             docRef.set(otpData, SetOptions.merge()).await()
 
-            val subject = when (type) {
-                OtpType.EMAIL_CHANGE -> "NaviSight Email Verification"
-                OtpType.PASSWORD_CHANGE -> "NaviSight Password Change Verification"
-                OtpType.VIU_EMAIL_CHANGE -> "NaviSight Security Verification"
-                OtpType.VIU_PROFILE_UPDATE -> "NaviSight Security Verification"
-                OtpType.SIGNUP_VERIFICATION -> "NaviSight Signup Verification"
-                OtpType.VIU_CREATION -> "NaviSight New VIU Link Request"
-                OtpType.VIU_SIGNUP_VERIFICATION -> "NaviSight Signup Verification"
-            }
-            val body = when (type) {
-                OtpType.EMAIL_CHANGE -> "Your verification code is: $otp\n\nIt expires in 5 minutes."
-                OtpType.PASSWORD_CHANGE -> "Your verification code to change your password is: $otp\n\nIt expires in 5 minutes."
-                OtpType.VIU_EMAIL_CHANGE -> "You requested to change a VIU's contact email. Your verification code is: $otp\n\nIt expires in 5 minutes."
-                OtpType.VIU_PROFILE_UPDATE -> "Your verification code to update VIU details is: $otp\n\nIt expires in 5 minutes."
-                OtpType.SIGNUP_VERIFICATION -> "Your verification code is: $otp\n\nIt expires in 5 minutes."
-                OtpType.VIU_CREATION -> "A new Visually Impaired User is trying to link to your account. Your verification code is: $otp\n\nIt expires in 5 minutes."
-                OtpType.VIU_SIGNUP_VERIFICATION -> "Your verification code is: $otp\n\nIt expires in 5 minutes."
-            }
+            // 6. Send Email using your EmailSender object
+            sendEmailForType(context, emailToSendTo, type, otp)
 
-            EmailSender.sendVerificationEmail(
-                context = context,
-                to = emailToSendTo,
-                subject = subject,
-                body = body
-            )
             ResendOtpResult.Success
         } catch (e: Exception) {
-            Log.e(TAG, "[${type.name}] OTP Request failed with exception", e)
+            Log.e(TAG, "Request OTP Failed", e)
             ResendOtpResult.FailureGeneric
         }
     }
 
-    /**
-     * Verifies OTP, sets cooldown on 3rd try.
-     */
     suspend fun verifyOtp(
-        uid: String, // UID of the document where OTP is stored
+        uid: String,
         enteredOtp: String,
         type: OtpType
     ): OtpVerificationResult {
         return try {
-            val docRef = getDocRef(uid, type) // Use helper
+            val docId = getOtpDocId(uid, type)
+            val docRef = otpCollection.document(docId)
             val doc = docRef.get().await()
+
+            // Does not exist?
+            if (!doc.exists()) return OtpVerificationResult.FailureExpiredOrCooledDown
+
+            val storedOtp = doc.getString("otp")
+            val expiresAt = doc.getLong("expiresAt") ?: 0L
+            val cooldownUntil = doc.getLong("cooldownUntil") ?: 0L
+            val attemptCount = doc.getLong("attemptCount")?.toInt() ?: 0
             val currentTime = System.currentTimeMillis()
 
-            val storedOtp = doc.getString(type.otpField)
-            val timestamp = doc.getLong(type.timestampField) ?: 0L
-            val attemptCount = doc.getLong(type.attemptCountField)?.toInt() ?: 0
-            val cooldownUntil = doc.getTimestamp(type.cooldownField)?.toDate()?.time ?: 0L
+            // Validation Checks
+            if (currentTime < cooldownUntil) return OtpVerificationResult.FailureExpiredOrCooledDown
 
-            if (currentTime < cooldownUntil) {
+            // Check Expiration
+            if (currentTime > expiresAt) {
+                cleanupOtp(uid, type) // Auto-delete expired doc
                 return OtpVerificationResult.FailureExpiredOrCooledDown
             }
 
-            if (storedOtp == null) {
-                return OtpVerificationResult.FailureExpiredOrCooledDown
-            }
-
-            if (currentTime - timestamp > OTP_EXPIRATION_MS) {
-                cancelOtpProcess(uid, type) // Expire it
-                return OtpVerificationResult.FailureExpiredOrCooledDown
-            }
-
-            if (attemptCount >= MAX_OTP_ATTEMPTS) {
-                // This case should be rare, as 3rd attempt sets cooldown
-                return OtpVerificationResult.FailureMaxAttempts
-            }
-
+            if (attemptCount >= MAX_OTP_ATTEMPTS) return OtpVerificationResult.FailureMaxAttempts
 
             if (enteredOtp == storedOtp) {
-                // SUCCESS
-                OtpVerificationResult.Success
+                return OtpVerificationResult.Success
             } else {
-                // FAILURE
-                val newAttemptCount = attemptCount + 1
-                if (newAttemptCount >= MAX_OTP_ATTEMPTS) {
-                    // This was the 3rd FAILED attempt. Start 5-min cooldown.
-                    val failureUpdateMap = mutableMapOf<String, Any?>()
-                    val cooldownTime = Date(currentTime + OTP_COOLDOWN_DURATION_MS)
-                    failureUpdateMap[type.cooldownField] = cooldownTime
-                    failureUpdateMap[type.attemptCountField] = newAttemptCount
-                    docRef.update(failureUpdateMap).await()
-                    OtpVerificationResult.FailureMaxAttempts
+                // Wrong OTP Logic
+                val newCount = attemptCount + 1
+                if (newCount >= MAX_OTP_ATTEMPTS) {
+                    // Lockout
+                    docRef.update("cooldownUntil", currentTime + OTP_COOLDOWN_DURATION_MS).await()
+                    return OtpVerificationResult.FailureMaxAttempts
                 } else {
-                    // This was attempt 1 or 2. Just increment count.
-                    docRef.update(type.attemptCountField, newAttemptCount).await()
-                    OtpVerificationResult.FailureInvalid
+                    docRef.update("attemptCount", newCount).await()
+                    return OtpVerificationResult.FailureInvalid
                 }
             }
+
         } catch (e: Exception) {
-            Log.e(TAG, "[${type.name}] OTP Verification failed with exception", e)
             OtpVerificationResult.FailureExpiredOrCooledDown
         }
     }
 
-    /**
-     * Immediately expires an active OTP when the user cancels.
-     * This does NOT reset the resend count or any active 5-minute cooldown.
-     * This is correct, as it prevents "canceling" to escape a lockout.
-     */
-    suspend fun cancelOtpProcess(uid: String, type: OtpType) {
+    // Completely removes the document from stored_otp
+    suspend fun cleanupOtp(uid: String, type: OtpType) {
         try {
-            val docRef = getDocRef(uid, type) // Use helper
-            Log.d(TAG, "[${type.name}] User cancelled. Deleting active OTP.")
-
-            val fieldsToCancel = mapOf(
-                type.otpField to FieldValue.delete(),
-                type.timestampField to FieldValue.delete(),
-                type.attemptCountField to FieldValue.delete()
-            )
-
-            docRef.update(fieldsToCancel).await()
+            val docId = getOtpDocId(uid, type)
+            otpCollection.document(docId).delete().await()
         } catch (e: Exception) {
-            Log.e(TAG, "[${type.name}] Failed to cancel OTP fields", e)
+            Log.e(TAG, "Cleanup failed", e)
         }
     }
 
-    /**
-     * Cleans up ALL OTP fields after a FULLY SUCCESSFUL operation.
-     * This is correct, as it resets everything for the next time.
-     */
-    suspend fun cleanupOtpFields(uid: String, type: OtpType, extraFieldsToDelete: Map<String, FieldValue> = emptyMap()) {
-        try {
-            val docRef = getDocRef(uid, type) // Use helper
-            Log.d(TAG, "[${type.name}] Cleaning up ALL OTP fields after success.")
-
-            val cleanupMap = mutableMapOf<String, Any>(
-                type.otpField to FieldValue.delete(),
-                type.timestampField to FieldValue.delete(),
-                type.attemptCountField to FieldValue.delete(),
-                type.resendCountField to FieldValue.delete(), // <-- Resets resend count
-                type.cooldownField to FieldValue.delete()
-            )
-            cleanupMap.putAll(extraFieldsToDelete)
-            docRef.update(cleanupMap).await()
-        } catch (e: Exception) {
-            Log.e(TAG, "[${type.name}] Failed to cleanup OTP fields", e)
-        }
+    // Helper to retrieve extra data (like pendingViuId) stored inside the OTP doc
+    suspend fun getExtraDataString(uid: String, type: OtpType, fieldKey: String): String? {
+        return try {
+            val docId = getOtpDocId(uid, type)
+            val doc = otpCollection.document(docId).get().await()
+            doc.getString(fieldKey)
+        } catch (e: Exception) { null }
     }
 
-    private fun generateOtp(): String {
-        return (100000..999999).random().toString()
+    private suspend fun sendEmailForType(context: Context, email: String, type: OtpType, otp: String) {
+        val (subject, body) = when (type) {
+            OtpType.SIGNUP_VERIFICATION -> "NaviSight Caregiver Signup" to "Your verification code is: $otp"
+            OtpType.VIU_CREATION -> "NaviSight VIU Link Request" to "A new VIU is requesting to link to your account. Code: $otp"
+            OtpType.EMAIL_CHANGE -> "NaviSight Security Alert" to "You requested to change your email. Code: $otp"
+            OtpType.PASSWORD_CHANGE -> "NaviSight Password Reset" to "Your password reset code is: $otp"
+            OtpType.TRANSFER_PRIMARY -> "NaviSight Transfer Request" to "Code to transfer primary caregiver rights: $otp"
+            OtpType.VIU_EMAIL_CHANGE -> "NaviSight VIU Email Change" to "You requested to change the email address for a VIU. Code: $otp"
+            else -> "NaviSight Verification" to "Your code is: $otp"
+        }
+        EmailSender.sendVerificationEmail(context, to = email, subject = subject, body = body)
     }
 }

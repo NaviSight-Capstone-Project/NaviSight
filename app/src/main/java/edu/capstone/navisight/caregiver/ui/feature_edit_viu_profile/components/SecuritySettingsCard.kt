@@ -20,7 +20,7 @@ import edu.capstone.navisight.caregiver.ui.feature_edit_viu_profile.SecurityFlow
 
 @Composable
 fun SecuritySettingsCard(
-    viewModel: EditViuProfileViewModel, // <--- UPDATED TYPE
+    viewModel: EditViuProfileViewModel,
     viuEmail: String,
     securityError: String?,
     emailResendTimer: Int

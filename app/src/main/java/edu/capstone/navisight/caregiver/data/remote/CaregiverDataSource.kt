@@ -9,8 +9,6 @@ import edu.capstone.navisight.auth.model.OtpResult.PasswordChangeRequestResult
 import edu.capstone.navisight.common.EmailSender
 import edu.capstone.navisight.auth.model.OtpResult.OtpVerificationResult
 import edu.capstone.navisight.auth.model.OtpResult.ResendOtpResult
-//import .webrtc.model.FirebaseFieldNames.STATUS  // idunno whats dis raf
-//import .webrtc.utils.UserStatus
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -28,7 +26,6 @@ class CaregiverDataSource(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
     private val usersCollection = firestore.collection("caregivers")
-
     private val otpDataSource: OtpDataSource = OtpDataSource(auth, firestore)
 
     suspend fun getProfile(uid: String): Caregiver? {
@@ -53,7 +50,7 @@ class CaregiverDataSource(
         password: String
     ): ResendOtpResult {
         try {
-            // --- NEW VALIDATION: Check if email exists in Firestore ---
+            // Check for duplicate emails first
             val snapshot = usersCollection
                 .whereEqualTo("email", newEmail)
                 .get()
@@ -63,19 +60,18 @@ class CaregiverDataSource(
                 Log.w(TAG, "[EmailChange] Request BLOCKED. Email $newEmail already in use.")
                 return ResendOtpResult.FailureEmailAlreadyInUse
             }
-            // ----------------------------------------------------------
 
             if (otpDataSource.isCooldownActive(uid, OtpDataSource.OtpType.EMAIL_CHANGE)) {
                 Log.w(TAG, "[EmailChange] Request BLOCKED by active cooldown.")
                 return ResendOtpResult.FailureCooldown
             }
 
-            // ... rest of the function (reauth and otp request) ...
             val reauthOk = reauthenticateUser(password)
             if (!reauthOk) {
                 return ResendOtpResult.FailureGeneric
             }
 
+            // Store pendingEmail in extraData
             return otpDataSource.requestOtp(
                 context = context,
                 uid = uid,
@@ -90,7 +86,7 @@ class CaregiverDataSource(
     }
 
     suspend fun cancelEmailChange(uid: String) {
-        otpDataSource.cancelOtpProcess(uid, OtpDataSource.OtpType.EMAIL_CHANGE)
+        otpDataSource.cleanupOtp(uid, OtpDataSource.OtpType.EMAIL_CHANGE)
     }
 
     suspend fun verifyEmailOtp(uid: String, enteredOtp: String): OtpVerificationResult {
@@ -102,18 +98,17 @@ class CaregiverDataSource(
 
         if (verificationResult == OtpVerificationResult.Success) {
             try {
-                val doc = usersCollection.document(uid).get().await()
-                val newEmail = doc.getString("pendingEmail")
+                // CHANGED: Get pendingEmail from OTP doc
+                val newEmail = otpDataSource.getExtraDataString(uid, OtpDataSource.OtpType.EMAIL_CHANGE, "pendingEmail")
                     ?: return OtpVerificationResult.FailureExpiredOrCooledDown
 
                 auth.currentUser?.updateEmail(newEmail)?.await()
 
-                otpDataSource.cleanupOtpFields(
-                    uid = uid,
-                    type = OtpDataSource.OtpType.EMAIL_CHANGE,
-                    extraFieldsToDelete = mapOf("pendingEmail" to FieldValue.delete())
-                )
+                // Update Firestore
                 usersCollection.document(uid).update("email", newEmail).await()
+
+                // CHANGED: Use cleanupOtp
+                otpDataSource.cleanupOtp(uid, OtpDataSource.OtpType.EMAIL_CHANGE)
 
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -134,16 +129,13 @@ class CaregiverDataSource(
             try {
                 usersCollection.document(uid).update("isEmailVerified", true).await()
 
-                otpDataSource.cleanupOtpFields(
-                    uid = uid,
-                    type = OtpDataSource.OtpType.SIGNUP_VERIFICATION
-                )
+                // CHANGED: Use cleanupOtp
+                otpDataSource.cleanupOtp(uid, OtpDataSource.OtpType.SIGNUP_VERIFICATION)
             } catch (e: Exception) {
                 e.printStackTrace()
                 return OtpVerificationResult.FailureExpiredOrCooledDown
             }
         }
-
         return verificationResult
     }
 
@@ -158,26 +150,26 @@ class CaregiverDataSource(
             val docRef = usersCollection.document(uid)
             val doc = docRef.get().await()
             val currentTime = System.currentTimeMillis()
-            Log.d(TAG, "[PasswordChange] Request: CurrentTime=${Date(currentTime)}")
 
+            // 1. Check OTP Cooldown (from stored_otp)
             if (otpDataSource.isCooldownActive(uid, OtpDataSource.OtpType.PASSWORD_CHANGE)) {
-                Log.w(TAG, "[PasswordChange] Request BLOCKED by OTP cooldown.")
                 return PasswordChangeRequestResult.FailureCooldown
             }
+
+            // 2. Check Business Logic Cooldown (from User Profile)
             val initialPwdCooldownUntil = doc.getTimestamp("passwordAttemptCooldownUntil")?.toDate()?.time ?: 0L
             if (currentTime < initialPwdCooldownUntil) {
-                Log.w(TAG, "[PasswordChange] Request BLOCKED by initial attempt cooldown.")
                 return PasswordChangeRequestResult.FailureCooldown
             }
-            Log.d(TAG, "[PasswordChange] Request: Cooldown checks passed.")
 
             val credential = EmailAuthProvider.getCredential(email, currentPassword)
             try {
                 user.reauthenticate(credential).await()
 
-                Log.d(TAG, "[PasswordChange] Request: Initial re-auth successful.")
+                // Auth Success -> Clear attempt counts on profile
                 docRef.update("passwordAttemptCount", FieldValue.delete()).await()
 
+                // Request OTP
                 val otpResult = otpDataSource.requestOtp(
                     context = context,
                     uid = uid,
@@ -193,21 +185,17 @@ class CaregiverDataSource(
                 }
 
             } catch (reauthException: Exception) {
-
                 Log.w(TAG, "[PasswordChange] Request: Initial re-auth failed.")
                 val attemptCount = doc.getLong("passwordAttemptCount")?.toInt() ?: 0
                 val newAttemptCount = attemptCount + 1
                 val failureUpdateMap = mutableMapOf<String, Any?>("passwordAttemptCount" to newAttemptCount)
 
                 if (newAttemptCount >= 5) {
-                    Log.w(TAG, "[PasswordChange] Request: Max initial attempts ($newAttemptCount/5) reached. Setting cooldown.")
                     val cooldownTime = Date(currentTime + OtpDataSource.OTP_COOLDOWN_DURATION_MS)
-                    // Set *initial* password attempt cooldown (distinct from OTP cooldown)
                     failureUpdateMap["passwordAttemptCooldownUntil"] = cooldownTime
                     docRef.update(failureUpdateMap).await()
                     PasswordChangeRequestResult.FailureMaxAttempts
                 } else {
-                    Log.d(TAG, "[PasswordChange] Request: Incrementing initial attempt count to $newAttemptCount.")
                     docRef.update(failureUpdateMap as Map<String, Any>).await()
                     PasswordChangeRequestResult.FailureInvalidPassword
                 }
@@ -219,7 +207,8 @@ class CaregiverDataSource(
     }
 
     suspend fun cancelPasswordChange(uid: String) {
-        otpDataSource.cancelOtpProcess(uid, OtpDataSource.OtpType.PASSWORD_CHANGE)
+        // CHANGED: Use cleanupOtp
+        otpDataSource.cleanupOtp(uid, OtpDataSource.OtpType.PASSWORD_CHANGE)
     }
 
     suspend fun resendPasswordChangeOtp(context: Context): ResendOtpResult {
@@ -247,10 +236,8 @@ class CaregiverDataSource(
         if (verificationResult == OtpVerificationResult.Success) {
             try {
                 user.updatePassword(newPassword).await()
-                otpDataSource.cleanupOtpFields(
-                    uid = user.uid,
-                    type = OtpDataSource.OtpType.PASSWORD_CHANGE
-                )
+                // CHANGED: Use cleanupOtp
+                otpDataSource.cleanupOtp(user.uid, OtpDataSource.OtpType.PASSWORD_CHANGE)
             } catch (e: Exception) {
                 e.printStackTrace()
                 return OtpVerificationResult.FailureExpiredOrCooledDown
@@ -315,32 +302,17 @@ class CaregiverDataSource(
                 extraData = mapOf("isEmailVerified" to false)
             )
 
-            // Add to Firebase Real-Time Database, status defaults to ONLINE.
-//            val webRtcRTDB = FirebaseDatabase.getInstance().getReference("webrtc_signal")
-//            webRtcRTDB.child(uid).child(email).setValue(email).addOnCompleteListener {
-//                webRtcRTDB.child(uid).child(STATUS).setValue(UserStatus.ONLINE).addOnCompleteListener {
-//                    Log.d("webrtcrtdb", "caregiver registration complete")
-//                }.addOnFailureListener {
-//                    Log.e("webrtcrtdb", "caregiver registration failed on status insertion")
-//                }
-//            }.addOnFailureListener {
-//                Log.e("webrtcrtdb", "caregiver registration failed")
-//            }
-
-            //idunno whats dis
-
             if (otpResult == ResendOtpResult.Success) {
                 return Result.success(caregiver)
             } else {
                 Log.e(TAG, "signupCaregiver: OTP send failed, rolling back user.")
-                deleteUnverifiedUser(uid) // Delete auth user + doc
+                deleteUnverifiedUser(uid)
                 return Result.failure(Exception("Failed to send verification email. Please try again."))
             }
 
         } catch (e: Exception) {
             e.printStackTrace()
             if (uid != null) {
-                Log.e(TAG, "signupCaregiver: Signup failed with exception, rolling back user $uid")
                 deleteUnverifiedUser(uid)
             }
             return Result.failure(e)
@@ -352,7 +324,6 @@ class CaregiverDataSource(
             val doc = usersCollection.document(uid).get().await()
             val email = doc.getString("email")
             if (email == null) {
-                Log.e(TAG, "resendSignupOtp: User doc not found or no email for uid $uid")
                 return ResendOtpResult.FailureGeneric
             }
 
@@ -363,7 +334,6 @@ class CaregiverDataSource(
                 type = OtpDataSource.OtpType.SIGNUP_VERIFICATION
             )
         } catch (e: Exception) {
-            Log.e(TAG, "resendSignupOtp: Failed with exception", e)
             ResendOtpResult.FailureGeneric
         }
     }
@@ -388,15 +358,13 @@ class CaregiverDataSource(
             val user = auth.currentUser
 
             if (user != null && user.uid == uid) {
+                // CHANGED: Use cleanupOtp
+                otpDataSource.cleanupOtp(uid, OtpDataSource.OtpType.SIGNUP_VERIFICATION)
 
-                otpDataSource.cancelOtpProcess(uid, OtpDataSource.OtpType.SIGNUP_VERIFICATION)
                 usersCollection.document(uid).delete().await()
-
                 user.delete().await()
-
                 true
             } else {
-                Log.w(TAG, "deleteUnverifiedUser: Mismatch or user null. Cannot delete.")
                 false
             }
         } catch (e: Exception) {
@@ -405,4 +373,3 @@ class CaregiverDataSource(
         }
     }
 }
-

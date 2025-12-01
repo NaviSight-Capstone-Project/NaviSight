@@ -14,7 +14,9 @@ data class Caregiver(
     var locationSharing: Boolean = true,
     var address: String = "",
     var birthday: Timestamp = Timestamp.now(),
-    var sex: String = ""
+    var sex: String = "",
+    val isEmailVerified: Boolean = false, // Defaults to false
+    val viuIds: List<String> = emptyList()
 
     //wag na lang pakealaman yung order para di nakakasakit ng ulo idebug
 )

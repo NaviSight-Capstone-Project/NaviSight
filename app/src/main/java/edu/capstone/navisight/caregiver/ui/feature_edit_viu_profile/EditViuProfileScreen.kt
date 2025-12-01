@@ -58,6 +58,7 @@ fun EditViuProfileScreen(
     val emailResendTimer by viewModel.emailResendTimer.collectAsState()
     val emailFlowState by viewModel.emailFlowState.collectAsState()
     val canEdit by viewModel.canEdit.collectAsState()
+    val transferSuccess by viewModel.transferSuccess.collectAsState()
 
     val context = LocalContext.current
 
@@ -106,7 +107,7 @@ fun EditViuProfileScreen(
         }
     }
 
-    // --- Handling Toasts for Success/Errors ---
+    // Handling Toasts for Success/Errors
     val saveSuccess by viewModel.saveSuccess.collectAsState()
     LaunchedEffect(saveSuccess) {
         if (saveSuccess) {
@@ -114,9 +115,15 @@ fun EditViuProfileScreen(
             viewModel.onSaveSuccessShown()
         }
     }
+    LaunchedEffect(transferSuccess) {
+        if (transferSuccess) {
+            Toast.makeText(context, "Transfer request sent!", Toast.LENGTH_SHORT).show()
+            viewModel.onTransferSuccessShown()
+        }
+    }
     // (Add other LaunchedEffects for errors/success here as needed)
 
-    // --- DIALOGS ---
+    // DIALOGS
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedBirthdayMillis)
         DatePickerDialog(

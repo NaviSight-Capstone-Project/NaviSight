@@ -85,6 +85,9 @@ class EditViuProfileViewModel(
     private val _saveSuccess = MutableStateFlow(false)
     val saveSuccess: StateFlow<Boolean> = _saveSuccess.asStateFlow()
 
+    private val _transferSuccess = MutableStateFlow(false)
+    val transferSuccess: StateFlow<Boolean> = _transferSuccess.asStateFlow()
+
     private val _emailFlowState = MutableStateFlow(SecurityFlowState.IDLE)
     val emailFlowState: StateFlow<SecurityFlowState> = _emailFlowState.asStateFlow()
 
@@ -662,10 +665,11 @@ class EditViuProfileViewModel(
             _transferError.value = result.message
             _transferFlowState.value = TransferFlowState.CONFIRMING_PASSWORD // Stay on dialog to show error
         } else {
-            _saveSuccess.value = true // Trigger success toast
+            _transferSuccess.value = true
             cancelTransferFlow() // Reset states
         }
     }
+    fun onTransferSuccessShown() { _transferSuccess.value = false }
 
     // 4. Cancel / Close Dialogs
     fun cancelTransferFlow() {

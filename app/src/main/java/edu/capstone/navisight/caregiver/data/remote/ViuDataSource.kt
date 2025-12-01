@@ -32,12 +32,12 @@ class ViuDataSource(
 ) {
 
     private val TAG = "ViuDataSource"
-    private val otpDataSource = OtpDataSource()
+    private val otpDataSource = OtpDataSource(auth, firestore)
 
     companion object {
         private const val VIUS_COLLECTION = "vius"
         private const val VIU_LOCATION_REF = "viu_location"
-          }
+    }
 
     private val viusCollection = firestore.collection("vius")
     private val relationshipsCollection = firestore.collection("relationships")
@@ -170,10 +170,12 @@ class ViuDataSource(
             val caregiverEmail = auth.currentUser?.email
                 ?: return Result.failure(Exception("Caregiver not signed in"))
 
+            // Check new OTP Cooldown check
             if (otpDataSource.isCooldownActive(viuUid, OtpDataSource.OtpType.VIU_EMAIL_CHANGE)) {
                 return Result.success(ResendOtpResult.FailureCooldown)
             }
 
+            // Store pendingEmail in extraData (goes to stored_otp doc)
             val otpResult = otpDataSource.requestOtp(
                 context = context,
                 uid = viuUid,
@@ -188,7 +190,8 @@ class ViuDataSource(
     }
 
     suspend fun cancelViuEmailChange(viuUid: String) {
-        otpDataSource.cancelOtpProcess(viuUid, OtpDataSource.OtpType.VIU_EMAIL_CHANGE)
+        // Updated to use cleanupOtp
+        otpDataSource.cleanupOtp(viuUid, OtpDataSource.OtpType.VIU_EMAIL_CHANGE)
     }
 
     suspend fun verifyViuEmailChange(viuUid: String, enteredOtp: String): Result<OtpVerificationResult> {
@@ -200,17 +203,17 @@ class ViuDataSource(
             )
 
             if (verificationResult == OtpVerificationResult.Success) {
-                val doc = viusCollection.document(viuUid).get().await()
-                val newEmail = doc.getString("pendingEmail")
-                    ?: return Result.success(OtpVerificationResult.FailureExpiredOrCooledDown)
+                // CHANGED: Get pendingEmail from OTP doc, NOT Viu doc
+                val newEmail = otpDataSource.getExtraDataString(
+                    viuUid,
+                    OtpDataSource.OtpType.VIU_EMAIL_CHANGE,
+                    "pendingEmail"
+                ) ?: return Result.success(OtpVerificationResult.FailureExpiredOrCooledDown)
 
                 viusCollection.document(viuUid).update("email", newEmail).await()
 
-                otpDataSource.cleanupOtpFields(
-                    uid = viuUid,
-                    type = OtpDataSource.OtpType.VIU_EMAIL_CHANGE,
-                    extraFieldsToDelete = mapOf("pendingEmail" to FieldValue.delete())
-                )
+                // CHANGED: Use cleanupOtp
+                otpDataSource.cleanupOtp(viuUid, OtpDataSource.OtpType.VIU_EMAIL_CHANGE)
             }
             Result.success(verificationResult)
         } catch (e: Exception) {
@@ -254,7 +257,8 @@ class ViuDataSource(
 
     suspend fun cancelViuProfileUpdate() {
         val caregiverUid = auth.currentUser?.uid ?: return
-        otpDataSource.cancelOtpProcess(caregiverUid, OtpDataSource.OtpType.VIU_PROFILE_UPDATE)
+        // Updated to cleanupOtp
+        otpDataSource.cleanupOtp(caregiverUid, OtpDataSource.OtpType.VIU_PROFILE_UPDATE)
     }
 
     suspend fun verifyCaregiverOtp(enteredOtp: String): Result<OtpVerificationResult> {
@@ -268,10 +272,8 @@ class ViuDataSource(
             )
 
             if (verificationResult == OtpVerificationResult.Success) {
-                otpDataSource.cleanupOtpFields(
-                    uid = caregiverUid,
-                    type = OtpDataSource.OtpType.VIU_PROFILE_UPDATE
-                )
+                // Updated to cleanupOtp
+                otpDataSource.cleanupOtp(caregiverUid, OtpDataSource.OtpType.VIU_PROFILE_UPDATE)
             }
             Result.success(verificationResult)
         } catch (e: Exception) {
@@ -293,6 +295,7 @@ class ViuDataSource(
             Result.failure(e)
         }
     }
+
     suspend fun checkIfPrimaryCaregiver(viuUid: String): Result<Boolean> {
         val caregiverUid = auth.currentUser?.uid
             ?: return Result.failure(Exception("Caregiver not signed in"))
@@ -309,7 +312,6 @@ class ViuDataSource(
             }
 
             val document = querySnapshot.documents.first()
-
             val primaryField = document.get("primaryCaregiver")
 
             val isPrimary = when (primaryField) {
