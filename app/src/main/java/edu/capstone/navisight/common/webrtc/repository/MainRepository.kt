@@ -38,8 +38,8 @@ class MainRepository private constructor(
     private lateinit var currentLatestEvent: DataModel
     private var caregiverStatusListener: (() -> Unit)? = null
 
-    fun login(username: String, isDone: (Boolean, String?) -> Unit) {
-        firebaseClient.checkRTDB(username, isDone)
+    fun login(uid: String, isDone: (Boolean, String?) -> Unit) {
+        firebaseClient.checkRTDB(uid, isDone)
     }
 
     fun getUserType(): String{

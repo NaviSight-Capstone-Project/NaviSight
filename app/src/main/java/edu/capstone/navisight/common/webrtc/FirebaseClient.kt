@@ -6,21 +6,18 @@ import edu.capstone.navisight.common.webrtc.utils.EventListener
 import edu.capstone.navisight.common.webrtc.utils.UserStatus
 import edu.capstone.navisight.common.webrtc.model.DataModel
 import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
 import edu.capstone.navisight.caregiver.data.remote.ViuDataSource
 import edu.capstone.navisight.caregiver.model.Viu
 import edu.capstone.navisight.common.webrtc.model.FirebaseFieldNames.EMAIL
+import edu.capstone.navisight.common.webrtc.model.FirebaseFieldNames.LATEST_EVENT
 import edu.capstone.navisight.common.webrtc.model.FirebaseFieldNames.STATUS
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
-import kotlin.collections.remove
-import kotlin.text.set
 
 /**
  * Non-DI Singleton version of FirebaseClient.
@@ -37,6 +34,7 @@ class FirebaseClient private constructor(
 
     private var currentUID: String? = null
     private fun setUID(uid: String) {
+        Log.d("AuthenticationCheck", "UID has been set. Value is: $uid")
         this.currentUID = uid
     }
     private val viuRemoteDataSource = ViuDataSource()
@@ -124,19 +122,20 @@ class FirebaseClient private constructor(
 
     // Formerly login.
     fun checkRTDB(uid: String, done: (Boolean, String?) -> Unit) {
+        setUID(uid) // DO NOT REMOVE THIS.
         Log.d("AuthenticationCheck", "Passing through checkRTDB with UID $uid...")
         dbRef.addListenerForSingleValueEvent(object : EventListener() {
             override fun onDataChange(snapshot: DataSnapshot) {
                 // First retrieval
                 userType = snapshot.ref.parent?.key.toString()
+
                 if (snapshot.hasChild(uid)) {
-                    dbRef.child(uid).child(FirebaseFieldNames.STATUS)
+                    dbRef.child(uid).child(STATUS)
                         .setValue(UserStatus.ONLINE)
                         .addOnCompleteListener {
                             /*
                             Handle Firebase RTDB not updating properly
                              */
-                            setUID(uid)
                             clearLatestEvent()
                             done(true, null)
                         }.addOnFailureListener {
@@ -145,16 +144,16 @@ class FirebaseClient private constructor(
                 } else {
                     // Detect  to make a document for RTDB, make one so NullPointerException also
                     // won't hit status checking in MainActivity's OnDestroy.
+
                     dbRef.child(uid).child(EMAIL).setValue(currentEmail)
                         .addOnCompleteListener {
-                        dbRef.child(uid).child(STATUS)
-                            .setValue(UserStatus.ONLINE)
-                            .addOnCompleteListener {
-                                setUID(uid)
-                                done(true, null)
-                            }.addOnFailureListener {
-                                done(false, it.message)
-                            }
+                            dbRef.child(uid).child(STATUS)
+                                .setValue(UserStatus.ONLINE)
+                                .addOnCompleteListener {
+                                    done(true, null)
+                                }.addOnFailureListener {
+                                    done(false, it.message)
+                                }
                     }.addOnFailureListener {
                         done(false, it.message)
                     }
@@ -165,20 +164,19 @@ class FirebaseClient private constructor(
 
     fun observeLatestEvents(listener: Listener) {
         try {
-            dbRef.child(currentUID!!).child(FirebaseFieldNames.LATEST_EVENT)
+
+            Log.d("observeLatestEvents", "Triggered with currentuid: $currentUID.")
+            dbRef.child(currentUID!!).child(LATEST_EVENT)
                 .addValueEventListener(object : EventListener() {
                     override fun onDataChange(snapshot: DataSnapshot) {
                         super.onDataChange(snapshot)
-                        Log.d("observeLatestEvents", "Triggered.")
-
+                        Log.d("observeLatestEvents", "overriding...")
                         val event = try {
                             Log.d("observeLatestEvents", "Trying")
-
                             gson.fromJson(snapshot.value.toString(), DataModel::class.java)
                         } catch (e: Exception) {
                             e.printStackTrace()
                             Log.d("observeLatestEvents", "LATEST EVENT IS NULL")
-
                             null
                         }
                         event?.let {
@@ -188,15 +186,16 @@ class FirebaseClient private constructor(
                     }
                 })
         } catch (e: Exception) {
-            Log.d("observeLatestEvents", "FAILED ON OBSERVING LATEST EVENTS ${e.stackTraceToString()}")
-
+            Log.d(
+                "observeLatestEvents",
+                "FAILED ON OBSERVING LATEST EVENTS ${e.stackTraceToString()}")
             e.printStackTrace()
         }
     }
 
     fun sendMessageToOtherClient(message: DataModel, success: (Boolean) -> Unit) {
         val convertedMessage = gson.toJson(message.copy(sender = currentUID))
-        dbRef.child(message.target).child(FirebaseFieldNames.LATEST_EVENT).setValue(convertedMessage)
+        dbRef.child(message.target).child(LATEST_EVENT).setValue(convertedMessage)
             .addOnCompleteListener { success(true) }
             .addOnFailureListener { success(false) }
         Log.d("CallSignal", "Triggered send connection request")
