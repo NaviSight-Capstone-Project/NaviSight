@@ -2,194 +2,207 @@ package edu.capstone.navisight.auth.ui.signup.caregiver
 
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
+import edu.capstone.navisight.auth.util.LegalDocuments
 import edu.capstone.navisight.auth.domain.DeleteUnverifiedUserUseCase
 import edu.capstone.navisight.auth.domain.ResendSignupOtpUseCase
 import edu.capstone.navisight.auth.domain.SignupCaregiverUseCase
 import edu.capstone.navisight.auth.domain.VerifySignupOtpUseCase
+import edu.capstone.navisight.auth.domain.usecase.AcceptLegalDocumentsUseCase
 import edu.capstone.navisight.auth.model.OtpResult
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+data class SignupFormState(
+    val firstName: String = "",
+    val middleName: String = "",
+    val lastName: String = "",
+    val phone: String = "",
+    val addressDetails: String = "",
+    val country: String = "",
+    val sex: String = "",
+    val birthday: Timestamp? = null,
+    val email: String = "",
+    val password: String = "",
+    val rePassword: String = "",
+    val profileImageUri: Uri? = null,
+    val termsAccepted: Boolean = false,
+    val privacyAccepted: Boolean = false
+)
 
 data class CaregiverSignupUiState(
     val isLoading: Boolean = false,
     val signupSuccess: Boolean = false,
     val verificationSuccess: Boolean = false,
     val createdUserId: String? = null,
-    val successMessage: String? = null,
     val errorMessage: String? = null,
-    val profileImageUri: Uri? = null,
     val resendTimer: Int = 0
 )
 
+sealed class SignupEvent {
+    data class FirstNameChanged(val value: String) : SignupEvent()
+    data class MiddleNameChanged(val value: String) : SignupEvent()
+    data class LastNameChanged(val value: String) : SignupEvent()
+    data class PhoneChanged(val value: String) : SignupEvent()
+    data class AddressChanged(val value: String) : SignupEvent()
+    data class CountryChanged(val value: String) : SignupEvent()
+    data class SexChanged(val value: String) : SignupEvent()
+    data class BirthdayChanged(val value: Timestamp?) : SignupEvent()
+    data class EmailChanged(val value: String) : SignupEvent()
+    data class PasswordChanged(val value: String) : SignupEvent()
+    data class RePasswordChanged(val value: String) : SignupEvent()
+    data class ImageSelected(val uri: Uri?) : SignupEvent()
+    data class TermsChanged(val value: Boolean) : SignupEvent()
+    data class PrivacyChanged(val value: Boolean) : SignupEvent()
+}
+
 class CaregiverSignupViewModel : ViewModel() {
 
-    private val signupCaregiverUseCase: SignupCaregiverUseCase = SignupCaregiverUseCase()
-    private val verifySignupOtpUseCase: VerifySignupOtpUseCase = VerifySignupOtpUseCase()
-    private val resendSignupOtpUseCase: ResendSignupOtpUseCase = ResendSignupOtpUseCase()
-    private val deleteUnverifiedUserUseCase: DeleteUnverifiedUserUseCase = DeleteUnverifiedUserUseCase()
+    private val _formState = MutableStateFlow(SignupFormState())
+    val formState = _formState.asStateFlow()
 
     private val _uiState = MutableStateFlow(CaregiverSignupUiState())
     val uiState = _uiState.asStateFlow()
 
-    private var resendTimerJob: Job? = null
+    private val signupCaregiverUseCase = SignupCaregiverUseCase()
+    private val verifySignupOtpUseCase = VerifySignupOtpUseCase()
+    private val resendSignupOtpUseCase = ResendSignupOtpUseCase()
+    private val deleteUnverifiedUserUseCase = DeleteUnverifiedUserUseCase()
+    private val acceptLegalDocumentsUseCase = AcceptLegalDocumentsUseCase()
 
-    private fun startResendTimer(durationSeconds: Int = 60) {
-        resendTimerJob?.cancel()
-        resendTimerJob = viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(resendTimer = durationSeconds)
-            (durationSeconds - 1 downTo 0).asFlow()
-                .onEach { delay(1000) }
-                .collect { secondsRemaining ->
-                    _uiState.value = _uiState.value.copy(resendTimer = secondsRemaining)
-                }
+    fun onEvent(event: SignupEvent) {
+        when(event) {
+            is SignupEvent.FirstNameChanged -> _formState.update { it.copy(firstName = event.value) }
+            is SignupEvent.MiddleNameChanged -> _formState.update { it.copy(middleName = event.value) }
+            is SignupEvent.LastNameChanged -> _formState.update { it.copy(lastName = event.value) }
+            is SignupEvent.PhoneChanged -> _formState.update { it.copy(phone = event.value) }
+            is SignupEvent.AddressChanged -> _formState.update { it.copy(addressDetails = event.value) }
+            is SignupEvent.CountryChanged -> _formState.update { it.copy(country = event.value) }
+            is SignupEvent.SexChanged -> _formState.update { it.copy(sex = event.value) }
+            is SignupEvent.BirthdayChanged -> _formState.update { it.copy(birthday = event.value) }
+            is SignupEvent.EmailChanged -> _formState.update { it.copy(email = event.value) }
+            is SignupEvent.PasswordChanged -> _formState.update { it.copy(password = event.value) }
+            is SignupEvent.RePasswordChanged -> _formState.update { it.copy(rePassword = event.value) }
+            is SignupEvent.ImageSelected -> _formState.update { it.copy(profileImageUri = event.uri) }
+            is SignupEvent.TermsChanged -> _formState.update { it.copy(termsAccepted = event.value) }
+            is SignupEvent.PrivacyChanged -> _formState.update { it.copy(privacyAccepted = event.value) }
         }
     }
 
-    private fun stopResendTimer() {
-        resendTimerJob?.cancel()
-        _uiState.value = _uiState.value.copy(resendTimer = 0)
-    }
+    fun submitSignup(context: Context) {
+        val form = _formState.value
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-    fun onProfileImageCropped(croppedUri: Uri) {
-        _uiState.value = _uiState.value.copy(profileImageUri = croppedUri)
-    }
-
-    fun signup(
-        context: Context,
-        email: String,
-        password: String,
-        firstName: String,
-        lastName: String,
-        middleName: String,
-        phoneNumber: String,
-        address: String,
-        birthday: Timestamp,
-        sex: String
-    ) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            try {
+                val result = signupCaregiverUseCase(
+                    context = context,
+                    email = form.email,
+                    password = form.password,
+                    firstName = form.firstName,
+                    lastName = form.lastName,
+                    middleName = form.middleName,
+                    phoneNumber = form.phone,
+                    address = "${form.addressDetails}, ${form.country}",
+                    birthday = form.birthday!!,
+                    sex = form.sex,
+                    imageUri = form.profileImageUri
+                )
 
-            val result = signupCaregiverUseCase(
-                context = context,
-                email = email,
-                password = password,
-                firstName = firstName,
-                lastName = lastName,
-                middleName = middleName,
-                phoneNumber = phoneNumber,
-                address = address,
-                birthday = birthday,
-                sex = sex,
-                imageUri = _uiState.value.profileImageUri
-            )
+                result.onSuccess { caregiver ->
+                    val uid = caregiver.uid
 
-            result.fold(
-                onSuccess = { caregiver ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        signupSuccess = true,
-                        createdUserId = caregiver.uid
+                    val legalResult = acceptLegalDocumentsUseCase(
+                        uid = uid,
+                        email = form.email,
+                        termsAccepted = form.termsAccepted,
+                        privacyAccepted = form.privacyAccepted,
+                        version = LegalDocuments.TERMS_VERSION
                     )
-                    startResendTimer(60)
-                },
-                onFailure = { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = exception.message ?: "Signup failed"
-                    )
+
+                    if (legalResult.isSuccess) {
+                        _uiState.update { it.copy(isLoading = false, signupSuccess = true, createdUserId = uid) }
+                    } else {
+                        deleteUnverifiedUserUseCase(uid)
+                        _uiState.update { it.copy(isLoading = false, errorMessage = "Failed to save legal consent. Signup cancelled.") }
+                    }
+
+                }.onFailure { e ->
+                    _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "Signup Failed") }
                 }
-            )
+
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
+            }
         }
     }
 
-    fun verifyOtp(uid: String, otp: String) {
+    fun verifyOtp(uid: String, code: String) {
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            val result = verifySignupOtpUseCase(uid, otp)
-
-            when (result) {
-                OtpResult.OtpVerificationResult.Success -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        verificationSuccess = true,
-                        successMessage = "Verification successful! Please log in."
-                    )
-                    stopResendTimer()
+            try {
+                when (val result = verifySignupOtpUseCase(uid, code)) {
+                    is OtpResult.OtpVerificationResult.Success -> {
+                        _uiState.update { it.copy(isLoading = false, verificationSuccess = true) }
+                    }
+                    is OtpResult.OtpVerificationResult.FailureInvalid -> {
+                        _uiState.update { it.copy(isLoading = false, errorMessage = "Invalid OTP. Please try again.") }
+                    }
+                    is OtpResult.OtpVerificationResult.FailureMaxAttempts -> {
+                        deleteUnverifiedUserUseCase(uid)
+                        _uiState.update { it.copy(isLoading = false, errorMessage = "Maximum attempts reached. Signup cancelled.", signupSuccess = false) }
+                    }
+                    is OtpResult.OtpVerificationResult.FailureExpiredOrCooledDown -> {
+                        _uiState.update { it.copy(isLoading = false, errorMessage = "Code expired or in cooldown.") }
+                    }
                 }
-                OtpResult.OtpVerificationResult.FailureInvalid -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = "Invalid OTP. Please try again."
-                    )
-                }
-                OtpResult.OtpVerificationResult.FailureMaxAttempts -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = "Max attempts reached. Please wait 5 minutes."
-                    )
-                    startResendTimer(300)
-                }
-                OtpResult.OtpVerificationResult.FailureExpiredOrCooledDown -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = "OTP expired or on cooldown. Please resend."
-                    )
-                    stopResendTimer()
-                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
             }
         }
     }
 
     fun resendOtp(context: Context, uid: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            val result = resendSignupOtpUseCase(context, uid)
-
-            when (result) {
-                OtpResult.ResendOtpResult.Success -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = "New OTP sent"
-                    )
-                    startResendTimer(60)
+            try {
+                when (resendSignupOtpUseCase(context, uid)) {
+                    is OtpResult.ResendOtpResult.Success -> {
+                        Toast.makeText(context, "Verification code resent.", Toast.LENGTH_SHORT).show()
+                    }
+                    is OtpResult.ResendOtpResult.FailureCooldown -> {
+                        Toast.makeText(context, "Please wait before resending.", Toast.LENGTH_SHORT).show()
+                    }
+                    is OtpResult.ResendOtpResult.FailureEmailAlreadyInUse -> {
+                        Toast.makeText(context, "Email is already in use.", Toast.LENGTH_SHORT).show()
+                    }
+                    is OtpResult.ResendOtpResult.FailureGeneric -> {
+                        Toast.makeText(context, "Failed to resend code.", Toast.LENGTH_SHORT).show()
+                    }
                 }
-                OtpResult.ResendOtpResult.FailureCooldown -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = "Limit reached. Please wait 5 minutes."
-                    )
-                    startResendTimer(300)
-                }
-                OtpResult.ResendOtpResult.FailureGeneric -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = "Please wait 1 minute before resending."
-                    )
-                }
-
-                OtpResult.ResendOtpResult.FailureEmailAlreadyInUse -> TODO()
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to resend code.", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     fun cancelSignup(uid: String) {
         viewModelScope.launch {
-            deleteUnverifiedUserUseCase(uid)
-            stopResendTimer()
+            try {
+                deleteUnverifiedUserUseCase(uid)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            _uiState.update { CaregiverSignupUiState() }
+            _formState.update { SignupFormState() }
         }
     }
 
     fun clearError() {
-        if (_uiState.value.errorMessage != null) {
-            _uiState.value = _uiState.value.copy(errorMessage = null)
-        }
+        _uiState.update { it.copy(errorMessage = null) }
     }
 }

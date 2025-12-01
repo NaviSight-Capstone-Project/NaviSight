@@ -11,11 +11,6 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.yalantis.ucrop.UCrop
 import edu.capstone.navisight.auth.AuthActivity
 import java.io.File
@@ -33,7 +28,7 @@ class CaregiverSignupFragment : Fragment() {
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == Activity.RESULT_OK && result.data != null) {
                 val croppedUri = UCrop.getOutput(result.data!!)
-                croppedUri?.let { viewModel.onProfileImageCropped(it) }
+                croppedUri?.let { viewModel.onEvent(SignupEvent.ImageSelected(it)) }
             }
         }
 
@@ -46,6 +41,8 @@ class CaregiverSignupFragment : Fragment() {
             setActiveControlsWidgetColor(android.graphics.Color.parseColor("#78E4EF"))
             setToolbarWidgetColor(android.graphics.Color.WHITE)
             setCircleDimmedLayer(true)
+            setShowCropFrame(true)
+            setShowCropGrid(false)
         }
 
         val cropIntent = UCrop.of(sourceUri, destinationUri)
@@ -63,44 +60,14 @@ class CaregiverSignupFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                val navController = rememberNavController()
-
-                NavHost(navController = navController, startDestination = "signup") {
-
-                    composable("signup") {
-                        CaregiverSignupScreen(
-                            viewModel = viewModel,
-                            onSelectImageClick = { imagePickerLauncher.launch("image/*") },
-                            onSignupSuccess = { uid ->
-                                navController.navigate("otp/$uid") {
-                                    popUpTo("signup") { inclusive = true }
-                                }
-                            },
-                            onBackClick = {
-                                parentFragmentManager.popBackStack()
-                            }
-                        )
-                    }
-
-                    composable(
-                        route = "otp/{uid}",
-                        arguments = listOf(navArgument("uid") { type = NavType.StringType })
-                    ) { backStackEntry ->
-                        val uid = backStackEntry.arguments?.getString("uid") ?: ""
-
-                        CaregiverOtpScreen(
-                            viewModel = viewModel,
-                            uid = uid,
-                            onVerificationSuccess = {
-                                (requireActivity() as AuthActivity).onLoginSuccess()
-                            },
-                            onCancelSignup = {
-                                viewModel.cancelSignup(uid)
-                                parentFragmentManager.popBackStack()
-                            }
-                        )
-                    }
-                }
+                CaregiverSignupScreen(
+                    viewModel = viewModel,
+                    onSelectImageClick = { imagePickerLauncher.launch("image/*") },
+                    onSignupSuccess = {
+                        (requireActivity() as? AuthActivity)?.onLoginSuccess()
+                    },
+                    onBackClick = { parentFragmentManager.popBackStack() }
+                )
             }
         }
     }
