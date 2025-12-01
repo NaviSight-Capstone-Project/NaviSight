@@ -126,7 +126,7 @@ class ConnectionDataSource(
         viuName: String
     ): RequestStatus {
         return try {
-            val existingRequest = firestore.collection("secondaryPairingRequests")
+            val existingRequest = firestore.collection("secondary_pairing_requests")
                 .whereEqualTo("requesterUid", requesterUid)
                 .whereEqualTo("viuUid", viuUid)
                 .whereEqualTo("status", "pending")
@@ -147,7 +147,7 @@ class ConnectionDataSource(
                 requesterName = "Caregiver"
             )
 
-            firestore.collection("secondaryPairingRequests")
+            firestore.collection("secondary_pairing_requests")
                 .add(request)
                 .await()
 
@@ -178,7 +178,7 @@ class ConnectionDataSource(
                 if (viuUids.isEmpty()) {
                     trySend(emptyList())
                 } else {
-                    listener = firestore.collection("secondaryPairingRequests")
+                    listener = firestore.collection("secondary_pairing_requests")
                         .whereIn("viuUid", viuUids)
                         .whereEqualTo("status", "pending")
                         .addSnapshotListener { reqSnapshot, reqError ->
@@ -207,7 +207,7 @@ class ConnectionDataSource(
 
     suspend fun approveSecondaryRequest(request: SecondaryPairingRequest): RequestStatus {
         return try {
-            val requestRef = firestore.collection("secondaryPairingRequests").document(request.id)
+            val requestRef = firestore.collection("secondary_pairing_requests").document(request.id)
 
             requestRef.update("status", "approved").await()
 
@@ -230,7 +230,7 @@ class ConnectionDataSource(
     suspend fun denySecondaryRequest(requestId: String): RequestStatus {
         return try {
 
-            firestore.collection("secondaryPairingRequests")
+            firestore.collection("secondary_pairing_requests")
                 .document(requestId)
                 .update("status", "denied")
                 .await()
@@ -278,7 +278,7 @@ class ConnectionDataSource(
     suspend fun sendTransferRequest(request: TransferPrimaryRequest): RequestStatus {
         return try {
             // Check for duplicate pending requests
-            val existing = firestore.collection("transferPrimaryRequests")
+            val existing = firestore.collection("transfer_primary_requests")
                 .whereEqualTo("viuUid", request.viuUid)
                 .whereEqualTo("recipientUid", request.recipientUid)
                 .whereEqualTo("status", "pending")
@@ -286,7 +286,7 @@ class ConnectionDataSource(
 
             if (!existing.isEmpty) return RequestStatus.Error("Request already pending")
 
-            firestore.collection("transferPrimaryRequests").add(request).await()
+            firestore.collection("transfer_primary_requests").add(request).await()
             RequestStatus.Success
         } catch (e: Exception) {
             RequestStatus.Error(e.message ?: "Failed to send")
@@ -294,7 +294,7 @@ class ConnectionDataSource(
     }
 
     fun getIncomingTransferRequests(myUid: String): Flow<List<TransferPrimaryRequest>> = callbackFlow {
-        val listener = firestore.collection("transferPrimaryRequests")
+        val listener = firestore.collection("transfer_primary_requests")
             .whereEqualTo("recipientUid", myUid)
             .whereEqualTo("status", "pending")
             .addSnapshotListener { snap, error ->
@@ -336,7 +336,7 @@ class ConnectionDataSource(
             // Get the References
             val senderDocRef = senderSnapshot.documents[0].reference
             val receiverDocRef = receiverSnapshot.documents[0].reference
-            val requestDocRef = firestore.collection("transferPrimaryRequests").document(request.id)
+            val requestDocRef = firestore.collection("transfer_primary_requests").document(request.id)
 
             firestore.runTransaction { transaction ->
                 transaction.get(senderDocRef)
@@ -355,7 +355,7 @@ class ConnectionDataSource(
 
     suspend fun denyTransferRequest(requestId: String): RequestStatus {
         return try {
-            firestore.collection("transferPrimaryRequests")
+            firestore.collection("transfer_primary_requests")
                 .document(requestId)
                 .update("status", "denied")
                 .await()

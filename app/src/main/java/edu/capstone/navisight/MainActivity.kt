@@ -75,7 +75,7 @@ class MainActivity : AppCompatActivity() {
             if (auth.currentUser != null) {
                 currentUser = auth.currentUser!!
                 //TEMPORARY FIX KASI AYAW MAG RUN, SEE LINE 138
-                startWebrtcService(currentUser.email.toString())
+                //startWebrtcService(currentUser.email.toString())
                 handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
                 lifecycleScope.launch {
                     try {
@@ -135,7 +135,7 @@ class MainActivity : AppCompatActivity() {
             if (isDone) {
                 Log.d("CallSignal", "User set to ONLINE")
                 //COMMENT OUT MUNA, PAKI ALIS NA LANG COMMENT
-                //startWebrtcService(email) // Init. WebRTC handler.
+                startWebrtcService(email) // Init. WebRTC handler.
             } else {
                 Log.e("CallSignal", "Failed to set user to ONLINE: $reason")
             }

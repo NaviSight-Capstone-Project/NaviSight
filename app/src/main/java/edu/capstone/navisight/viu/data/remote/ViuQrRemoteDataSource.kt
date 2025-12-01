@@ -10,7 +10,7 @@ import kotlin.text.ifEmpty
 class ViuQrRemoteDataSource(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
-    private val qrCollection = firestore.collection("QR_Code")
+    private val qrCollection = firestore.collection("qr_code")
 
     // Fetch QR by the VIU’s UID (not document ID)
     suspend fun getQrByViuUid(viuUid: String): QR? {
