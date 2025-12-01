@@ -47,7 +47,8 @@ fun RecordsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFEFF0F1))
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 

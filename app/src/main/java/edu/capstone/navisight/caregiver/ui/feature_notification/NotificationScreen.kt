@@ -50,6 +50,7 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF9FAFB))
+            .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         // --- Header ---

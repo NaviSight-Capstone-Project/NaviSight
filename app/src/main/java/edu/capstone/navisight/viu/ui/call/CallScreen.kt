@@ -87,6 +87,7 @@ fun CallScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // Remote video view (full screen)
         AndroidView(
