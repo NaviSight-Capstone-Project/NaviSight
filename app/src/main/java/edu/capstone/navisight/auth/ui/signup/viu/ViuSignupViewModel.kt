@@ -4,11 +4,12 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.Timestamp
 import edu.capstone.navisight.auth.domain.DeleteUnverifiedViuUserUseCase
 import edu.capstone.navisight.auth.domain.ResendViuSignupOtpUseCase
 import edu.capstone.navisight.auth.domain.SignupViuUseCase
 import edu.capstone.navisight.auth.domain.VerifyViuSignupOtpUseCase
+import edu.capstone.navisight.auth.domain.usecase.AcceptLegalDocumentsUseCase
+import edu.capstone.navisight.auth.util.LegalDocuments
 import edu.capstone.navisight.auth.model.OtpResult
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -17,7 +18,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-
 
 data class ViuSignupUiState(
     val isLoading: Boolean = false,
@@ -33,18 +33,17 @@ data class ViuSignupUiState(
 
 class ViuSignupViewModel : ViewModel() {
 
-    // Instantiates VIU Use Cases
     private val signupViuUseCase: SignupViuUseCase = SignupViuUseCase()
     private val verifyViuSignupOtpUseCase: VerifyViuSignupOtpUseCase = VerifyViuSignupOtpUseCase()
     private val resendViuSignupOtpUseCase: ResendViuSignupOtpUseCase = ResendViuSignupOtpUseCase()
     private val deleteUnverifiedViuUserUseCase: DeleteUnverifiedViuUserUseCase = DeleteUnverifiedViuUserUseCase()
+    private val acceptLegalDocumentsUseCase: AcceptLegalDocumentsUseCase = AcceptLegalDocumentsUseCase()
 
     private val _uiState = MutableStateFlow(ViuSignupUiState())
     val uiState = _uiState.asStateFlow()
 
     private var resendTimerJob: Job? = null
 
-    //  Timer logic is identical to Caregiver's
     private fun startResendTimer(durationSeconds: Int = 60) {
         resendTimerJob?.cancel()
         resendTimerJob = viewModelScope.launch {
@@ -66,7 +65,6 @@ class ViuSignupViewModel : ViewModel() {
         _uiState.value = _uiState.value.copy(profileImageUri = croppedUri)
     }
 
-    //  Simplified Signup function
     fun signup(
         context: Context,
         email: String,
@@ -76,11 +74,14 @@ class ViuSignupViewModel : ViewModel() {
         middleName: String,
         phone: String,
         address: String,
+        sex: String,
         category: String,
-        caregiverEmail: String
+        caregiverEmail: String,
+        termsAccepted: Boolean,
+        privacyAccepted: Boolean
     ) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
             val result = signupViuUseCase(
                 context = context,
@@ -93,18 +94,35 @@ class ViuSignupViewModel : ViewModel() {
                 address = address,
                 category = category,
                 imageUri = _uiState.value.profileImageUri,
-                caregiverEmail = caregiverEmail
+                caregiverEmail = caregiverEmail,
+                sex = sex
             )
 
             result.fold(
-                onSuccess = { (viu, caregiverUid) -> // Destructure the Pair
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        signupSuccess = true,
-                        createdUserId = viu.uid,
-                        createdCaregiverId = caregiverUid // Store Caregiver UID
+                onSuccess = { (viu, caregiverUid) ->
+                    val legalResult = acceptLegalDocumentsUseCase(
+                        uid = viu.uid,
+                        email = email,
+                        termsAccepted = termsAccepted,
+                        privacyAccepted = privacyAccepted,
+                        version = LegalDocuments.TERMS_VERSION
                     )
-                    startResendTimer(60)
+
+                    if (legalResult.isSuccess) {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            signupSuccess = true,
+                            createdUserId = viu.uid,
+                            createdCaregiverId = caregiverUid
+                        )
+                        startResendTimer(60)
+                    } else {
+                        deleteUnverifiedViuUserUseCase(viu.uid)
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            errorMessage = "Failed to save legal agreements. Signup cancelled."
+                        )
+                    }
                 },
                 onFailure = { exception ->
                     _uiState.value = _uiState.value.copy(
@@ -137,11 +155,13 @@ class ViuSignupViewModel : ViewModel() {
                     )
                 }
                 OtpResult.OtpVerificationResult.FailureMaxAttempts -> {
+                    deleteUnverifiedViuUserUseCase(viuUid)
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        errorMessage = "Max attempts reached. Please wait 5 minutes."
+                        errorMessage = "Max attempts reached. Signup cancelled.",
+                        signupSuccess = false
                     )
-                    startResendTimer(300)
+                    stopResendTimer()
                 }
                 OtpResult.OtpVerificationResult.FailureExpiredOrCooledDown -> {
                     _uiState.value = _uiState.value.copy(
@@ -180,16 +200,21 @@ class ViuSignupViewModel : ViewModel() {
                         errorMessage = "Please wait 1 minute before resending."
                     )
                 }
-
-                OtpResult.ResendOtpResult.FailureEmailAlreadyInUse -> TODO()
+                OtpResult.ResendOtpResult.FailureEmailAlreadyInUse -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = "Email issue."
+                    )
+                }
             }
         }
     }
 
-    fun cancelSignup(viuUid: String) { // Modified
+    fun cancelSignup(viuUid: String) {
         viewModelScope.launch {
             deleteUnverifiedViuUserUseCase(viuUid)
             stopResendTimer()
+            _uiState.value = ViuSignupUiState()
         }
     }
 

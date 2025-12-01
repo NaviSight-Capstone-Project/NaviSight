@@ -46,6 +46,8 @@ class ViuSignupFragment : Fragment() {
             setActiveControlsWidgetColor(android.graphics.Color.parseColor("#78E4EF"))
             setToolbarWidgetColor(android.graphics.Color.WHITE)
             setCircleDimmedLayer(true)
+            setShowCropFrame(true)
+            setShowCropGrid(false)
         }
 
         val cropIntent = UCrop.of(sourceUri, destinationUri)
@@ -92,7 +94,7 @@ class ViuSignupFragment : Fragment() {
                             viewModel = viewModel,
                             uid = uid,
                             onVerificationSuccess = {
-                                (requireActivity() as AuthActivity).onLoginSuccess()
+                                (requireActivity() as? AuthActivity)?.onLoginSuccess()
                             },
                             onCancelSignup = {
                                 viewModel.cancelSignup(uid)

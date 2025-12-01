@@ -1,5 +1,6 @@
 package edu.capstone.navisight.auth.data.remote
 
+import android.R
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.net.Uri
@@ -39,7 +40,8 @@ class ViuSignupDataSource(
         address: String,
         category: String,
         imageUri: Uri?,
-        caregiverEmail: String
+        caregiverEmail: String,
+        sex: String
     ): Result<Pair<Viu, String>> {
         var viuUid: String? = null
         try {
@@ -61,7 +63,8 @@ class ViuSignupDataSource(
                 firstName = firstName, middleName = middleName, lastName = lastName,
                 email = email, phone = phone, address = address, category = category,
                 profileImageUrl = imageUrl,
-                isEmailVerified = false
+                isEmailVerified = false,
+                sex = sex
             )
             viusCollection.document(viuUid).set(viu).await()
 

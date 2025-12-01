@@ -21,11 +21,12 @@ class ViuSignupRepository {
         address: String,
         category: String,
         imageUri: Uri?,
-        caregiverEmail: String
+        caregiverEmail: String,
+        sex: String
     ): Result<Pair<Viu, String>> {
         return remoteDataSource.signupViu(
             context, email, password, firstName, lastName, middleName,
-            phone, address, category, imageUri, caregiverEmail
+            phone, address, category, imageUri, caregiverEmail, sex
         )
     }
 
