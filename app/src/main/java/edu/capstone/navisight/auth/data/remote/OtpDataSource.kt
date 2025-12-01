@@ -37,7 +37,7 @@ class OtpDataSource(
         PASSWORD_CHANGE,          // Reset Password
         VIU_PROFILE_UPDATE,       // Edit VIU Profile
         TRANSFER_PRIMARY,         // Transfer Caregiver
-        VIU_EMAIL_CHANGE          // <--- ADDED THIS (Change VIU Email)
+        VIU_EMAIL_CHANGE          // Change VIU Email
     }
 
     private fun getOtpDocId(uid: String, type: OtpType): String {

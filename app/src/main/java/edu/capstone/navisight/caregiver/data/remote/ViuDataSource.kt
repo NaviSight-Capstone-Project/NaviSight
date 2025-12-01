@@ -203,7 +203,6 @@ class ViuDataSource(
             )
 
             if (verificationResult == OtpVerificationResult.Success) {
-                // CHANGED: Get pendingEmail from OTP doc, NOT Viu doc
                 val newEmail = otpDataSource.getExtraDataString(
                     viuUid,
                     OtpDataSource.OtpType.VIU_EMAIL_CHANGE,
@@ -212,7 +211,6 @@ class ViuDataSource(
 
                 viusCollection.document(viuUid).update("email", newEmail).await()
 
-                // CHANGED: Use cleanupOtp
                 otpDataSource.cleanupOtp(viuUid, OtpDataSource.OtpType.VIU_EMAIL_CHANGE)
             }
             Result.success(verificationResult)
@@ -272,7 +270,6 @@ class ViuDataSource(
             )
 
             if (verificationResult == OtpVerificationResult.Success) {
-                // Updated to cleanupOtp
                 otpDataSource.cleanupOtp(caregiverUid, OtpDataSource.OtpType.VIU_PROFILE_UPDATE)
             }
             Result.success(verificationResult)

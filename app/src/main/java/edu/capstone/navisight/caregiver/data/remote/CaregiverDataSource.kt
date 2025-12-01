@@ -98,16 +98,13 @@ class CaregiverDataSource(
 
         if (verificationResult == OtpVerificationResult.Success) {
             try {
-                // CHANGED: Get pendingEmail from OTP doc
                 val newEmail = otpDataSource.getExtraDataString(uid, OtpDataSource.OtpType.EMAIL_CHANGE, "pendingEmail")
                     ?: return OtpVerificationResult.FailureExpiredOrCooledDown
 
                 auth.currentUser?.updateEmail(newEmail)?.await()
 
-                // Update Firestore
                 usersCollection.document(uid).update("email", newEmail).await()
 
-                // CHANGED: Use cleanupOtp
                 otpDataSource.cleanupOtp(uid, OtpDataSource.OtpType.EMAIL_CHANGE)
 
             } catch (e: Exception) {
@@ -129,7 +126,6 @@ class CaregiverDataSource(
             try {
                 usersCollection.document(uid).update("isEmailVerified", true).await()
 
-                // CHANGED: Use cleanupOtp
                 otpDataSource.cleanupOtp(uid, OtpDataSource.OtpType.SIGNUP_VERIFICATION)
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -207,7 +203,6 @@ class CaregiverDataSource(
     }
 
     suspend fun cancelPasswordChange(uid: String) {
-        // CHANGED: Use cleanupOtp
         otpDataSource.cleanupOtp(uid, OtpDataSource.OtpType.PASSWORD_CHANGE)
     }
 
@@ -236,7 +231,6 @@ class CaregiverDataSource(
         if (verificationResult == OtpVerificationResult.Success) {
             try {
                 user.updatePassword(newPassword).await()
-                // CHANGED: Use cleanupOtp
                 otpDataSource.cleanupOtp(user.uid, OtpDataSource.OtpType.PASSWORD_CHANGE)
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -358,7 +352,6 @@ class CaregiverDataSource(
             val user = auth.currentUser
 
             if (user != null && user.uid == uid) {
-                // CHANGED: Use cleanupOtp
                 otpDataSource.cleanupOtp(uid, OtpDataSource.OtpType.SIGNUP_VERIFICATION)
 
                 usersCollection.document(uid).delete().await()
