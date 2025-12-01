@@ -14,6 +14,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
 import edu.capstone.navisight.caregiver.data.remote.ViuDataSource
 import edu.capstone.navisight.caregiver.model.Viu
+import edu.capstone.navisight.common.webrtc.model.FirebaseFieldNames.EMAIL
+import edu.capstone.navisight.common.webrtc.model.FirebaseFieldNames.STATUS
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
@@ -42,66 +44,13 @@ class FirebaseClient private constructor(
     // For checking if the user is a VIU or Caregiver
     private lateinit var userType : String
 
-    // Tracking listeners for removal, mapping Reference -> Listener
-    private val statusListeners = mutableMapOf<DatabaseReference, ValueEventListener>()
-
-    fun observeUsersStatus(status: (List<Pair<Viu?, String>>) -> Unit) {
-        dbRef.addValueEventListener(object : EventListener() {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                clientScope.launch {
-                    val deferredFetches = snapshot.children
-                        .filter { it.key != currentUID }
-                        .mapNotNull { snapshotChild ->
-                            // Set UID as key. Do not remove this.
-                            val uid = snapshotChild.key ?: return@mapNotNull null
-                            val userStatus = snapshotChild.child(FirebaseFieldNames.STATUS).value.toString()
-
-                            // Use 'async' to start all Firestore lookups in parallel
-                            async {
-                                // The suspending call
-                                val credentials = retrieveVIUCredentials(uid)
-                                // Return all necessary data to process later
-                                Pair(credentials, userStatus)
-                            }
-                        }
-
-                    //  Use 'awaitAll' to pause the coroutine until all results are back
-                    val results = deferredFetches.awaitAll()
-
-                    // Switch back to the Main thread before invoking the callback
-                    withContext(Dispatchers.Main) {
-                        status(results)
-                    }
-                }
-            }
-        })
-    }
-
-    fun listenForTargetNodeChanges(userId: String, onNodeChange: (DataSnapshot) -> Unit): () -> Unit {
-        // Monitor the entire user node reference
-        val userNodeRef = dbRef.child(userId)
-
-        val listener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                // Pass the entire snapshot to the repository for parsing and checking
-                onNodeChange(snapshot)
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                Log.e("FirebaseClient", "Target node listener cancelled for $userId.", error.toException())
-                // In case of error, we can send an empty snapshot or handle it gracefully
-            }
-        }
-
-        userNodeRef.addValueEventListener(listener)
-        statusListeners[userNodeRef] = listener
-
-        // Return a lambda function that can be called to remove this specific listener
-        return {
-            userNodeRef.removeEventListener(listener)
-            statusListeners.remove(userNodeRef)
-            Log.d("FirebaseClient", "Target node listener removed for $userId.")
-        }
+    /*
+        Set current email as a "catcher" if ever, for whatever reason, the registration failed
+        to set up the real-time database right.
+     */
+    private var currentEmail: String? = null
+    fun setEmail(email: String) {
+        this.currentEmail = email
     }
 
     // Handle relationships
@@ -181,18 +130,34 @@ class FirebaseClient private constructor(
                 // First retrieval
                 userType = snapshot.ref.parent?.key.toString()
                 if (snapshot.hasChild(uid)) {
-
                     dbRef.child(uid).child(FirebaseFieldNames.STATUS)
                         .setValue(UserStatus.ONLINE)
                         .addOnCompleteListener {
+                            /*
+                            Handle Firebase RTDB not updating properly
+                             */
                             setUID(uid)
-                            // Handle Firebase RTDB not updating properly
-                            // if last property is the same in case of abort.
                             clearLatestEvent()
                             done(true, null)
                         }.addOnFailureListener {
                             done(false, "${it.message}")
                         }
+                } else {
+                    // Detect  to make a document for RTDB, make one so NullPointerException also
+                    // won't hit status checking in MainActivity's OnDestroy.
+                    dbRef.child(uid).child(EMAIL).setValue(currentEmail)
+                        .addOnCompleteListener {
+                        dbRef.child(uid).child(STATUS)
+                            .setValue(UserStatus.ONLINE)
+                            .addOnCompleteListener {
+                                setUID(uid)
+                                done(true, null)
+                            }.addOnFailureListener {
+                                done(false, it.message)
+                            }
+                    }.addOnFailureListener {
+                        done(false, it.message)
+                    }
                 }
             }
         })

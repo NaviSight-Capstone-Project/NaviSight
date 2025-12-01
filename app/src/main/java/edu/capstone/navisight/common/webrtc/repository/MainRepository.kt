@@ -37,29 +37,13 @@ class MainRepository private constructor(
     private var remoteView: SurfaceViewRenderer? = null
     private lateinit var currentLatestEvent: DataModel
     private var caregiverStatusListener: (() -> Unit)? = null
-    private lateinit var mainActivity : MainActivity
 
     fun login(username: String, isDone: (Boolean, String?) -> Unit) {
         firebaseClient.checkRTDB(username, isDone)
     }
 
-    // TODO: Improve these code
-    // Get and Set for Notification Helper and access to what current user type
-//    fun setMainActivity(currentActivity: MainActivity) {
-//        mainActivity = currentActivity
-//    }
-//
-//    fun getMainActivity(): MainActivity {
-//        return mainActivity
-//    }
-
     fun getUserType(): String{
         return firebaseClient.getUserType()
-    }
-
-    // TODO: Remove once optimized
-    fun observeUsersStatus(status: (List<Pair<Viu?, String>>) -> Unit) {
-        firebaseClient.observeUsersStatus(status)
     }
 
     fun initFirebase() {
@@ -169,9 +153,13 @@ class MainRepository private constructor(
         this.target = target
     }
 
-    fun initWebrtcClient(username: String) {
+    fun setEmail(email: String) {
+        firebaseClient.setEmail(email) // Set the email for making a RTDB entry if none detected.
+    }
+
+    fun initWebrtcClient(email: String) {
         webRTCClient.listener = this
-        webRTCClient.initializeWebrtcClient(username, object : MyPeerObserver() {
+        webRTCClient.initializeWebrtcClient(email, object : MyPeerObserver() {
 
             override fun onAddStream(p0: MediaStream?) {
                 Log.d("MainRepository", "onAddStream is activated!")

@@ -69,6 +69,7 @@ class MainActivity : AppCompatActivity() {
 
     fun startAppWithRegisteredUser(){
         currentUser = auth.currentUser!!
+        mainRepository.setEmail(currentUser.email.toString())
         startWebrtcService(currentUser.email.toString())
         handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
         lifecycleScope.launch {
@@ -85,11 +86,6 @@ class MainActivity : AppCompatActivity() {
                 navigateToAuth()
             }
         }
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        startAppWithRegisteredUser()
     }
 
     fun beginAppFlow() {
@@ -149,7 +145,7 @@ class MainActivity : AppCompatActivity() {
     private fun startWebrtcService(currentUser: String) {
         val intent = Intent(this, MainService::class.java).apply {
             action = MainServiceActions.START_SERVICE.name
-            putExtra("username", currentUser)
+            putExtra("email", currentUser)
         }
         startForegroundService(intent)
     }

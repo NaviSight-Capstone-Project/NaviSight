@@ -29,7 +29,7 @@ import org.webrtc.SurfaceViewRenderer
 class MainService : Service(), MainRepository.Listener {
     private val TAG = "MainServiceCountdown"
     private var isServiceRunning = false
-    private var username: String? = null
+    private var email: String? = null
 
     // Init. vars for call timeout
     private val CALL_TIMEOUT_MS = 30000L // 30 seconds
@@ -41,7 +41,6 @@ class MainService : Service(), MainRepository.Listener {
     private var isPreviousCallStateVideo = true
 
     private lateinit var mainRepository : MainRepository
-    private lateinit var mainActivity : MainActivity
 
     private fun showToastOnMainThreadAndTTS(message: String) {
         Handler(Looper.getMainLooper()).post {
@@ -101,7 +100,6 @@ class MainService : Service(), MainRepository.Listener {
         Log.d("CallSignal", "making mainservice")
         INSTANCE = this
         mainRepository = MainRepository.getInstance(applicationContext)
-//        mainActivity = mainRepository.getMainActivity()
         rtcAudioManager = RTCAudioManager.create(this)
         rtcAudioManager.setDefaultAudioDevice(RTCAudioManager.AudioDevice.SPEAKER_PHONE)
         notificationManager = getSystemService(
@@ -159,13 +157,13 @@ class MainService : Service(), MainRepository.Listener {
         //start our foreground service
         if (!isServiceRunning) {
             isServiceRunning = true
-            username = incomingIntent.getStringExtra("username")
+            email = incomingIntent.getStringExtra("email")
             startServiceWithNotification()
 
             //setup my clients
             mainRepository.listener = this
             mainRepository.initFirebase()
-            mainRepository.initWebrtcClient(username!!)
+            mainRepository.initWebrtcClient(email!!)
 
         }
     }
@@ -271,14 +269,14 @@ class MainService : Service(), MainRepository.Listener {
     private fun endCallAndRestartRepository(){
         mainRepository.endCall()
         endAndDeniedCallListener?.onCallEnded()
-        mainRepository.initWebrtcClient(username!!)
+        mainRepository.initWebrtcClient(email!!)
     }
 
     private fun deniedCallAndRestartRepository(){
         Log.d("deniedcall", " got denied call from mainservice.kt")
         mainRepository.endCall()
         endAndDeniedCallListener?.onCallEnded()
-        mainRepository.initWebrtcClient(username!!)
+        mainRepository.initWebrtcClient(email!!)
     }
 
     private fun handleSetupViews(incomingIntent: Intent) {
