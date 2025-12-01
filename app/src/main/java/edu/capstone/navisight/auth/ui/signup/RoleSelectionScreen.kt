@@ -1,21 +1,28 @@
 package edu.capstone.navisight.auth.ui.signup
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import edu.capstone.navisight.R
 
 @Composable
 fun RoleSelectionScreen(
@@ -23,99 +30,162 @@ fun RoleSelectionScreen(
     onViuClicked: () -> Unit,
     onBackToLogin: () -> Unit
 ) {
-    val gradientStart = Color(0xFF78E4EF)
-    val gradientEnd = Color(0xFF6342ED)
-    val gradientStartButton = Color(0xFFAA41E5)
-    val focusedColor = Color(0xFF6641EC)
+    // Background Animation
+    val infiniteTransition = rememberInfiniteTransition(label = "bg")
+    val offsetX by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1080f,
+        animationSpec = infiniteRepeatable(tween(12000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "offsetX"
+    )
+    val offsetY by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1920f,
+        animationSpec = infiniteRepeatable(tween(14000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "offsetY"
+    )
+
+    // Gradients
+    val gradientTeal = Brush.radialGradient(
+        listOf(Color(0xFF77F7ED).copy(0.5f), Color(0xFFD9D9D9).copy(0.05f)),
+        center = Offset(offsetX * 0.6f + 100f, offsetY * 0.4f + 50f),
+        radius = 900f
+    )
+    val gradientPurple = Brush.radialGradient(
+        listOf(Color(0xFFB446F2).copy(0.5f), Color(0xFFD9D9D9).copy(0.05f)),
+        center = Offset(1080f - offsetX * 0.7f - 150f, 1920f - offsetY * 0.6f - 100f),
+        radius = 1000f
+    )
+    val textColor = Color(0xFF4A4A4A)
+    val focusedColor = Color(0xFF6041EC)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.horizontalGradient(listOf(gradientStart, gradientEnd)))
+            .background(Brush.linearGradient(listOf(Color.White, Color(0xFFF8F8F8)))),
+        contentAlignment = Alignment.Center
     ) {
-        // Back Button
-        IconButton(onClick = onBackToLogin, modifier = Modifier.padding(top = 9.dp, start = 8.dp)) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back to Login",
-                tint = Color.White
-            )
-        }
+        // Animated Layer
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(gradientTeal)
+                .background(gradientPurple)
+        )
 
-        // White Card
+        // Main Layout Column
         Column(
             modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .wrapContentHeight()
-                .align(Alignment.Center)
-                .background(Color.White, RoundedCornerShape(24.dp))
-                .padding(32.dp),
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Spacer(Modifier.weight(0.5f))
+
+            // Logo
+            Image(
+                painter = painterResource(R.drawable.ic_logo),
+                contentDescription = "Logo",
+                modifier = Modifier.size(200.dp, 100.dp)
+            )
+
+            // Gap between Logo and Text
+            Spacer(Modifier.height(64.dp))
+
+            // Updated Text
+            Text(
+                text = "Choose your account type",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            // Gap between Text and Buttons
+            Spacer(Modifier.height(32.dp))
+
+            // Buttons Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                RoleSelectionCard(
+                    text = "Caregiver",
+                    imageRes = R.drawable.avatar_caregiver,
+                    textColor = textColor,
+                    onClick = onCaregiverClicked,
+                    modifier = Modifier.weight(1f)
+                )
+
+                RoleSelectionCard(
+                    text = "Visually Impaired",
+                    imageRes = R.drawable.avatar_viu,
+                    textColor = textColor,
+                    onClick = onViuClicked,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Spacer(Modifier.weight(1f))
+
+            // Back Button
+            TextButton(
+                onClick = onBackToLogin,
+                modifier = Modifier.padding(bottom = 32.dp)
+            ) {
+                Text(
+                    text = "Back to Login",
+                    color = focusedColor,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+// Square Button Component
+@Composable
+private fun RoleSelectionCard(
+    text: String,
+    imageRes: Int,
+    textColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        modifier = modifier
+            .aspectRatio(1f)
+            .clickable { onClick() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            Image(
+                painter = painterResource(imageRes),
+                contentDescription = text,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            )
+
+            Spacer(Modifier.height(8.dp))
+
             Text(
-                "Join NaviSight",
-                style = MaterialTheme.typography.headlineMedium,
+                text = text,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = focusedColor
+                color = textColor,
+                textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(16.dp))
-
-            Text(
-                "To get started, please tell us who you are.",
-                textAlign = TextAlign.Center,
-                color = Color.Black.copy(alpha = 0.8f)
-            )
-            Spacer(Modifier.height(32.dp))
-
-            // Caregiver Button
-            Button(
-                onClick = onCaregiverClicked,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                contentPadding = PaddingValues()
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.horizontalGradient(listOf(gradientStartButton, gradientEnd)),
-                            shape = RoundedCornerShape(12.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "I'm a Caregiver",
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-
-            // VIU Button
-            OutlinedButton(
-                onClick = onViuClicked,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = focusedColor
-                ),
-                border = BorderStroke(2.dp, focusedColor)
-            ) {
-                Text(
-                    "I'm a Visually Impaired User",
-                    color = focusedColor,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
         }
     }
 }
