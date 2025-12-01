@@ -203,6 +203,7 @@ class OtpDataSource(
             }
 
             val otp = generateOtp()
+            Log.d("generateOtp", "Current OTP is: $otp") // TODO: Remove when under production
             val otpData = mutableMapOf<String, Any?>()
             otpData.putAll(extraData)
             otpData[type.otpField] = otp

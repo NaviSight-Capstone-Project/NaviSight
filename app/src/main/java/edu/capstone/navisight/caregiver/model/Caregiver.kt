@@ -13,11 +13,7 @@ data class Caregiver (
     var profileImageUrl: String? = null,
     var geofencingAlerts: Boolean = true,
     var locationSharing: Boolean = true,
-
-
-
     var address: String = "",
     var birthday: Timestamp = Timestamp.now(),
     var sex: String = ""
-
 )

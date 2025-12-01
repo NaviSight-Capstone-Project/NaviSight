@@ -59,9 +59,6 @@ class MainActivity : AppCompatActivity() {
         mainRepository = MainRepository.getInstance(applicationContext)
         auth = FirebaseAuth.getInstance()
 
-        // Pass Main Activity to Main Repository for further access
-//        mainRepository.setMainActivity(this)
-
         // Setup all permissions using this helper, begin if set properly
         val permissionHandler = PermissionsHelper(this)
         permissionHandler.checkAndRequestInitialPermissions()
@@ -70,27 +67,35 @@ class MainActivity : AppCompatActivity() {
         beginAppFlow()
     }
 
+    fun startAppWithRegisteredUser(){
+        currentUser = auth.currentUser!!
+        startWebrtcService(currentUser.email.toString())
+        handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
+        lifecycleScope.launch {
+            try {
+                getUserCollectionUseCase = GetUserCollectionUseCase()
+                val collection = getUserCollectionUseCase(currentUser.uid)
+                when (collection) {
+                    "caregivers" -> navigateToHomeFragment(isCaregiver = true)
+                    "vius" -> navigateToHomeFragment(isCaregiver = false)
+                    else -> navigateToAuth()
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error fetching user collection", e)
+                navigateToAuth()
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        startAppWithRegisteredUser()
+    }
+
     fun beginAppFlow() {
         if (isDisclaimerAgreed()){
             if (auth.currentUser != null) {
-                currentUser = auth.currentUser!!
-                //TEMPORARY FIX KASI AYAW MAG RUN, SEE LINE 138
-                //startWebrtcService(currentUser.email.toString())
-                handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
-                lifecycleScope.launch {
-                    try {
-                        getUserCollectionUseCase = GetUserCollectionUseCase()
-                        val collection = getUserCollectionUseCase(currentUser.uid)
-                        when (collection) {
-                            "caregivers" -> navigateToHomeFragment(isCaregiver = true)
-                            "vius" -> navigateToHomeFragment(isCaregiver = false)
-                            else -> navigateToAuth()
-                        }
-                    } catch (e: Exception) {
-                        Log.e("MainActivity", "Error fetching user collection", e)
-                        navigateToAuth()
-                    }
-                }
+                startAppWithRegisteredUser()
             } else navigateToGuestMode()
         } else navigateToDisclaimer()
     }
@@ -134,7 +139,6 @@ class MainActivity : AppCompatActivity() {
         mainRepository.login(uid) { isDone, reason ->
             if (isDone) {
                 Log.d("CallSignal", "User set to ONLINE")
-                //COMMENT OUT MUNA, PAKI ALIS NA LANG COMMENT
                 startWebrtcService(email) // Init. WebRTC handler.
             } else {
                 Log.e("CallSignal", "Failed to set user to ONLINE: $reason")
