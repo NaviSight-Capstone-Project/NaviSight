@@ -45,19 +45,26 @@ import edu.capstone.navisight.viu.utils.ObjectDetectorHelper
 import edu.capstone.navisight.common.TTSHelper
 import edu.capstone.navisight.common.webrtc.model.DataModel
 import edu.capstone.navisight.common.webrtc.model.DataModelType
+import edu.capstone.navisight.common.webrtc.repository.MainRepository
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.utils.getCameraAndMicPermission
 import java.util.LinkedList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+
+private const val TAG = "CameraFragment"
+private const val QUICK_MENU_TAG = "QuickMenu"
+
+
 class CameraFragment : Fragment(R.layout.fragment_camera),
     ObjectDetectorHelper.DetectorListener, MainService.Listener, QuickMenuListener {
-    private val TAG = "CameraFragment"
 
-    // For WebRTC and pop-up call
+
+    // Init. WebRTC and pop-up call and quick menu action vars
     private lateinit var service: MainService
     private var callRequestDialog: AlertDialog? = null
+    private lateinit var mainRepository : MainRepository
 
     // Init. camera system vars
     private var _fragmentCameraBinding: FragmentCameraBinding? = null
@@ -71,9 +78,18 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
 
-    // Init. screensaver stuff
+    // Init. screensaver vars
     private var isScreensaverActive = false
     private var currentBrightness = 0.0F // Default.
+    private val idleTimeout = 10_000L
+    private val idleHandler = Handler(Looper.getMainLooper())
+    private val idleRunnable = Runnable {
+        if (!isScreensaverActive) {
+            context?.let { safeContext ->
+                toggleScreenSaver(safeContext)
+            }
+        }
+    }
 
     // Init. clickCount for quadruple tap and screensaver mode
     private var clickCount = 0
@@ -137,17 +153,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         }
     }
 
-
-    private val idleTimeout = 10_000L
-    private val idleHandler = Handler(Looper.getMainLooper())
-    private val idleRunnable = Runnable {
-        if (!isScreensaverActive) {
-            context?.let { safeContext ->
-                toggleScreenSaver(safeContext)
-            }
-        }
-    }
-
     // For ringtone
     private var incomingMediaPlayer: MediaPlayer? = null
 
@@ -155,11 +160,11 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private val callActivityLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        // This callback is executed when CallActivity finishes
+        // Execute these when CallActivity finishes
         if (result.resultCode == AppCompatActivity.RESULT_OK) {
             // Check for a specific result code if needed, but RESULT_OK is usually enough
             Log.d(TAG, "CallActivity finished. Re-binding camera use cases.")
-            // Reinitialize camera here
+            // Reinitialize camera
             setUpCamera()
             doAutoScreensaver() // Re-start the screensaver timer
         } else {
@@ -170,8 +175,8 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         }
     }
 
-    ///////////////////////////////////////////////////
-    //  END OF INITIALIZATIONS
+    //////////////////////////////////////////////////
+    // END OF INITIALIZATIONS
     //////////////////////////////////////////////////
 
     private fun showQuickMenuFragment() {
@@ -189,10 +194,20 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
 
     override fun onQuickMenuAction(actionId: Int) {
         when(actionId) {
-            R.id.ball_top -> Log.d(TAG, "Executed: Top Action")
-            R.id.ball_bottom -> Log.d(TAG, "Executed: Bottom Action")
-            R.id.ball_left -> Log.d(TAG, "Executed: Left Action")
-            R.id.ball_right -> Log.d(TAG, "Executed: Right Action")
+            R.id.ball_top -> {
+                handleStartCall(isVideoCall=true)
+                Log.d(QUICK_MENU_TAG, "Executed: Video Calling Primary Caregiver")
+            }
+            R.id.ball_bottom -> {
+                handleStartCall(isVideoCall=false)
+                Log.d(QUICK_MENU_TAG, "Executed: Audio Calling Primary Caregiver")
+            }
+            R.id.ball_left -> {
+                Log.d(QUICK_MENU_TAG, "Executed: Video Calling Primary Caregiver")
+            }
+            R.id.ball_right -> {
+                Log.d(QUICK_MENU_TAG, "Executed: Video Calling Primary Caregiver")
+            }
         }
     }
 
@@ -211,6 +226,10 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         bindTouchListener()
         Log.d(TAG, "Quick Menu Drag ended and fragment removed.")
     }
+
+    ////////////////////////////////////////////////////
+    // END OF QUICK MENU
+    ////////////////////////////////////////////////////
 
     // Adjust binds here
     @SuppressLint("ClickableViewAccessibility")
@@ -266,6 +285,10 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         }
     }
 
+    //////////////////////////////////////////////
+    // END OF BIND/TOUCH LISTENER
+    //////////////////////////////////////////////
+
     // Setup onPause/onResume for WebRTC
     override fun onPause() {
         super.onPause()
@@ -308,9 +331,10 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Link Main Service listener
+        // Link Main Service listener and Main Repository
         MainService.listener = this
         service = MainService.getInstance()
+        mainRepository = MainRepository.getInstance(requireContext())
 
         // Start camera bind with object detector
         _fragmentCameraBinding = FragmentCameraBinding.bind(view)
@@ -440,6 +464,15 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        releaseMediaPlayer() // Set to release media player
+    }
+
+    /////////////////////////////////////////////////////////
+    // END OF MAIN APP FLOW AND CAMERA SYSTEM
+    /////////////////////////////////////////////////////////
+
     private fun doAutoScreensaver() {
         idleHandler.removeCallbacks(idleRunnable)
         idleHandler.postDelayed(idleRunnable, idleTimeout)
@@ -453,7 +486,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                     context.contentResolver, Settings.System.SCREEN_BRIGHTNESS
                 ) / 255f
                 binding.screensaverEye.setVisibility(View.VISIBLE)
-                changeScreenBrightness(context, 0.0F)
+                changeScreenBrightness(0.0F)
                 binding.previewModeOverlay.setBackgroundColor(resources.getColor(R.color.screensaver_color))
                 binding.tooltipTitle.setText(R.string.screensaver_mode_tooltip_title)
                 binding.tooltipDescription1.setText(R.string.screensaver_mode_tooltip_1)
@@ -461,7 +494,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             } else {
                 isScreensaverActive = false
                 binding.screensaverEye.setVisibility(View.INVISIBLE)
-                changeScreenBrightness(context, currentBrightness)
+                changeScreenBrightness(currentBrightness)
                 binding.previewModeOverlay.setBackgroundColor(0)
                 binding.tooltipTitle.setText(R.string.preview_mode_tooltip_title)
                 binding.tooltipDescription1.setText(R.string.preview_mode_tooltip_1)
@@ -470,7 +503,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         }
     }
 
-    fun changeScreenBrightness(context: Context, screenBrightnessValue: Float) {
+    fun changeScreenBrightness(screenBrightnessValue: Float) {
         val window = requireActivity().window
         val layoutParams = window.attributes
         layoutParams.screenBrightness = screenBrightnessValue
@@ -478,8 +511,27 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     }
 
     ///////////////////////////////////////////////////
-    //  WEBRTC AND POP-UP CALLING
+    //  END OF SCREEN SAVER FLOW
     //////////////////////////////////////////////////
+
+    private fun handleStartCall(isVideoCall: Boolean) {
+        (requireActivity() as AppCompatActivity).getCameraAndMicPermission {
+            val targetUid = mainRepository.getUserUID()
+            mainRepository.sendConnectionRequest(targetUid, isVideoCall) { success ->
+                if (success) {
+                    service.startCallTimeoutTimer() // Begin expiration
+                    val intent = Intent(requireActivity(), ViuCallActivity::class.java).apply {
+                        putExtra("target", targetUid)
+                        putExtra("isVideoCall", isVideoCall)
+                        putExtra("isCaller", true)
+                    }
+                    startActivity(intent)
+                } else {
+                    Log.e("CallSignal", "Failed to send call request.")
+                }
+            }
+        }
+    }
 
     override fun onCallReceived(model: DataModel) {
         // Ensure switch to the Main thread to handle UI
@@ -577,7 +629,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
 
             callRequestDialog?.window?.setBackgroundDrawableResource(R.drawable.bg_popup_rounded)
 
-            // CLEANUP: Stop and release when the dialog is dismissed for any reason
+            // Stop and release when the dialog is dismissed for any reason
             callRequestDialog?.setOnDismissListener { // Use safe call
                 releaseMediaPlayer()
                 callRequestDialog = null // Clear the reference when dismissed
@@ -639,18 +691,11 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     }
 
 
-    // For ringtone
+    // Release media player if needed
     private fun releaseMediaPlayer() {
         incomingMediaPlayer?.stop()
         incomingMediaPlayer?.release()
         incomingMediaPlayer = null
-    }
-
-
-    // Override these lifecycle methods in your Fragment class
-    override fun onDestroy() {
-        super.onDestroy()
-        releaseMediaPlayer()
     }
 
     private fun releaseCamera(onReleased: (() -> Unit)? = null) {
@@ -676,5 +721,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         }
     }
 
-
+    //////////////////////////////////////////////////
+    //  END OF WEBRTC AND POP-UP CALLING
+    //////////////////////////////////////////////////
 }

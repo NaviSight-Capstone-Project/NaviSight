@@ -1,6 +1,7 @@
 package edu.capstone.navisight.common.webrtc
 
 import android.util.Log
+import androidx.lifecycle.viewModelScope
 import edu.capstone.navisight.common.webrtc.model.FirebaseFieldNames
 import edu.capstone.navisight.common.webrtc.utils.EventListener
 import edu.capstone.navisight.common.webrtc.utils.UserStatus
@@ -31,12 +32,18 @@ class FirebaseClient private constructor(
 ) {
     // Define a Coroutine Scope for the Singleton lifecycle
     private val clientScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     private var currentUID: String? = null
+
     private fun setUID(uid: String) {
         Log.d("AuthenticationCheck", "UID has been set. Value is: $uid")
         this.currentUID = uid
     }
+
+    // Set this function for Camera's quick menu actions
+    fun getUserUID(): String {
+        return this.currentUID!!
+    }
+
     private val viuRemoteDataSource = ViuDataSource()
 
     // For checking if the user is a VIU or Caregiver
@@ -161,6 +168,7 @@ class FirebaseClient private constructor(
             }
         })
     }
+
 
     fun observeLatestEvents(listener: Listener) {
         try {

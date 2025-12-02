@@ -46,6 +46,10 @@ class MainRepository private constructor(
         return firebaseClient.getUserType()
     }
 
+    fun getUserUID(): String {
+        return firebaseClient.getUserUID()
+    }
+
     fun initFirebase() {
         firebaseClient.observeLatestEvents(object : FirebaseClient.Listener {
             override fun onLatestEventReceived(event: DataModel) {

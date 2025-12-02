@@ -33,7 +33,8 @@
     <color name="teal_700">#FF018786</color>
     <color name="faded_white">#57FFFFFF</color>
     <color name="faded_black">#57000000</color>
-    <color name="light_green">#3AAE09</color>
+    <color name="green">#3AAE09</color>
+    <color name="light_green">#B9E4A5</color>
     <color name="yellow">#EAE78F</color>
     <color name="red">#E82039</color>
 </resources>

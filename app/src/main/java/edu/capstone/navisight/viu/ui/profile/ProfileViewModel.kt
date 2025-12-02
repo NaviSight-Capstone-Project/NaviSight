@@ -30,7 +30,6 @@ data class ProfileUiState(
 
 sealed class ProfileUiEvent {
     data class StartCall(val target: String, val isVideoCall: Boolean) : ProfileUiEvent()
-    // You could also add a LoggedOut event here if desired
 }
 
 class ProfileViewModel(
@@ -63,12 +62,8 @@ class ProfileViewModel(
             try {
                 _uiState.value = _uiState.value.copy(isLoading = true)
 
-
                 val viuUser = getViuProfileUseCase()
-
-
                 val (qrModel, qrBitmap) = generateQrUseCase(viuUser.uid, viuUser.firstName)
-
 
                 _uiState.value = ProfileUiState(
                     user = viuUser,
@@ -116,7 +111,7 @@ class ProfileViewModel(
         }
     }
 
-    // Update your videoCall/audioCall functions to use the UID directly
+    // Update videoCall/audioCall functions to use the UID directly
     fun videoCall(targetUid: String) {
         viewModelScope.launch {
             _uiEvent.send(ProfileUiEvent.StartCall(target = targetUid, isVideoCall = true))

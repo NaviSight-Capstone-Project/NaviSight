@@ -19,6 +19,7 @@ import edu.capstone.navisight.auth.model.OtpResult.ResendOtpResult
 import edu.capstone.navisight.caregiver.model.Viu
 import edu.capstone.navisight.caregiver.model.ViuLocation
 import edu.capstone.navisight.caregiver.model.ViuStatus
+import edu.capstone.navisight.viu.model.Caregiver
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow

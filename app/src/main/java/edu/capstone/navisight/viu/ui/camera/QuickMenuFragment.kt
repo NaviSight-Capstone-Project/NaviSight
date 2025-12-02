@@ -7,6 +7,8 @@ import android.view.DragEvent
 import android.view.View
 import androidx.fragment.app.Fragment
 import edu.capstone.navisight.R
+import edu.capstone.navisight.common.TTSHelper
+import edu.capstone.navisight.common.VibrationHelper
 
 interface QuickMenuListener {
     fun onQuickMenuDismissed()
@@ -16,9 +18,9 @@ interface QuickMenuListener {
 private const val UNHIGHLIGHTED_ALPHA = 0.4f
 private const val HIGHLIGHTED_ALPHA = 1.0f
 
-class QuickMenuFragment : Fragment(R.layout.quick_menu) {
+private const val TAG = "QuickMenuFragment (Not inside CameraFragment)"
 
-    private val TAG = "QuickMenu"
+class QuickMenuFragment : Fragment(R.layout.quick_menu) {
     var dragListener: QuickMenuListener? = null
 
     // Map View IDs to their respective Views for easy access
@@ -57,6 +59,18 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
         currentHighlightedId = null
     }
 
+    // Edit and set custom TTS statements when the ball is highlighted here
+    private fun getIdTTSDescription(viewId:String): String {
+        when (viewId) {
+            "ball_top" -> return "Video call"
+            "ball_bottom" -> return "Audio call"
+            "ball_right" -> return "Quick action #2"
+            "ball_left" -> return "Quick action #1"
+        }
+        throw IllegalArgumentException(
+            "viewId must only be either ball_top, ball_bottom, ball_right, or ball_left")
+    }
+
     // Actual Drag Listener Implementation
     private val menuDragListener = View.OnDragListener { v, event ->
         val targetId = v.id // The ID of the View receiving the event (root or a ball)
@@ -72,7 +86,7 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
                 return@OnDragListener false
             }
 
-            // Highlighting Logic: Track which ball the shadow is over
+            // Track which ball the shadow is over
             DragEvent.ACTION_DRAG_ENTERED, DragEvent.ACTION_DRAG_LOCATION -> {
                 // Only process these events if the target is one of the four balls
                 if (ballViews.containsKey(targetId)) {
@@ -83,7 +97,17 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
                         // Highlight new view
                         ballViews[targetId]?.alpha = HIGHLIGHTED_ALPHA
                         currentHighlightedId = targetId
-                        Log.d(TAG, "Highlighted: ${v.resources.getResourceEntryName(targetId)}")
+
+                        // Vibrate on highlight.
+                        VibrationHelper(requireContext()).vibrate()
+
+                        // TTS depending on action.
+                        val ballId = v.resources.getResourceEntryName(targetId)
+                        TTSHelper.speak(
+                            requireContext(),
+                            getIdTTSDescription(ballId))
+
+                        Log.d(TAG, "Highlighted: $ballId")
                     }
                 }
                 return@OnDragListener true
@@ -94,6 +118,7 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
                 if (ballViews.containsKey(targetId)) {
                     ballViews[targetId]?.alpha = UNHIGHLIGHTED_ALPHA
                     currentHighlightedId = null
+
                 }
                 return@OnDragListener true
             }
@@ -111,6 +136,8 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
             // Drag operation finished (successful drop or release elsewhere)
             DragEvent.ACTION_DRAG_ENDED -> {
                 dragListener?.onQuickMenuDismissed()
+                // Make TTS say "cancel" to alert user
+                TTSHelper.speak(requireContext(), "Quick Menu cancelled")
                 return@OnDragListener true
             }
 
