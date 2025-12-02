@@ -1,7 +1,10 @@
 package edu.capstone.navisight.caregiver.ui.feature_scanqr
 
 import android.Manifest
+import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -18,7 +21,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
+import com.yalantis.ucrop.UCrop // Import UCrop
 import edu.capstone.navisight.R
+import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -27,6 +32,11 @@ class ScanQrFragment : Fragment() {
     private lateinit var viewModel: ScanQrViewModel
     private lateinit var cameraExecutor: ExecutorService
     private var previewView: PreviewView? = null
+
+    // Launcher to pick image from gallery
+    private val getContentLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { startCrop(it) }
+    }
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
@@ -57,11 +67,79 @@ class ScanQrFragment : Fragment() {
         composeView.setContent {
             ScanQrScreen(
                 viewModel = viewModel,
-                onNavigateBack = { parentFragmentManager.popBackStack() }
+                onNavigateBack = { parentFragmentManager.popBackStack() },
+                onGalleryClick = { openGallery() }
             )
         }
 
         return view
+    }
+
+    private fun openGallery() {
+        getContentLauncher.launch("image/*")
+    }
+
+    // Configure and start uCrop
+    private fun startCrop(uri: Uri) {
+        val destinationFileName = "CROPPED_IMAGE_${System.currentTimeMillis()}.jpg"
+        val destinationUri = Uri.fromFile(File(requireContext().cacheDir, destinationFileName))
+
+        val options = UCrop.Options()
+        options.setToolbarTitle("Crop QR Code")
+        options.setCompressionQuality(90)
+
+        // Match Navisight theme colors if possible, or use defaults
+        // options.setToolbarColor(ContextCompat.getColor(requireContext(), R.color.your_primary_color))
+
+        UCrop.of(uri, destinationUri)
+            .withOptions(options)
+            .withAspectRatio(1f, 1f) // QR codes are usually square
+            .start(requireContext(), this)
+    }
+
+    // Handle the Result from uCrop
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == Activity.RESULT_OK && requestCode == UCrop.REQUEST_CROP) {
+            val resultUri = UCrop.getOutput(data!!)
+            resultUri?.let { processImageForQrCode(it) }
+        } else if (resultCode == UCrop.RESULT_ERROR) {
+            val cropError = UCrop.getError(data!!)
+            Toast.makeText(requireContext(), "Crop error: ${cropError?.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Process the cropped image with ML Kit
+    private fun processImageForQrCode(uri: Uri) {
+        try {
+            val image = InputImage.fromFilePath(requireContext(), uri)
+            val scanner = BarcodeScanning.getClient()
+
+            // Show loading state manually if needed, or let ViewModel handle it
+            // viewModel.setLoading(true)
+
+            scanner.process(image)
+                .addOnSuccessListener { barcodes ->
+                    if (barcodes.isNotEmpty()) {
+                        // Take the first barcode found
+                        val rawValue = barcodes[0].rawValue
+                        if (rawValue != null) {
+                            viewModel.onQrCodeScanned(rawValue)
+                        } else {
+                            Toast.makeText(requireContext(), "Could not read QR data", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(requireContext(), "No QR code found in image", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .addOnFailureListener {
+                    Log.e("ScanQrFragment", "Error processing image", it)
+                    Toast.makeText(requireContext(), "Failed to scan image", Toast.LENGTH_SHORT).show()
+                }
+        } catch (e: Exception) {
+            Log.e("ScanQrFragment", "Error loading image", e)
+        }
     }
 
     override fun onResume() {

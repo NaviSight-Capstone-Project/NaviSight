@@ -72,7 +72,7 @@ class EditViuProfileViewModel(
     private val getCurrentUserUidUseCase = GetCurrentUserUidUseCase()
     private val unpairViuUseCase = UnpairViuUseCase()
 
-    // --- State Flows ---
+    // State Flows
     private val _viu = MutableStateFlow<Viu?>(null)
     val viu: StateFlow<Viu?> = _viu.asStateFlow()
 
@@ -140,12 +140,12 @@ class EditViuProfileViewModel(
     private val _unpairSuccess = MutableStateFlow(false)
     val unpairSuccess: StateFlow<Boolean> = _unpairSuccess.asStateFlow()
 
-    // --- Internal State ---
+    // Internal State
     private val dateFormatter = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
     private var pendingViuUpdate: Viu? = null
     private var pendingNewEmail: String? = null
 
-    // --- Timers ---
+    // Timers
     private var saveResendTimerJob: Job? = null
     private val _saveResendTimer = MutableStateFlow(0)
     val saveResendTimer: StateFlow<Int> = _saveResendTimer.asStateFlow()
@@ -179,7 +179,7 @@ class EditViuProfileViewModel(
         }
     }
 
-    // --- Image Upload ---
+    // Image Upload
     fun uploadProfileImage(imageUri: Uri) {
         if (!_canEdit.value) {
             _error.value = "Only the Primary Caregiver can change the photo."
@@ -199,7 +199,7 @@ class EditViuProfileViewModel(
         }
     }
 
-    // --- Timer Logic ---
+    // Timer Logic
     private fun startSaveResendTimer() {
         saveResendTimerJob?.cancel()
         saveResendTimerJob = viewModelScope.launch {
@@ -228,7 +228,7 @@ class EditViuProfileViewModel(
         _emailResendTimer.value = 0
     }
 
-    // --- Validations ---
+    // Validations
     private fun validateName(name: String, fieldName: String): String? {
         if (name.isBlank()) return "$fieldName cannot be empty."
         if (name.any { it.isDigit() }) return "$fieldName cannot contain numbers."
@@ -264,7 +264,7 @@ class EditViuProfileViewModel(
         return null
     }
 
-    // --- Save Flow (Edit Profile) ---
+    // Save Flow (Edit Profile)
     fun startSaveFlow(
         firstName: String, middleName: String, lastName: String,
         birthday: String, sex: String, phone: String, address: String, status: String
@@ -431,7 +431,7 @@ class EditViuProfileViewModel(
         viewModelScope.launch { cancelViuProfileUpdateUseCase() }
     }
 
-    // --- Delete Flow ---
+    // Delete Flow
     fun startDeleteFlow() {
         if (!_canEdit.value) {
             _deleteError.value = "Only the Primary Caregiver can delete this profile."
@@ -472,7 +472,7 @@ class EditViuProfileViewModel(
         _deleteError.value = null
     }
 
-    // --- Security / Email Change Flow ---
+    // Security / Email Change Flow
     fun sendPasswordReset() {
         val viuEmail = _viu.value?.email ?: return
         viewModelScope.launch {
@@ -597,7 +597,7 @@ class EditViuProfileViewModel(
         }
     }
 
-    // 2. Candidate Selected: Move to Password Confirmation
+    // Candidate Selected: Move to Password Confirmation
     fun onCandidateSelected(candidate: TransferPrimaryRequest) {
         pendingCandidate = candidate
         _passwordRetryCount.value = 0
@@ -605,7 +605,7 @@ class EditViuProfileViewModel(
         _transferFlowState.value = TransferFlowState.CONFIRMING_PASSWORD
     }
 
-    // 3. Confirm Password & Send
+    // Confirm Password & Send
     fun confirmTransferPassword(password: String) {
         if (password.isBlank()) {
             _transferError.value = "Password cannot be empty"
@@ -622,7 +622,7 @@ class EditViuProfileViewModel(
 
             reauthenticateCaregiverUseCase(password).fold(
                 onSuccess = {
-                    // Password Correct -> Send Request
+                    // Send Request
                     performTransferRequest()
                 },
                 onFailure = {
@@ -671,7 +671,7 @@ class EditViuProfileViewModel(
     }
     fun onTransferSuccessShown() { _transferSuccess.value = false }
 
-    // 4. Cancel / Close Dialogs
+    // Cancel / Close Dialogs
     fun cancelTransferFlow() {
         _transferFlowState.value = TransferFlowState.IDLE
         pendingCandidate = null
@@ -783,7 +783,7 @@ class EditViuProfileViewModel(
         _passwordRetryCount.value = 0
     }
 
-    // --- Cleanup/Reset helpers ---
+    // Cleanup/Reset helpers
     fun clearSaveError() { _saveError.value = null }
     fun clearDeleteError() { _deleteError.value = null }
     fun clearSecurityError() { _securityError.value = null }

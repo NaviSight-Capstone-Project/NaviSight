@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,8 +23,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import edu.capstone.navisight.viu.model.Viu
 import edu.capstone.navisight.viu.model.QR
@@ -127,7 +124,7 @@ fun ProfileContent(user: Viu, qr: QR?, qrBitmap: Bitmap?,
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "QR: ${qr?.QrUid ?: "N/A"}",
+                    text = "QR: ${qr?.qrUid ?: "N/A"}",
                     color = Color(0xFF6041EC),
                     fontSize = 12.sp
                 )

@@ -5,10 +5,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,15 +20,20 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun ScanQrScreen(
     viewModel: ScanQrViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onGalleryClick: () -> Unit
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
     val successMessage by viewModel.successMessage.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
+    // State for the manual input dialog
+    var showManualInputDialog by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
+        // Top Bar: Back Button
         IconButton(
             onClick = onNavigateBack,
             modifier = Modifier
@@ -44,6 +49,57 @@ fun ScanQrScreen(
             )
         }
 
+        // Bottom Actions: Manual Input & Gallery Upload
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 48.dp, start = 16.dp, end = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Manual Input Button
+            Button(
+                onClick = { showManualInputDialog = true },
+                modifier = Modifier
+                    .fillMaxWidth(0.8f) // Make it slightly narrower than full width
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Black.copy(alpha = 0.6f),
+                    contentColor = Color.White
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Keyboard,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Enter UID Manually")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Gallery Upload Button
+            Button(
+                onClick = onGalleryClick,
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Black.copy(alpha = 0.6f),
+                    contentColor = Color.White
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Image,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Upload QR from Gallery")
+            }
+        }
+
+        // Loading Indicator
         if (isLoading) {
             Box(
                 modifier = Modifier
@@ -55,6 +111,18 @@ fun ScanQrScreen(
             }
         }
 
+        // Manual Input Dialog
+        if (showManualInputDialog) {
+            ManualInputUidDialog(
+                onDismiss = { showManualInputDialog = false },
+                onSubmit = { uid ->
+                    showManualInputDialog = false
+                    viewModel.onQrCodeScanned(uid)
+                }
+            )
+        }
+
+        // Success/Error Dialogs
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -78,6 +146,48 @@ fun ScanQrScreen(
             }
         }
     }
+}
+
+@Composable
+fun ManualInputUidDialog(
+    onDismiss: () -> Unit,
+    onSubmit: (String) -> Unit
+) {
+    var textInput by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = "Enter QR UID") },
+        text = {
+            Column {
+                Text("Please enter the code found below the QR image.")
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = textInput,
+                    onValueChange = { textInput = it },
+                    label = { Text("UID Code") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (textInput.isNotBlank()) {
+                        onSubmit(textInput)
+                    }
+                }
+            ) {
+                Text("Connect")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
