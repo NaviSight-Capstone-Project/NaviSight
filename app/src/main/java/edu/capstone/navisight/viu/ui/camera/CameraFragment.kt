@@ -62,6 +62,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     // Init. camera system vars
     private var _fragmentCameraBinding: FragmentCameraBinding? = null
     private val fragmentCameraBinding get() = _fragmentCameraBinding
+    private val cameraReleaseHandler = Handler(Looper.getMainLooper())
     private lateinit var cameraExecutor: ExecutorService
     private lateinit var objectDetectorHelper: ObjectDetectorHelper
     private lateinit var bitmapBuffer: Bitmap
@@ -211,7 +212,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         Log.d(TAG, "Quick Menu Drag ended and fragment removed.")
     }
 
-    // New function to contain the complex touch logic
+    // Adjust binds here
     @SuppressLint("ClickableViewAccessibility")
     private fun bindTouchListener() {
         fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
@@ -268,6 +269,10 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     // Setup onPause/onResume for WebRTC
     override fun onPause() {
         super.onPause()
+        cameraReleaseHandler.removeCallbacksAndMessages(null)
+        idleHandler.removeCallbacksAndMessages(null)
+        longPressHandler.removeCallbacksAndMessages(null)
+        quadrupleTapHandler.removeCallbacksAndMessages(null)
         releaseCamera()
         // Unregister the listener to prevent the call dialog from showing up
         if (MainService.listener == this) {
@@ -283,24 +288,20 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         // Re-register as the active listener for incoming calls
         MainService.listener = this
         // TODO: Check if camera is already permitted (very unlikely, as this app should be running na, last TODO)
-        setUpCamera()
+        context?.let {
+            fragmentCameraBinding?.viewFinder?.post {
+                setUpCamera()
+            }
+        }
     }
 
     override fun onDestroyView() {
-        idleHandler.removeCallbacks(idleRunnable)
-        longPressHandler.removeCallbacks(longPressRunnable)
         _fragmentCameraBinding = null
         super.onDestroyView()
         cameraExecutor.shutdown()
         if (MainService.listener == this) {
             MainService.listener = null
         }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        idleHandler.removeCallbacks(idleRunnable)
-        longPressHandler.removeCallbacks(longPressRunnable)
     }
 
     @SuppressLint("MissingPermission", "ClickableViewAccessibility")
@@ -328,18 +329,34 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     }
 
     private fun setUpCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
+        val safeContext = context ?: run {
+            Log.w(TAG, "setUpCamera: Context is null. Aborting.")
+            return
+        }
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(safeContext) // Use safeContext
         cameraProviderFuture.addListener(
             {
+
+                if (!isAdded) {
+                    Log.w(TAG, "CameraProvider future resolved after fragment detachment. Aborting bind.")
+                    return@addListener
+                }
+
                 cameraProvider = cameraProviderFuture.get()
                 bindCameraUseCases()
             },
-            ContextCompat.getMainExecutor(requireContext())
+            ContextCompat.getMainExecutor(safeContext) // Use safeContext here too
         )
     }
 
     @SuppressLint("UnsafeOptInUsageError")
     private fun bindCameraUseCases() {
+
+        val binding = fragmentCameraBinding
+        if (context == null || binding == null) {
+            Log.w(TAG, "bindCameraUseCases: Context or View Binding is null. Aborting.")
+            return
+        }
         val cameraProvider =
             cameraProvider ?: throw kotlin.IllegalStateException("Camera initialization failed.")
 
@@ -645,9 +662,13 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             Log.d(TAG, "Camera released successfully.")
 
             // Wait a bit for CameraX to release hardware resources
-            Handler(Looper.getMainLooper()).postDelayed({
+            cameraReleaseHandler.postDelayed({
                 Log.d(TAG, "Camera release delay complete. Proceeding.")
-                onReleased?.invoke()
+                if (isAdded) {
+                    onReleased?.invoke()
+                } else {
+                    Log.w(TAG, "Fragment detached before camera release callback completed. Aborting onReleased.")
+                }
             }, 500) // 0.5 second delay (tweakable)
         } catch (e: Exception) {
             Log.e(TAG, "Error releasing camera: ${e.message}", e)
