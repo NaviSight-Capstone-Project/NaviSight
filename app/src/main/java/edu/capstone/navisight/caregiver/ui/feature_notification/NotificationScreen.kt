@@ -59,7 +59,7 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.ic_notification),
+                painter = painterResource(id = R.drawable.ic_notification_outline),
                 contentDescription = null,
                 tint = Color(0xFF6041EC),
                 modifier = Modifier.size(28.dp)

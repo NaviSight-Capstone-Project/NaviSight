@@ -8,12 +8,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.sp
 
 @Composable
@@ -23,15 +26,24 @@ fun BottomNavigationBar(
     iconSize: Dp = 24.dp
 ) {
     val items = listOf(
-        BottomNavItem.Track,
         BottomNavItem.Records,
         BottomNavItem.Stream,
+        BottomNavItem.Track,
         BottomNavItem.Notification,
         BottomNavItem.Settings
     )
 
-    val selectedColor = Color(0xFF6041EC)
+    val colorBlue = Color(0xFF54AFF2)
+    val colorPurple = Color(0xFFAB76F4)
     val unselectedColor = Color(0xFF9E9E9E)
+
+    val iconGradientBrush = Brush.verticalGradient(
+        colors = listOf(colorBlue, colorPurple)
+    )
+
+    val indicatorGradientBrush = Brush.horizontalGradient(
+        colors = listOf(colorBlue, colorPurple)
+    )
 
     val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
     val itemCount = items.size
@@ -39,7 +51,8 @@ fun BottomNavigationBar(
     val indicatorWidth = 40.dp
 
     val animatedOffset by animateDpAsState(
-        targetValue = itemWidth * currentIndex + (itemWidth - indicatorWidth) / 2
+        targetValue = itemWidth * currentIndex + (itemWidth - indicatorWidth) / 2,
+        label = "indicatorAnimation"
     )
 
     Box(
@@ -74,22 +87,46 @@ fun BottomNavigationBar(
                 ) {
                     items.forEachIndexed { index, item ->
                         val selected = currentIndex == index
+
                         NavigationBarItem(
                             selected = selected,
                             onClick = { onItemSelected(index) },
                             icon = {
-                                Icon(
-                                    painter = painterResource(id = item.iconRes),
-                                    contentDescription = item.label,
-                                    modifier = Modifier.size(iconSize)
+                                if (selected) {
+                                    Icon(
+                                        painter = painterResource(id = item.filledIcon),
+                                        contentDescription = item.label,
+                                        modifier = Modifier
+                                            .size(iconSize)
+                                            .graphicsLayer(alpha = 0.99f)
+                                            .drawWithCache {
+                                                onDrawWithContent {
+                                                    drawContent()
+                                                    drawRect(
+                                                        brush = iconGradientBrush,
+                                                        blendMode = BlendMode.SrcIn
+                                                    )
+                                                }
+                                            },
+                                        tint = Color.Unspecified
+                                    )
+                                } else {
+                                    Icon(
+                                        painter = painterResource(id = item.outlineIcon),
+                                        contentDescription = item.label,
+                                        modifier = Modifier.size(iconSize),
+                                        tint = unselectedColor
+                                    )
+                                }
+                            },
+                            label = {
+                                Text(
+                                    text = item.label,
+                                    fontSize = 11.sp,
+                                    color = if (selected) colorPurple else unselectedColor
                                 )
                             },
-                            label = { Text(text = item.label, fontSize=11.sp) },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = selectedColor,
-                                unselectedIconColor = unselectedColor,
-                                selectedTextColor = selectedColor,
-                                unselectedTextColor = unselectedColor,
                                 indicatorColor = Color.Transparent
                             )
                         )
@@ -104,7 +141,7 @@ fun BottomNavigationBar(
                 .width(indicatorWidth)
                 .height(3.dp)
                 .background(
-                    color = selectedColor,
+                    brush = indicatorGradientBrush,
                     shape = RoundedCornerShape(50)
                 )
         )
