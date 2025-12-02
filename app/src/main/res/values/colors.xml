@@ -15,11 +15,15 @@
     <color name="white">#FFFFFFFF</color>
     <color name="purple">#18172c</color>
     <color name="grey_white">#fefefe</color>
-    <color name="light_purple">#988fff</color>
+    <color name="light_purple">#D7D7F8</color>
     <color name="light_red">#FF8F8F</color>
 
+    <color name="light_orange">#FF9800</color>
+    <color name="light_blue">#D5F5FF</color>
+    <color name="blue">#0F7BD3</color>
     <color name="ash">#474747</color>
     <color name="dark_violet">#2D1435</color>
+    <color name="peach">#FDF0E5</color>
 
     <color name="royal_purple">#6750a4</color>
     <color name="purple_200">#FFBB86FC</color>
