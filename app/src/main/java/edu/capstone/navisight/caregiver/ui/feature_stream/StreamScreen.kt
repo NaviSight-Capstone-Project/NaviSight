@@ -71,6 +71,11 @@ fun StreamScreen(
     val firebaseClient = FirebaseClient.getInstance()
     val vius by viewModel.vius.collectAsState()
 
+    val viuList: List<Viu> = usersList.map { triple ->
+        // Access the first element of the Triple
+        triple.first
+    }
+
     // Init. search query stuff
     val searchQuery by viewModel.searchQuery.collectAsState()
 
@@ -114,31 +119,12 @@ fun StreamScreen(
         }
     }
 
-    data class Item(val id: Int, val name: String)
-
-    val rawDataFromSource = remember {
-        listOf(
-            Item(1, "Dog"),
-            Item(2, "Apple"),
-            Item(3, "Frog"),
-            Item(4, "Banana")
-        )
-    }
-
-    val yourSortedItemList = remember {
-        rawDataFromSource.sortedBy { it.name }
-    }
-
-
     val listState = rememberLazyListState()
-
-
     LazyColumn(state = listState) {
-        items(yourSortedItemList) { item ->
-            Text(item.name) // Or your custom item composable
+        items(viuList) { item ->
+            Text(item.firstName) // Or your custom item composable
         }
     }
-
     val scope = rememberCoroutineScope()
     val alphabet = ('A'..'Z').toList()
 
@@ -190,10 +176,13 @@ fun StreamScreen(
                 }
 
                 // Set search bar.
-                SearchBar (
-                    query = searchQuery,
-                    onQueryChange = { viewModel.onSearchQueryChanged(it) }
-                )
+                Box (modifier=Modifier.padding(horizontal=12.dp)){
+                    SearchBar (
+                        query = searchQuery,
+                        onQueryChange = { viewModel.onSearchQueryChanged(it) }
+                    )
+                }
+
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -296,8 +285,8 @@ fun StreamScreen(
                         modifier = Modifier.clickable {
                             scope.launch {
                                 // TODO: Fix connection
-                                val targetIndex = yourSortedItemList.indexOfFirst {
-                                    it.name.startsWith(letter.toString(), ignoreCase = true)
+                                val targetIndex = viuList.indexOfFirst {
+                                    it.firstName.startsWith(letter.toString(), ignoreCase = true)
                                 }
                                 if (targetIndex != -1) {
                                     // Scroll to the item
