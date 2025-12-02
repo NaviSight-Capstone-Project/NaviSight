@@ -1,6 +1,8 @@
 package edu.capstone.navisight.viu.ui.camera
 
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipDescription
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -17,6 +19,7 @@ import android.util.Size
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.View
+import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -48,18 +51,18 @@ import java.util.LinkedList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.DetectorListener, MainService.Listener {
-
+class CameraFragment : Fragment(R.layout.fragment_camera),
+    ObjectDetectorHelper.DetectorListener, MainService.Listener, QuickMenuListener {
     private val TAG = "CameraFragment"
 
+    // For WebRTC and pop-up call
     private lateinit var service: MainService
-
-    // For WebRTC popup call
     private var callRequestDialog: AlertDialog? = null
 
+    // Init. camera system vars
     private var _fragmentCameraBinding: FragmentCameraBinding? = null
     private val fragmentCameraBinding get() = _fragmentCameraBinding
-
+    private lateinit var cameraExecutor: ExecutorService
     private lateinit var objectDetectorHelper: ObjectDetectorHelper
     private lateinit var bitmapBuffer: Bitmap
     private var preview: Preview? = null
@@ -67,15 +70,72 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
     private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
 
-    private var clickCount = 0
+    // Init. screensaver stuff
     private var isScreensaverActive = false
     private var currentBrightness = 0.0F // Default.
 
+    // Init. clickCount for quadruple tap and screensaver mode
+    private var clickCount = 0
+
+    // Init. quadruple tap to profile page
     private val QUADRUPLE_TAP_TIMEOUT = 500L
     private val quadrupleTapHandler = Handler(Looper.getMainLooper())
     private val quadrupleTapRunnable = Runnable {
         clickCount = 0
     }
+
+    //  Init. variables for menu activation (long press)
+    private var quickMenuFragment: QuickMenuFragment? = null
+    private val longPressDuration = 3_000L
+    private val longPressHandler = Handler(Looper.getMainLooper())
+    private var initialDownX: Float = 0f
+    private var initialDownY: Float = 0f
+    private val longPressRunnable = Runnable {
+        context?.let { safeContext ->
+            TTSHelper.speak(safeContext, "Quick Menu activated. Drag and drop to select action.")
+
+            // Show the drag fragment (the drop targets)
+            showQuickMenuFragment()
+
+            fragmentCameraBinding?.quickMenuContainer?.visibility = View.VISIBLE
+
+            // Prepare the View for the Drag Shadow
+            val shadowView = View(safeContext).apply {
+                // Set drag shadow size dito
+                layoutParams = ViewGroup.LayoutParams(50, 50)
+                setBackgroundResource(R.drawable.quick_menu_drag_shadow)
+            }
+
+            // Force the view to measure and layout to set positive dimensions
+            val widthSpec = View.MeasureSpec.makeMeasureSpec(50, View.MeasureSpec.EXACTLY)
+            val heightSpec = View.MeasureSpec.makeMeasureSpec(50, View.MeasureSpec.EXACTLY)
+            shadowView.measure(widthSpec, heightSpec)
+            shadowView.layout(0, 0, shadowView.measuredWidth, shadowView.measuredHeight)
+
+            // Initiate the Drag and Drop operation
+            val clipItem = ClipData.Item("Quick Menu Drag")
+            val dragData = ClipData(
+                "Quick Menu Drag",
+                arrayOf(ClipDescription.MIMETYPE_TEXT_PLAIN),
+                clipItem
+            )
+
+            // Pass view to the DragShadowBuilder
+            val shadowBuilder = View.DragShadowBuilder(shadowView)
+
+            // Nullify the listener *before* starting drag to drop touch ownership
+            fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener(null)
+
+            // Start the drag operation
+            fragmentCameraBinding?.previewModeHitbox?.startDragAndDrop(
+                dragData,
+                shadowBuilder,
+                null,
+                0
+            )
+        }
+    }
+
 
     private val idleTimeout = 10_000L
     private val idleHandler = Handler(Looper.getMainLooper())
@@ -109,6 +169,102 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
         }
     }
 
+    ///////////////////////////////////////////////////
+    //  END OF INITIALIZATIONS
+    //////////////////////////////////////////////////
+
+    private fun showQuickMenuFragment() {
+         if (quickMenuFragment == null) {
+            quickMenuFragment = QuickMenuFragment().also { fragment ->
+                // Use childFragmentManager to overlay the fragment
+                childFragmentManager.commit {
+                    setReorderingAllowed(true)
+                    // Target the new container ID inside the CameraFragment's view
+                    replace( R.id.quick_menu_container, fragment, "QuickMenu")
+                }
+            }
+        }
+    }
+
+    override fun onQuickMenuAction(actionId: Int) {
+        when(actionId) {
+            R.id.ball_top -> Log.d(TAG, "Executed: Top Action")
+            R.id.ball_bottom -> Log.d(TAG, "Executed: Bottom Action")
+            R.id.ball_left -> Log.d(TAG, "Executed: Left Action")
+            R.id.ball_right -> Log.d(TAG, "Executed: Right Action")
+        }
+    }
+
+    override fun onQuickMenuDismissed() {
+        // Find and remove the fragment when the drag operation ends
+        if (isAdded) {
+            childFragmentManager.commit {
+                quickMenuFragment?.let { remove(it) }
+            }
+        }
+        quickMenuFragment = null
+
+        fragmentCameraBinding?.quickMenuContainer?.visibility = View.GONE
+
+        // Re-enable the touch listener to allow long press detection again
+        bindTouchListener()
+        Log.d(TAG, "Quick Menu Drag ended and fragment removed.")
+    }
+
+    // New function to contain the complex touch logic
+    @SuppressLint("ClickableViewAccessibility")
+    private fun bindTouchListener() {
+        fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
+            doAutoScreensaver()
+            val action = event.actionMasked
+
+            when (action) {
+                MotionEvent.ACTION_DOWN -> {
+                    quadrupleTapHandler.removeCallbacks(quadrupleTapRunnable)
+                    clickCount++
+
+                    initialDownX = event.x
+                    initialDownY = event.y
+                    longPressHandler.postDelayed(
+                        longPressRunnable,
+                        longPressDuration)
+
+                    if (clickCount == 4) {
+                        context?.let { safeContext ->
+                            if (isAdded) {
+                                TTSHelper.speak(safeContext, "Navigating to Profile Page")
+                                if (isAdded) {
+                                    requireActivity().supportFragmentManager.commit {
+                                        setReorderingAllowed(true)
+                                        replace(
+                                            R.id.fragment_container,
+                                            ProfileFragment())
+                                        addToBackStack(null)
+                                    }
+                                }
+                            }
+                        }
+                        clickCount = 0
+                    }
+                    if (clickCount >= 3 && clickCount < 4) {
+                        context?.let { safeContext -> toggleScreenSaver(safeContext) }
+                    }
+                    if (clickCount > 0 && clickCount < 4) {
+                        quadrupleTapHandler.postDelayed(
+                            quadrupleTapRunnable, QUADRUPLE_TAP_TIMEOUT)
+                    }
+                    return@setOnTouchListener true // Claim touch stream
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    // Cancel the long press if the finger is released early
+                    longPressHandler.removeCallbacks(longPressRunnable)
+                }
+            }
+            // Maintain touch stream ownership
+            return@setOnTouchListener true
+        }
+    }
+
     // Setup onPause/onResume for WebRTC
     override fun onPause() {
         super.onPause()
@@ -130,10 +286,9 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
         setUpCamera()
     }
 
-    private lateinit var cameraExecutor: ExecutorService
-
     override fun onDestroyView() {
         idleHandler.removeCallbacks(idleRunnable)
+        longPressHandler.removeCallbacks(longPressRunnable)
         _fragmentCameraBinding = null
         super.onDestroyView()
         cameraExecutor.shutdown()
@@ -145,6 +300,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
     override fun onStop() {
         super.onStop()
         idleHandler.removeCallbacks(idleRunnable)
+        longPressHandler.removeCallbacks(longPressRunnable)
     }
 
     @SuppressLint("MissingPermission", "ClickableViewAccessibility")
@@ -166,43 +322,9 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
             setUpCamera()
         }
 
-
         // Bind/set extra functionalities here
         toggleScreenSaver(requireContext()) // Begin screen saving
-        fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
-            doAutoScreensaver()
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    quadrupleTapHandler.removeCallbacks(quadrupleTapRunnable)
-                    clickCount++
-                    if (clickCount == 4) {
-                        context?.let { safeContext ->
-                            if (isAdded) {
-                                // Start profile.
-                                context?.let { safeContext ->
-                                    TTSHelper.speak(safeContext, "Navigating to Profile Page")
-                                    if (isAdded) {
-                                        requireActivity().supportFragmentManager.commit {
-                                            setReorderingAllowed(true)
-                                            replace(R.id.fragment_container, ProfileFragment())
-                                            addToBackStack(null)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        clickCount = 0
-                    }
-                    if (clickCount >= 3 && clickCount < 4) {
-                        context?.let { safeContext -> toggleScreenSaver(safeContext) }
-                    }
-                    if (clickCount > 0 && clickCount < 4) {
-                        quadrupleTapHandler.postDelayed(quadrupleTapRunnable, QUADRUPLE_TAP_TIMEOUT)
-                    }
-                }
-            }
-            true
-        }
+        bindTouchListener() // Set and start the binding. Do not remove.
     }
 
     private fun setUpCamera() {
@@ -338,7 +460,10 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
         window.attributes = layoutParams
     }
 
-    // WebRTC stuffs.
+    ///////////////////////////////////////////////////
+    //  WEBRTC AND POP-UP CALLING
+    //////////////////////////////////////////////////
+
     override fun onCallReceived(model: DataModel) {
         // Ensure switch to the Main thread to handle UI
         activity?.runOnUiThread {
@@ -423,7 +548,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.
 
             // Find and set the dynamic content on the custom views
             val messageTitle = customLayout.findViewById<TextView>(R.id.messageTitle)
-            val caregiverTitle = customLayout.findViewById<TextView>(R.id.caregiverTitle)
             val btnAccept = customLayout.findViewById<AppCompatImageButton>(R.id.btnAccept)
             val btnDecline = customLayout.findViewById<AppCompatImageButton>(R.id.btnDecline)
             messageTitle.text = if (isVideoCall) "Incoming Video Call" else "Incoming Audio Call"

@@ -28,8 +28,6 @@
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:layout_gravity="center"/>
-    <!--        android:background="@color/screensaver_color"/> -->
-
 
     <androidx.camera.view.PreviewView
         android:id="@+id/view_finder"
@@ -93,5 +91,14 @@
         </LinearLayout>
     </LinearLayout>
 
+    <FrameLayout
+        android:id="@+id/quick_menu_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:elevation="10dp"
+        android:visibility="gone"
+        android:background="@android:color/transparent"
+        />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

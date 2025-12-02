@@ -1,0 +1,120 @@
+package edu.capstone.navisight.viu.ui.camera
+
+import android.content.ClipDescription
+import android.os.Bundle
+import android.util.Log
+import android.view.DragEvent
+import android.view.View
+import androidx.fragment.app.Fragment
+import edu.capstone.navisight.R
+
+interface QuickMenuListener {
+    fun onQuickMenuDismissed()
+    fun onQuickMenuAction(actionId: Int)
+}
+
+private const val UNHIGHLIGHTED_ALPHA = 0.4f
+private const val HIGHLIGHTED_ALPHA = 1.0f
+
+class QuickMenuFragment : Fragment(R.layout.quick_menu) {
+
+    private val TAG = "QuickMenu"
+    var dragListener: QuickMenuListener? = null
+
+    // Map View IDs to their respective Views for easy access
+    private lateinit var ballViews: Map<Int, View>
+
+    // Static variable to track the last highlighted view ID during a drag operation
+    private var currentHighlightedId: Int? = null
+
+    override fun onAttach(context: android.content.Context) {
+        super.onAttach(context)
+        // Ensure the hosting fragment/activity implements the listener
+        dragListener = parentFragment as? QuickMenuListener
+            ?: throw IllegalStateException("Parent must implement QuickMenuListener")
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        ballViews = mapOf(
+            R.id.ball_top to view.findViewById(R.id.ball_top),
+            R.id.ball_bottom to view.findViewById(R.id.ball_bottom),
+            R.id.ball_left to view.findViewById(R.id.ball_left),
+            R.id.ball_right to view.findViewById(R.id.ball_right)
+        )
+
+        // Set the drag listener on the entire root view of the fragment
+        // and also explicitly on each drop target.
+        view.setOnDragListener(menuDragListener)
+        ballViews.values.forEach { it.setOnDragListener(menuDragListener) }
+
+        resetHighlights()
+    }
+
+    private fun resetHighlights() {
+        ballViews.values.forEach { it.alpha = UNHIGHLIGHTED_ALPHA }
+        currentHighlightedId = null
+    }
+
+    // Actual Drag Listener Implementation
+    private val menuDragListener = View.OnDragListener { v, event ->
+        val targetId = v.id // The ID of the View receiving the event (root or a ball)
+
+        when (event.action) {
+
+            // This is required for the view to receive subsequent events (ENTERED, DROPPED)
+            DragEvent.ACTION_DRAG_STARTED -> {
+                if (event.clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
+                    // Indicate that this View can accept the drag data
+                    return@OnDragListener true
+                }
+                return@OnDragListener false
+            }
+
+            // Highlighting Logic: Track which ball the shadow is over
+            DragEvent.ACTION_DRAG_ENTERED, DragEvent.ACTION_DRAG_LOCATION -> {
+                // Only process these events if the target is one of the four balls
+                if (ballViews.containsKey(targetId)) {
+                    if (targetId != currentHighlightedId) {
+                        // Un-highlight old view
+                        currentHighlightedId?.let { ballViews[it]?.alpha = UNHIGHLIGHTED_ALPHA }
+
+                        // Highlight new view
+                        ballViews[targetId]?.alpha = HIGHLIGHTED_ALPHA
+                        currentHighlightedId = targetId
+                        Log.d(TAG, "Highlighted: ${v.resources.getResourceEntryName(targetId)}")
+                    }
+                }
+                return@OnDragListener true
+            }
+
+            // Remove highlight when the shadow leaves a ball
+            DragEvent.ACTION_DRAG_EXITED -> {
+                if (ballViews.containsKey(targetId)) {
+                    ballViews[targetId]?.alpha = UNHIGHLIGHTED_ALPHA
+                    currentHighlightedId = null
+                }
+                return@OnDragListener true
+            }
+
+            // Drag released over a target
+            DragEvent.ACTION_DROP -> {
+                // If a ball was highlighted upon drop, execute the action
+                currentHighlightedId?.let { actionId ->
+                    dragListener?.onQuickMenuAction(actionId)
+                }
+                // The drag operation will end automatically after ACTION_DROP
+                return@OnDragListener true
+            }
+
+            // Drag operation finished (successful drop or release elsewhere)
+            DragEvent.ACTION_DRAG_ENDED -> {
+                dragListener?.onQuickMenuDismissed()
+                return@OnDragListener true
+            }
+
+            else -> return@OnDragListener false
+        }
+    }
+}
