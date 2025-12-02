@@ -22,12 +22,20 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +44,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -60,6 +69,10 @@ fun StreamScreen(
      onAudioCall: (username: String) -> Unit){
     val usersList = remember { mutableStateListOf<Triple<Viu, String, String>>() }
     val firebaseClient = FirebaseClient.getInstance()
+    val vius by viewModel.vius.collectAsState()
+
+    // Init. search query stuff
+    val searchQuery by viewModel.searchQuery.collectAsState()
 
     // Hold the list of VIU UIDs associated with the caregiver
     var associatedViuUids by remember { mutableStateOf<List<String>?>(null) }
@@ -176,6 +189,12 @@ fun StreamScreen(
                     )
                 }
 
+                // Set search bar.
+                SearchBar (
+                    query = searchQuery,
+                    onQueryChange = { viewModel.onSearchQueryChanged(it) }
+                )
+
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Set main content with controls
@@ -291,4 +310,53 @@ fun StreamScreen(
             }
         }
     }
+}
+
+
+@Composable
+fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit
+) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .shadow(4.dp, RoundedCornerShape(50)),
+        shape = RoundedCornerShape(50),
+        placeholder = {
+            Text(
+                text = "Search a VIU to video or audio call",
+                style = TextStyle(color = Color.Gray, fontSize = 14.sp)
+            )
+        },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Search",
+                tint = Color(0xFF6041EC)
+            )
+        },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Clear",
+                        tint = Color.Gray
+                    )
+                }
+            }
+        },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White,
+            focusedBorderColor = Color(0xFF6041EC),
+            unfocusedBorderColor = Color.Transparent,
+            cursorColor = Color(0xFF6041EC)
+        ),
+        singleLine = true
+    )
 }
