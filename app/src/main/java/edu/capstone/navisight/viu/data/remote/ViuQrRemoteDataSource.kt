@@ -23,9 +23,9 @@ class ViuQrRemoteDataSource(
         return querySnapshot.documents.firstOrNull()?.toObject(QR::class.java)
     }
 
-    // Save QR — use its qruid as Firestore document ID (random unique)
+    // Save QR use its qruid as Firestore document ID (random unique)
     suspend fun saveQr(qr: QR) {
-        val docId = qr.QrUid.ifEmpty { qrCollection.document().id }
-        qrCollection.document(docId).set(qr.copy(QrUid = docId)).await()
+        val docId = qr.qrUid.ifEmpty { qrCollection.document().id }
+        qrCollection.document(docId).set(qr.copy(qrUid = docId)).await()
     }
 }

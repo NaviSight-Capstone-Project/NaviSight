@@ -89,7 +89,7 @@ class ConnectionDataSource(
 
     suspend fun getQrByUid(qrUid: String): QRModel? {
         return try {
-            val snapshot = firestore.collection("QR_Code")
+            val snapshot = firestore.collection("qr_code")
                 .whereEqualTo("qrUid", qrUid)
                 .limit(1)
                 .get()

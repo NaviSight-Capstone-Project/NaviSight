@@ -25,7 +25,7 @@ class GenerateOrFetchQrUseCase(
 
         // Build the model
         val newModel = QR(
-            QrUid = newQrId,
+            qrUid = newQrId,
             viuUid = viuUid,
             name = name,
             qrCodeData = qrData

@@ -20,7 +20,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import edu.capstone.navisight.caregiver.ui.feature_edit_viu_profile.components.*
@@ -28,7 +27,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 // Helper function for age validation
-private fun isAgeValid(selectedMillis: Long?): Boolean {
+private fun ageValid(selectedMillis: Long?): Boolean {
     if (selectedMillis == null) return false
     val selectedDate = Date(selectedMillis)
     val today = Calendar.getInstance()
@@ -59,6 +58,8 @@ fun EditViuProfileScreen(
     val emailFlowState by viewModel.emailFlowState.collectAsState()
     val canEdit by viewModel.canEdit.collectAsState()
     val transferSuccess by viewModel.transferSuccess.collectAsState()
+    val passwordResetSuccess by viewModel.passwordResetSuccess.collectAsState()
+    val emailChangeSuccess by viewModel.emailChangeSuccess.collectAsState()
 
     val context = LocalContext.current
 
@@ -83,7 +84,7 @@ fun EditViuProfileScreen(
 
     val gradientBrush = Brush.horizontalGradient(colors = listOf(Color(0xFFB644F1), Color(0xFF6041EC)))
 
-    // --- State Initialization ---
+    // State Initialization
     LaunchedEffect(viu) {
         viu?.let {
             firstName = it.firstName
@@ -98,7 +99,7 @@ fun EditViuProfileScreen(
                 try {
                     val date = dateFormatter.parse(it.birthday)
                     selectedBirthdayMillis = date?.time
-                    isAgeValid = isAgeValid(selectedBirthdayMillis)
+                    isAgeValid = ageValid(selectedBirthdayMillis)
                 } catch (e: Exception) {
                     selectedBirthdayMillis = null
                     isAgeValid = false
@@ -121,7 +122,18 @@ fun EditViuProfileScreen(
             viewModel.onTransferSuccessShown()
         }
     }
-    // (Add other LaunchedEffects for errors/success here as needed)
+    LaunchedEffect(passwordResetSuccess) {
+        if (passwordResetSuccess) {
+            Toast.makeText(context, "Password reset email sent!", Toast.LENGTH_SHORT).show()
+            viewModel.onPasswordResetSuccessShown()
+        }
+    }
+    LaunchedEffect(emailChangeSuccess) {
+        if (emailChangeSuccess) {
+            Toast.makeText(context, "Email address updated successfully!", Toast.LENGTH_SHORT).show()
+            viewModel.onEmailChangeSuccessShown()
+        }
+    }
 
     // DIALOGS
     if (showDatePicker) {
@@ -134,7 +146,7 @@ fun EditViuProfileScreen(
                     selectedBirthdayMillis = datePickerState.selectedDateMillis
                     selectedBirthdayMillis?.let { millis ->
                         birthday = dateFormatter.format(Date(millis))
-                        isAgeValid = isAgeValid(millis)
+                        isAgeValid = ageValid(millis)
                         viewModel.clearSaveError()
                     }
                 }) { Text("OK") }
@@ -158,7 +170,7 @@ fun EditViuProfileScreen(
         )
     }
 
-    // --- LOGIC FLOW DIALOGS (Password/OTP) ---
+    // LOGIC FLOW DIALOGS (Password/OTP)
     if (saveFlowState == SaveFlowState.PENDING_PASSWORD) {
         PasswordEntryDialog(
             title = "Enter Your Password",
@@ -200,7 +212,7 @@ fun EditViuProfileScreen(
         Dialog(onDismissRequest = { }) { CircularProgressIndicator() }
     }
 
-    // --- FORM UI ---
+    // FORM UI
     val customTextFieldColors = TextFieldDefaults.colors(
         focusedContainerColor = Color.White,
         unfocusedContainerColor = Color.White,
@@ -243,6 +255,7 @@ fun EditViuProfileScreen(
                 OutlinedTextField(
                     value = birthday, onValueChange = { },
                     label = { Text("Birthday") }, readOnly = true, enabled = canEdit,
+                    isError = !isAgeValid,
                     colors = customTextFieldColors, shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth().clickable { if(canEdit) showDatePicker = true },
                     trailingIcon = { Icon(Icons.Default.DateRange, "Select Date", modifier = Modifier.clickable { if(canEdit) showDatePicker = true }) }
