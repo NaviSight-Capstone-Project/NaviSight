@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 class StreamViewModel () : ViewModel() {
@@ -35,19 +36,33 @@ class StreamViewModel () : ViewModel() {
     private val _sortOrder = MutableStateFlow(SortOrder.ASCENDING)
     val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
 
+    private val _vius = MutableStateFlow<List<Triple<Viu, String, String>>>(emptyList())
+    val vius: StateFlow<List<Triple<Viu, String, String>>> = _vius.asStateFlow()
 
-    val vius: StateFlow<List<Viu>> = combine(_allVius, _searchQuery, _sortOrder) { list, query, order ->
-        val filteredList = if (query.isBlank()) {
-            list
-        } else {
-            list.filter { viu ->
-                (viu.firstName?.contains(query, ignoreCase = true) == true) ||
-                        (viu.lastName?.contains(query, ignoreCase = true) == true)
-            }
+    val viuList: StateFlow<List<Viu>> = vius
+        .map { triples ->
+            // Use the map function on the List itself
+            triples.map { it.first }
         }
-        when (order) {
-            SortOrder.ASCENDING -> filteredList.sortedBy { it.firstName?.lowercase() }
-            SortOrder.DESCENDING -> filteredList.sortedByDescending { it.firstName?.lowercase() }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        // Convert the intermediate Flow into a StateFlow to be collected by the UI
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+//    val vius: StateFlow<List<Viu>> = combine(_allVius, _searchQuery, _sortOrder) { list, query, order ->
+//        val filteredList = if (query.isBlank()) {
+//            list
+//        } else {
+//            list.filter { viu ->
+//                (viu.firstName?.contains(query, ignoreCase = true) == true) ||
+//                        (viu.lastName?.contains(query, ignoreCase = true) == true)
+//            }
+//        }
+//        when (order) {
+//            SortOrder.ASCENDING -> filteredList.sortedBy { it.firstName?.lowercase() }
+//            SortOrder.DESCENDING -> filteredList.sortedByDescending { it.firstName?.lowercase() }
+//        }
+//    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 }

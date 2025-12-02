@@ -69,12 +69,7 @@ fun StreamScreen(
      onAudioCall: (username: String) -> Unit){
     val usersList = remember { mutableStateListOf<Triple<Viu, String, String>>() }
     val firebaseClient = FirebaseClient.getInstance()
-    val vius by viewModel.vius.collectAsState()
-
-    val viuList: List<Viu> = usersList.map { triple ->
-        // Access the first element of the Triple
-        triple.first
-    }
+    val viuList by viewModel.viuList.collectAsState()
 
     // Init. search query stuff
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -254,6 +249,12 @@ fun StreamScreen(
                             )
                         }
                     }
+//                } else if (viuList.isEmpty()) {
+//                    Text(
+//                        text = if (searchQuery.isNotEmpty()) "No matching VIUs found" else "No VIU records found",
+//                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+//                        color = Color.Gray
+//                        )
                 } else {
                     Box (modifier=Modifier
                         .padding(horizontal=12.dp)) {
