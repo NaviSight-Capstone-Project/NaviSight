@@ -36,6 +36,13 @@ class SettingsFragment : Fragment() {
                         viewModel = viewModel,
                         uid = uid,
                         onLogout = {
+                            try {
+                                val repo = edu.capstone.navisight.common.webrtc.repository.MainRepository.getInstance(requireContext())
+                                repo.setOffline()
+                            } catch (e: Exception) {
+                                android.util.Log.e("SettingsFragment", "Error setting offline: ${e.message}")
+                            }
+
                             FirebaseAuth.getInstance().signOut()
 
                             val intent = Intent(requireContext(), AuthActivity::class.java).apply {

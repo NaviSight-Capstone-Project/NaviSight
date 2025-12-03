@@ -153,9 +153,21 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (MainService.listener == this) {
-            MainService.listener = null
+
+        try {
+            if (MainService.listener == this) {
+                MainService.listener = null
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error clearing listener", e)
         }
-        mainRepository.setOffline()
+
+        if (::mainRepository.isInitialized) {
+            try {
+                mainRepository.setOffline()
+            } catch (e: Exception) {
+                Log.d("MainActivity", "Skipping setOffline (User likely already logged out)")
+            }
+        }
     }
 }
