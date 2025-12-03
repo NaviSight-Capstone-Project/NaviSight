@@ -121,7 +121,9 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private var initialDownY: Float = 0f
     private val longPressRunnable = Runnable {
         context?.let { safeContext ->
-            TTSHelper.speak(safeContext, "Quick Menu activated. Drag and drop to select action.")
+            // Say time
+            val currentTime = CameraTTSHelper.getCurrentDateTime()
+            TTSHelper.speak(safeContext, "Quick Menu activated. Current time is: $currentTime")
 
             // Show the drag fragment (the drop targets)
             showQuickMenuFragment()
