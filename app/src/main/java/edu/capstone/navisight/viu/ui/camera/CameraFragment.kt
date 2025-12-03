@@ -220,11 +220,13 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                 Log.d(QUICK_MENU_TAG, "Executed: Audio Calling Primary Caregiver")
             }
             R.id.ball_left -> {
+                // TODO: Replace with something much better
+                TTSHelper.queueSpeak(requireContext(), "Hello World")
                 Log.d(QUICK_MENU_TAG, "Executed: Quick Action #1")
             }
             R.id.ball_right -> {
                 switchCamera()
-                Log.d(QUICK_MENU_TAG, "Executed: Quick Action #2")
+                Log.d(QUICK_MENU_TAG, "Executed: Switch Camera")
             }
         }
     }
