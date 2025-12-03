@@ -13,6 +13,7 @@ import edu.capstone.navisight.common.webrtc.vendor.WebRTCClient
 import com.google.gson.Gson
 import edu.capstone.navisight.MainActivity
 import edu.capstone.navisight.caregiver.model.Viu
+import edu.capstone.navisight.common.webrtc.GsonSingleton
 import org.webrtc.MediaStream
 import org.webrtc.PeerConnection
 import org.webrtc.SessionDescription
@@ -322,11 +323,10 @@ class MainRepository private constructor(
 
         fun getInstance(context: Context): MainRepository {
             return instance ?: synchronized(this) {
-                val gson = Gson() // <-- TODO: THIS MAY CAUSE PROBLEMS DOWN THE LINE.
                 instance ?: MainRepository(
                     FirebaseClient.getInstance(),
-                     WebRTCClient.getInstance(context, gson),
-                     gson
+                    WebRTCClient.getInstance(context, GsonSingleton.instance),
+                    GsonSingleton.instance
                 ).also { instance = it }
             }
         }

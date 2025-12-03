@@ -236,7 +236,7 @@ class FirebaseClient private constructor(
             return instance ?: synchronized(this) {
                 instance ?: FirebaseClient(
                     FirebaseDatabase.getInstance().getReference("webrtc_signal"), // Firebase root ref
-                    Gson() // single Gson instance
+                    GsonSingleton.instance
                 ).also { instance = it }
             }
         }
