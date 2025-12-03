@@ -98,7 +98,7 @@ class ProfileFragment : Fragment(), MainService.Listener {
                     },
                     onBackClick = {
                         requireActivity().supportFragmentManager.commit {
-                            replace(R.id.fragment_container, CameraFragment()) // Replace with your actual CameraFragment class
+                            replace(R.id.fragment_container, CameraFragment())
                             setReorderingAllowed(true)
                         }
                     }

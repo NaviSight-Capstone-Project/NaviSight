@@ -3,6 +3,7 @@ package edu.capstone.navisight.viu.ui.profile
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -27,6 +28,7 @@ import coil.compose.AsyncImage
 import edu.capstone.navisight.viu.model.Viu
 import edu.capstone.navisight.viu.model.QR
 import edu.capstone.navisight.R
+import androidx.compose.ui.window.Dialog
 
 @Composable
 fun ProfileScreen(
@@ -65,10 +67,17 @@ fun ProfileScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileContent(user: Viu, qr: QR?, qrBitmap: Bitmap?,
-                   onLogout: () -> Unit, onVideoCall: () -> Unit,
-                   onAudioCall: () -> Unit,
-                   onBackClick: () -> Unit) {
+fun ProfileContent(
+    user: Viu,
+    qr: QR?,
+    qrBitmap: Bitmap?,
+    onLogout: () -> Unit,
+    onVideoCall: () -> Unit,
+    onAudioCall: () -> Unit,
+    onBackClick: () -> Unit
+) {
+    var showFullQrDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -91,7 +100,7 @@ fun ProfileContent(user: Viu, qr: QR?, qrBitmap: Bitmap?,
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // QR Section (Updated Layout)
+        // QR Section
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -117,7 +126,7 @@ fun ProfileContent(user: Viu, qr: QR?, qrBitmap: Bitmap?,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "The pairing is one caregiver to one VIU. If the current caregiver approves, you will be in charge of this VIU and Navisight will not be liable for anything that may happen.",
+                    text = "The pairing is one caregiver to one VIU. If the current caregiver approves, you will be in charge of this VIU.",
                     color = Color.Gray,
                     fontSize = 11.sp
                 )
@@ -138,7 +147,8 @@ fun ProfileContent(user: Viu, qr: QR?, qrBitmap: Bitmap?,
                         .size(150.dp)
                         .clip(RoundedCornerShape(20.dp))
                         .background(Color.White)
-                        .shadow(4.dp, RoundedCornerShape(20.dp)),
+                        .shadow(4.dp, RoundedCornerShape(20.dp))
+                        .clickable { showFullQrDialog = true },
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
@@ -171,7 +181,7 @@ fun ProfileContent(user: Viu, qr: QR?, qrBitmap: Bitmap?,
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Video call button
+        // Buttons
         Button(
             onClick = onVideoCall,
             modifier = Modifier
@@ -180,17 +190,11 @@ fun ProfileContent(user: Viu, qr: QR?, qrBitmap: Bitmap?,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8BC34A)),
             shape = RoundedCornerShape(25.dp)
         ) {
-            Text(
-                text = "Video call your caregiver",
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text("Video call your caregiver", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Audio call button
         Button(
             onClick = onAudioCall,
             modifier = Modifier
@@ -199,17 +203,11 @@ fun ProfileContent(user: Viu, qr: QR?, qrBitmap: Bitmap?,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A93C3)),
             shape = RoundedCornerShape(25.dp)
         ) {
-            Text(
-                text = "Audio call your caregiver",
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text("Audio call your caregiver", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Logout Button
         Button(
             onClick = onLogout,
             modifier = Modifier
@@ -218,12 +216,37 @@ fun ProfileContent(user: Viu, qr: QR?, qrBitmap: Bitmap?,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5C5C)),
             shape = RoundedCornerShape(25.dp)
         ) {
-            Text(
-                text = "Logout",
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text("Logout", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+
+
+    if (showFullQrDialog && qrBitmap != null) {
+        Dialog(onDismissRequest = { showFullQrDialog = false }) {
+            // A Card to hold the big image with a white background
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f) // Makes it a square
+                    .padding(16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        bitmap = qrBitmap.asImageBitmap(),
+                        contentDescription = "Full Size QR",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
         }
     }
 }
