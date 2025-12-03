@@ -6,12 +6,13 @@ import android.content.ClipDescription
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
@@ -23,6 +24,7 @@ import android.view.MotionEvent
 import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -58,23 +60,33 @@ import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.utils.getCameraAndMicPermission
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.viu.ui.profile.ProfileViewModel
+import edu.capstone.navisight.viu.utils.BatteryAlertListener
+import edu.capstone.navisight.viu.utils.BatteryStateReceiver
 import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
 import java.util.LinkedList
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-
+import kotlin.apply
+import androidx.core.content.edit
 
 private const val TAG = "CameraFragment"
 private const val QUICK_MENU_TAG = "QuickMenu"
-
+private const val SHARED_PREFERENCES_NAME = "NaviData"
+private const val LOW_BATTERY_WARN_FLAG_SHARED_PREF_NAME = "IsUserWarnedOnLowBatteryLevel"
+private var HAS_BATTERY_BEEN_DETECTED_ONCE = false
 
 // TODO: Make this fragment's camera front facing on deployment time
 
 class CameraFragment : Fragment(R.layout.fragment_camera),
-    ObjectDetectorHelper.DetectorListener, MainService.Listener, QuickMenuListener {
+    ObjectDetectorHelper.DetectorListener, MainService.Listener, QuickMenuListener,
+    BatteryAlertListener {
 
+    // Init. battery receivers and related
+    private lateinit var sharedPreferences: SharedPreferences // TODO: Probably remove this na
+    private lateinit var batteryReceiver: BatteryStateReceiver
+    private var batteryAlert: AlertDialog? = null
 
     // Init. WebRTC and pop-up call and quick menu action vars
     private lateinit var service: MainService
@@ -380,6 +392,9 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         idleHandler.removeCallbacksAndMessages(null)
         longPressHandler.removeCallbacksAndMessages(null)
         quadrupleTapHandler.removeCallbacksAndMessages(null)
+        context?.unregisterReceiver(batteryReceiver) // Release battery receiver
+        Log.d("battery", "finished adding battery intents")
+
         releaseCamera()
         // Unregister the listener to prevent the call dialog from showing up
         if (MainService.listener == this) {
@@ -400,6 +415,16 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                 setUpCamera()
             }
         }
+        batteryReceiver = BatteryStateReceiver(this)
+        val intentFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_BATTERY_LOW)
+            addAction(Intent.ACTION_BATTERY_OKAY)
+        }
+        context?.registerReceiver(batteryReceiver, intentFilter)
+        Log.d("battery", "finished adding battery intents")
+
+        // Check initially for battery here
+        checkInitialBatteryStatus()
     }
 
     override fun onDestroyView() {
@@ -414,6 +439,11 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     @SuppressLint("MissingPermission", "ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Initialize fully sharedPreferences for battery
+        sharedPreferences = requireContext().getSharedPreferences(
+            SHARED_PREFERENCES_NAME,
+            Context.MODE_PRIVATE)
 
         // Link Main Service listener and Main Repository
         MainService.listener = this
@@ -851,4 +881,117 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     //////////////////////////////////////////////////
     //  END OF WEBRTC AND POP-UP CALLING
     //////////////////////////////////////////////////
+
+    override fun onBatteryLow() {
+        if (sharedPreferences.getBoolean(
+                LOW_BATTERY_WARN_FLAG_SHARED_PREF_NAME,
+                false) || !HAS_BATTERY_BEEN_DETECTED_ONCE) {
+            activity?.runOnUiThread {
+                showLowBatteryAlert()
+                saveBatteryWarnFlag()
+                HAS_BATTERY_BEEN_DETECTED_ONCE = true
+            }
+        }
+    }
+
+    override fun onBatteryOkay() {
+        activity?.runOnUiThread {
+            if (batteryAlert?.isShowing == true) {
+                batteryAlert?.dismiss()
+                batteryAlert = null
+                removeBatteryWarnFlag()
+            }
+        }
+    }
+
+    private fun showLowBatteryAlert() {
+        if (batteryAlert?.isShowing == true || !isAdded) {
+            Log.w(TAG, "Battery alert already visible or fragment is not added. Ignoring.")
+            return
+        }
+
+        TTSHelper.speak(requireContext(), "Warning! Battery is low. Please charge your device.")
+
+        try {
+            val inflater = requireActivity().layoutInflater
+            val customLayout = inflater.inflate(R.layout.dialog_battery_alert, null)
+            val btnAccept = customLayout.findViewById<Button>(R.id.ok)
+            batteryAlert = AlertDialog.Builder(requireActivity())
+                .setView(customLayout)
+                .setCancelable(true)
+                .create()
+
+            // Dismiss the dialog when the user taps any part of the custom layout's background
+            customLayout.setOnClickListener {
+                batteryAlert?.dismiss()
+            }
+            batteryAlert?.setCanceledOnTouchOutside(true)
+            batteryAlert?.window?.setBackgroundDrawableResource(R.drawable.bg_popup_rounded)
+
+            // Dismiss action for both buttons
+            val dismissAction: () -> Unit = {
+                batteryAlert?.dismiss()
+                batteryAlert = null
+            }
+            btnAccept.setOnClickListener { dismissAction() }
+            batteryAlert?.show()
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing battery alert: ${e.message}", e)
+            Toast.makeText(context, "Error showing battery alert.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun checkInitialBatteryStatus() {
+        val context = context ?: return
+
+        // Get the sticky Intent that holds the current battery state
+        val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let {
+            filter -> context.registerReceiver(null, filter)
+        }
+
+        // Extract the percent and the scale (max level, always 100)
+        val level: Int = batteryStatus?.getIntExtra(
+            android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale: Int = batteryStatus?.getIntExtra(
+            android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
+
+        // Calculate the percentage
+        val batteryPct: Float = if (level != -1 && scale != -1 && scale != 0) {
+            level / scale.toFloat() * 100
+        } else {
+            0f
+        }
+
+        // Define the low battery threshold (default is 15)
+        // TODO: Unify thresholds in a combined file?
+        val lowThreshold = 15
+
+        // Check if the battery percentage is below the threshold
+        if (batteryPct <= lowThreshold) {
+            Log.w(TAG, "Initial battery check found battery at $batteryPct%. Triggering alert.")
+            activity?.runOnUiThread {
+                onBatteryLow()
+            }
+        } else {
+            Log.d(TAG, "Initial battery check found battery at $batteryPct%. Status is OK.")
+            activity?.runOnUiThread {
+                if (batteryAlert?.isShowing == true) {
+                    onBatteryOkay()
+                }
+            }
+        }
+    }
+
+    private fun saveBatteryWarnFlag() {
+        sharedPreferences.edit { putBoolean(LOW_BATTERY_WARN_FLAG_SHARED_PREF_NAME, true) }
+    }
+
+    private fun removeBatteryWarnFlag() {
+        sharedPreferences.edit { putBoolean(LOW_BATTERY_WARN_FLAG_SHARED_PREF_NAME, false) }
+    }
+
+    //////////////////////////
+    // END OF BATTERY ALERT
+    /////////////////////////
 }

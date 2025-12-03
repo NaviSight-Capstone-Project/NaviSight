@@ -32,6 +32,9 @@ import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 
+
+private const val IS_DISCLAIMER_AGREED_SP_NAME = "IsDisclaimerAgreed"
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var auth: FirebaseAuth
@@ -96,7 +99,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun isDisclaimerAgreed() : Boolean {
         val prefs = getSharedPreferences("NaviData", Context.MODE_PRIVATE)
-        return prefs.getBoolean("IsDisclaimerAgreed", false)
+        return prefs.getBoolean(IS_DISCLAIMER_AGREED_SP_NAME, false)
     }
 
     private fun navigateToAuth() {

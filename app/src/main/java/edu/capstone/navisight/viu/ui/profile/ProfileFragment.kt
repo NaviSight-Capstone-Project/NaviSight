@@ -290,6 +290,11 @@ class ProfileFragment : Fragment(), MainService.Listener {
             }
         }
     }
+
+    ////////////////////////////////////////
+    // END OF WEBRTC CALL
+    ///////////////////////////////////////
+
 }
 
 class ProfileViewModelFactory(
