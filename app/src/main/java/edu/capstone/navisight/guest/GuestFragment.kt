@@ -44,6 +44,8 @@ import java.util.LinkedList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+// TODO: Make this fragment's camera front facing on deployment time
+
 class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.DetectorListener {
 
     private val TAG = "ObjectDetection"

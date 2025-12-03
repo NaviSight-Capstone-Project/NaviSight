@@ -62,6 +62,8 @@ private const val TAG = "CameraFragment"
 private const val QUICK_MENU_TAG = "QuickMenu"
 
 
+// TODO: Make this fragment's camera front facing on deployment time
+
 class CameraFragment : Fragment(R.layout.fragment_camera),
     ObjectDetectorHelper.DetectorListener, MainService.Listener, QuickMenuListener {
 

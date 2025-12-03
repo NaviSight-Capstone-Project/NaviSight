@@ -232,7 +232,7 @@ class WebRTCClient (
     private fun getVideoCapturer(context: Context):CameraVideoCapturer =
         Camera2Enumerator(context).run {
             deviceNames.find {
-                isBackFacing(it)
+                isBackFacing(it) // TODO: Make this fragment's camera front facing on deployment time
             }?.let {
                 createCapturer(it,null)
             }?:throw IllegalStateException()
