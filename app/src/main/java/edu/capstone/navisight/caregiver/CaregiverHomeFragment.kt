@@ -50,7 +50,6 @@ class CaregiverHomeFragment : Fragment(),
 
     private val viewModel: CaregiverHomeViewModel by viewModels()
 
-    //Mga kineme fragment
     private val mapFragment = MapFragment()
     private val recordsFragment = RecordsFragment()
     private val streamFragment = StreamFragment()
@@ -110,9 +109,9 @@ class CaregiverHomeFragment : Fragment(),
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.currentScreenIndex.collect { index ->
                 when (index) {
-                    0 -> showChildFragment(mapFragment, "TAG_MAP")
-                    1 -> showChildFragment(recordsFragment, "TAG_RECORDS")
-                    2 -> showChildFragment(streamFragment, "TAG_STREAM")
+                    0 -> showChildFragment(recordsFragment, "TAG_RECORDS")
+                    1 -> showChildFragment(streamFragment, "TAG_STREAM")
+                    2 -> showChildFragment(mapFragment, "TAG_MAP")
                     3 -> showChildFragment(notificationsFragment, "TAG_NOTIFICATIONS")
                     4 -> showChildFragment(settingsFragment, "TAG_SETTINGS")
                 }
