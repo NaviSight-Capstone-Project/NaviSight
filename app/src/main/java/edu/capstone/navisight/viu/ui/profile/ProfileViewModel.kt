@@ -3,6 +3,7 @@ package edu.capstone.navisight.viu.ui.profile
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
@@ -46,6 +47,23 @@ class ProfileViewModel(
     init {
         // Start fetching the Caregiver UID as soon as the ViewModel is created
         fetchCaregiverUid()
+    }
+
+    companion object {
+        fun provideFactory(
+            remoteDataSource: ViuDataSource,
+            getViuProfileUseCase: GetViuProfileUseCase = GetViuProfileUseCase(),
+            generateQrUseCase: GenerateOrFetchQrUseCase = GenerateOrFetchQrUseCase()
+        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return ProfileViewModel(
+                    getViuProfileUseCase = getViuProfileUseCase,
+                    generateQrUseCase = generateQrUseCase,
+                    remoteDataSource = remoteDataSource
+                ) as T
+            }
+        }
     }
 
     private val _uiEvent = Channel<ProfileUiEvent>()

@@ -39,6 +39,9 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Vibrate on start
+        VibrationHelper(requireContext()).vibrate()
+
         ballViews = mapOf(
             R.id.ball_top to view.findViewById(R.id.ball_top),
             R.id.ball_bottom to view.findViewById(R.id.ball_bottom),
@@ -74,6 +77,7 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
     // Actual Drag Listener Implementation
     private val menuDragListener = View.OnDragListener { v, event ->
         val targetId = v.id // The ID of the View receiving the event (root or a ball)
+        var dropSuccessful = false
 
         when (event.action) {
 
@@ -126,8 +130,9 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
             // Drag released over a target
             DragEvent.ACTION_DROP -> {
                 // If a ball was highlighted upon drop, execute the action
-                currentHighlightedId?.let { actionId ->
-                    dragListener?.onQuickMenuAction(actionId)
+                if (currentHighlightedId != null) {
+                    dragListener?.onQuickMenuAction(currentHighlightedId!!)
+                    return@OnDragListener true
                 }
                 // The drag operation will end automatically after ACTION_DROP
                 return@OnDragListener true
@@ -135,13 +140,16 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
 
             // Drag operation finished (successful drop or release elsewhere)
             DragEvent.ACTION_DRAG_ENDED -> {
+                if (currentHighlightedId == null) { // Check if no consumption nangyari
+                    // Make TTS say "cancel" to alert user
+                    TTSHelper.speak(requireContext(), "Quick Menu cancelled")
+                }
                 dragListener?.onQuickMenuDismissed()
-                // Make TTS say "cancel" to alert user
-                TTSHelper.speak(requireContext(), "Quick Menu cancelled")
                 return@OnDragListener true
             }
 
-            else -> return@OnDragListener false
+            else -> {
+                return@OnDragListener false}
         }
     }
 }

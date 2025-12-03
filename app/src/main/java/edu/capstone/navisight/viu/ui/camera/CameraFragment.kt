@@ -35,7 +35,9 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
+import androidx.lifecycle.lifecycleScope
 import edu.capstone.navisight.R
 import edu.capstone.navisight.databinding.FragmentCameraBinding
 import edu.capstone.navisight.viu.detectors.ObjectDetection
@@ -48,6 +50,9 @@ import edu.capstone.navisight.common.webrtc.model.DataModelType
 import edu.capstone.navisight.common.webrtc.repository.MainRepository
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.utils.getCameraAndMicPermission
+import edu.capstone.navisight.viu.data.remote.ViuDataSource
+import edu.capstone.navisight.viu.ui.profile.ProfileViewModel
+import kotlinx.coroutines.flow.collectLatest
 import java.util.LinkedList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -102,6 +107,13 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     }
 
     //  Init. variables for menu activation (long press)
+    private val viuDataSource: ViuDataSource by lazy { ViuDataSource.getInstance() }
+    private val profileViewModel: ProfileViewModel by activityViewModels {
+        ProfileViewModel.provideFactory(
+            remoteDataSource = viuDataSource
+        )
+    }
+    private var caregiverUid: String? = null
     private var quickMenuFragment: QuickMenuFragment? = null
     private val longPressDuration = 3_000L
     private val longPressHandler = Handler(Looper.getMainLooper())
@@ -203,10 +215,10 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                 Log.d(QUICK_MENU_TAG, "Executed: Audio Calling Primary Caregiver")
             }
             R.id.ball_left -> {
-                Log.d(QUICK_MENU_TAG, "Executed: Video Calling Primary Caregiver")
+                Log.d(QUICK_MENU_TAG, "Executed: Quick Action #1")
             }
             R.id.ball_right -> {
-                Log.d(QUICK_MENU_TAG, "Executed: Video Calling Primary Caregiver")
+                Log.d(QUICK_MENU_TAG, "Executed: Quick Action #2")
             }
         }
     }
@@ -225,6 +237,17 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         // Re-enable the touch listener to allow long press detection again
         bindTouchListener()
         Log.d(TAG, "Quick Menu Drag ended and fragment removed.")
+    }
+
+    private fun observeCaregiverUid() {
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            profileViewModel.caregiverUid.collectLatest { uid ->
+                // This will automatically update the local variable
+                // whenever the ViewModel's StateFlow changes.
+                caregiverUid = uid
+                Log.d(TAG, "Caregiver UID updated in CameraFragment: $uid")
+            }
+        }
     }
 
     ////////////////////////////////////////////////////
@@ -350,6 +373,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         // Bind/set extra functionalities here
         toggleScreenSaver(requireContext()) // Begin screen saving
         bindTouchListener() // Set and start the binding. Do not remove.
+        observeCaregiverUid() // Set for calling using Quick Menu
     }
 
     private fun setUpCamera() {
@@ -515,19 +539,27 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     //////////////////////////////////////////////////
 
     private fun handleStartCall(isVideoCall: Boolean) {
+        val targetUid = caregiverUid // Get the UID from the observed StateFlow
+
+        if (targetUid.isNullOrEmpty()) {
+            Toast.makeText(requireContext(), "Caregiver not found. Cannot start call.", Toast.LENGTH_LONG).show()
+            Log.e("CallSignal", "Caregiver UID is null or empty.")
+            return
+        }
+
         (requireActivity() as AppCompatActivity).getCameraAndMicPermission {
-            val targetUid = mainRepository.getUserUID()
             mainRepository.sendConnectionRequest(targetUid, isVideoCall) { success ->
                 if (success) {
-                    service.startCallTimeoutTimer() // Begin expiration
+                    service.startCallTimeoutTimer()
                     val intent = Intent(requireActivity(), ViuCallActivity::class.java).apply {
                         putExtra("target", targetUid)
                         putExtra("isVideoCall", isVideoCall)
                         putExtra("isCaller", true)
                     }
-                    startActivity(intent)
+                    callActivityLauncher.launch(intent)
                 } else {
                     Log.e("CallSignal", "Failed to send call request.")
+                    Toast.makeText(requireContext(), "Failed to send call request.", Toast.LENGTH_LONG).show()
                 }
             }
         }

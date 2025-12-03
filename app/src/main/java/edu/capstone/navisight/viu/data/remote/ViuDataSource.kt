@@ -44,4 +44,21 @@ class ViuDataSource(
         return caregiverDoc.toObject(Caregiver::class.java)
             ?: throw kotlin.Exception("Invalid Caregiver data for UID: $caregiverUid")
     }
+
+    companion object {
+        @Volatile
+        private var INSTANCE: ViuDataSource? = null
+
+        /**
+         * Returns the singleton instance of ViuDataSource, creating it if necessary.
+         */
+        fun getInstance(
+            firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
+            auth: FirebaseAuth = FirebaseAuth.getInstance()
+        ): ViuDataSource {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: ViuDataSource(firestore, auth).also { INSTANCE = it }
+            }
+        }
+    }
 }
