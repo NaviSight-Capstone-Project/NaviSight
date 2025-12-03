@@ -67,7 +67,7 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
         when (viewId) {
             "ball_top" -> return "Video call"
             "ball_bottom" -> return "Audio call"
-            "ball_right" -> return "Quick action #2"
+            "ball_right" -> return "Switch Camera"
             "ball_left" -> return "Quick action #1"
         }
         throw IllegalArgumentException(

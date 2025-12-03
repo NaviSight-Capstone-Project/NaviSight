@@ -75,6 +75,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
 
     // Init. camera system vars
     private var _fragmentCameraBinding: FragmentCameraBinding? = null
+    private var currentCameraFacing: Int = CameraSelector.LENS_FACING_BACK // Default to back camera
     private val fragmentCameraBinding get() = _fragmentCameraBinding
     private val cameraReleaseHandler = Handler(Looper.getMainLooper())
     private lateinit var cameraExecutor: ExecutorService
@@ -222,6 +223,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                 Log.d(QUICK_MENU_TAG, "Executed: Quick Action #1")
             }
             R.id.ball_right -> {
+                switchCamera()
                 Log.d(QUICK_MENU_TAG, "Executed: Quick Action #2")
             }
         }
@@ -257,6 +259,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     ////////////////////////////////////////////////////
     // END OF QUICK MENU
     ////////////////////////////////////////////////////
+
 
     // Adjust binds here
     @SuppressLint("ClickableViewAccessibility")
@@ -413,7 +416,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             cameraProvider ?: throw kotlin.IllegalStateException("Camera initialization failed.")
 
         val cameraSelector =
-            CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
+            CameraSelector.Builder().requireLensFacing(currentCameraFacing).build()
 
         preview =
             Preview.Builder()
@@ -448,6 +451,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             preview?.setSurfaceProvider(fragmentCameraBinding?.viewFinder?.surfaceProvider)
         } catch (exc: Exception) {
             Log.e(TAG, "Use case binding failed", exc)
+            Toast.makeText(requireContext(), "Error: Cannot switch camera. Device may lack the selected camera.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -495,6 +499,29 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     override fun onDestroy() {
         super.onDestroy()
         releaseMediaPlayer() // Set to release media player
+    }
+
+    fun switchCamera() {
+        if (cameraProvider == null) {
+            Log.e(TAG, "Cannot switch camera: CameraProvider is null.")
+            return
+        }
+
+        // Toggle the camera facing state
+        currentCameraFacing = if (currentCameraFacing == CameraSelector.LENS_FACING_BACK) {
+            CameraSelector.LENS_FACING_FRONT
+        } else {
+            CameraSelector.LENS_FACING_BACK
+        }
+
+        // Announce the switch via TTS
+        context?.let { safeContext ->
+            val cameraName = if (currentCameraFacing == CameraSelector.LENS_FACING_FRONT) "Front" else "Back"
+            TTSHelper.speak(safeContext, "$cameraName camera activated")
+        }
+
+        // Rebind the camera use cases with the new selector
+        bindCameraUseCases()
     }
 
     /////////////////////////////////////////////////////////
@@ -756,6 +783,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             onReleased?.invoke()
         }
     }
+
 
     //////////////////////////////////////////////////
     //  END OF WEBRTC AND POP-UP CALLING
