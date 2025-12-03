@@ -68,7 +68,7 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
             "ball_top" -> return "Video call"
             "ball_bottom" -> return "Audio call"
             "ball_right" -> return "Switch Camera"
-            "ball_left" -> return "Quick action #1"
+            "ball_left" -> return "Take a picture"
         }
         throw IllegalArgumentException(
             "viewId must only be either ball_top, ball_bottom, ball_right, or ball_left")
@@ -77,10 +77,8 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
     // Actual Drag Listener Implementation
     private val menuDragListener = View.OnDragListener { v, event ->
         val targetId = v.id // The ID of the View receiving the event (root or a ball)
-        var dropSuccessful = false
 
         when (event.action) {
-
             // This is required for the view to receive subsequent events (ENTERED, DROPPED)
             DragEvent.ACTION_DRAG_STARTED -> {
                 if (event.clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {

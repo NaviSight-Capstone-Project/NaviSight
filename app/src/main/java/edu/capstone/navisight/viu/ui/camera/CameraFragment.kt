@@ -3,6 +3,7 @@ package edu.capstone.navisight.viu.ui.camera
 import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipDescription
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -10,7 +11,9 @@ import android.graphics.Bitmap
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
@@ -30,6 +33,8 @@ import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -45,6 +50,7 @@ import edu.capstone.navisight.viu.ui.call.ViuCallActivity
 import edu.capstone.navisight.viu.ui.profile.ProfileFragment
 import edu.capstone.navisight.viu.utils.ObjectDetectorHelper
 import edu.capstone.navisight.common.TTSHelper
+import edu.capstone.navisight.common.VibrationHelper
 import edu.capstone.navisight.common.webrtc.model.DataModel
 import edu.capstone.navisight.common.webrtc.model.DataModelType
 import edu.capstone.navisight.common.webrtc.repository.MainRepository
@@ -53,7 +59,9 @@ import edu.capstone.navisight.common.webrtc.utils.getCameraAndMicPermission
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.viu.ui.profile.ProfileViewModel
 import kotlinx.coroutines.flow.collectLatest
+import java.text.SimpleDateFormat
 import java.util.LinkedList
+import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -74,6 +82,8 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private lateinit var mainRepository : MainRepository
 
     // Init. camera system vars
+    private var imageCapture: ImageCapture? = null
+    private var camera: Camera? = null
     private var _fragmentCameraBinding: FragmentCameraBinding? = null
     private var currentCameraFacing: Int = CameraSelector.LENS_FACING_BACK // Default to back camera
     private val fragmentCameraBinding get() = _fragmentCameraBinding
@@ -83,7 +93,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private lateinit var bitmapBuffer: Bitmap
     private var preview: Preview? = null
     private var imageAnalyzer: ImageAnalysis? = null
-    private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
 
     // Init. screensaver vars
@@ -212,16 +221,15 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     override fun onQuickMenuAction(actionId: Int) {
         when(actionId) {
             R.id.ball_top -> {
-                handleStartCall(isVideoCall=true)
+                handleStartCall(isVideoCall=true) // Start video call
                 Log.d(QUICK_MENU_TAG, "Executed: Video Calling Primary Caregiver")
             }
             R.id.ball_bottom -> {
-                handleStartCall(isVideoCall=false)
+                handleStartCall(isVideoCall=false) // Start audio call
                 Log.d(QUICK_MENU_TAG, "Executed: Audio Calling Primary Caregiver")
             }
             R.id.ball_left -> {
-                // TODO: Replace with something much better
-                TTSHelper.queueSpeak(requireContext(), "Hello World")
+                takePicture() // Take a picture
                 Log.d(QUICK_MENU_TAG, "Executed: Quick Action #1")
             }
             R.id.ball_right -> {
@@ -256,6 +264,50 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                 Log.d(TAG, "Caregiver UID updated in CameraFragment: $uid")
             }
         }
+    }
+
+    private fun takePicture() {
+        val imageCapture = imageCapture ?: run {
+            Log.e(TAG, "ImageCapture use case not bound.")
+            TTSHelper.speak(requireContext(), "Photo capture failed. Camera is not ready.")
+            return
+        }
+
+        // Create the output file options using MediaStore (Modern Android best practice)
+        val name = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(System.currentTimeMillis())
+        val contentValues = ContentValues().apply {
+            put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, name)
+            put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+            put(
+                android.provider.MediaStore.Images.Media.RELATIVE_PATH,
+                Environment.DIRECTORY_PICTURES + "/NaviSight")
+        }
+
+        val outputOptions = ImageCapture.OutputFileOptions
+            .Builder(requireContext().contentResolver,
+                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                contentValues)
+            .build()
+
+        // Set up image capture listener
+        imageCapture.takePicture(
+            outputOptions,
+            ContextCompat.getMainExecutor(requireContext()),
+            object : ImageCapture.OnImageSavedCallback {
+                override fun onError(exc: ImageCaptureException) {
+                    Log.e(QUICK_MENU_TAG, "Photo capture failed: ${exc.message}", exc)
+                    TTSHelper.speak(requireContext(), "Photo capture failed.")
+                    Toast.makeText(requireContext(), "Photo capture failed.", Toast.LENGTH_SHORT).show()
+                }
+
+                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                    val msg = "Photo capture successful. Saved to Gallery."
+                    Log.d(QUICK_MENU_TAG, msg)
+                    TTSHelper.speak(requireContext(), msg)
+                    VibrationHelper(requireContext()).vibrate()
+                }
+            }
+        )
     }
 
     ////////////////////////////////////////////////////
@@ -408,7 +460,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
 
     @SuppressLint("UnsafeOptInUsageError")
     private fun bindCameraUseCases() {
-
         val binding = fragmentCameraBinding
         if (context == null || binding == null) {
             Log.w(TAG, "bindCameraUseCases: Context or View Binding is null. Aborting.")
@@ -425,6 +476,12 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                 .setTargetAspectRatio(AspectRatio.RATIO_4_3)
                 .setTargetRotation(fragmentCameraBinding?.viewFinder?.display?.rotation ?: Surface.ROTATION_0)
                 .build()
+
+        imageCapture = ImageCapture.Builder()
+            .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+            .setTargetRotation(fragmentCameraBinding?.viewFinder?.display?.rotation ?: Surface.ROTATION_0)
+            .build()
 
         imageAnalyzer =
             ImageAnalysis.Builder()
@@ -449,11 +506,15 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         cameraProvider.unbindAll()
 
         try {
-            camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalyzer)
+            camera = cameraProvider.bindToLifecycle(this, cameraSelector,
+                preview, imageAnalyzer, imageCapture)
             preview?.setSurfaceProvider(fragmentCameraBinding?.viewFinder?.surfaceProvider)
         } catch (exc: Exception) {
             Log.e(TAG, "Use case binding failed", exc)
-            Toast.makeText(requireContext(), "Error: Cannot switch camera. Device may lack the selected camera.", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                requireContext(),
+                "Error: Cannot switch camera. Device may lack the selected camera.",
+                Toast.LENGTH_LONG).show()
         }
     }
 

@@ -35,7 +35,7 @@ class WebRTCClient (
         mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio","true"))
     }
 
-    //call variables
+    // Init. call variables
     private lateinit var localSurfaceView: SurfaceViewRenderer
     private lateinit var remoteSurfaceView: SurfaceViewRenderer
     private var localStream: MediaStream? = null

@@ -1,14 +1,4 @@
-package edu.capstone.navisight.common
-
-/*
-
-PermissionsHelper.kt
-
-All permissions that need to be modified, added, or deleted must be placed here.
-One should pass the MainActivity here in order for the registerForActivityResult to work.
-Please try not to remove TODOs and other necessary comments.
-
- */
+package edu.capstone.navisight
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -30,7 +20,8 @@ class PermissionsHelper (private val mainActivity: AppCompatActivity) {
         Manifest.permission.RECORD_AUDIO,
         Manifest.permission.VIBRATE,
         Manifest.permission.POST_NOTIFICATIONS,
-        Manifest.permission.CALL_PHONE
+        Manifest.permission.CALL_PHONE,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE
     )
 
     init {
