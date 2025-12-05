@@ -24,6 +24,7 @@ fun MapScreen(
     selectedGeofence: Geofence?,
     onViuSelected: (String) -> Unit,
     onRecenterClick: () -> Unit,
+    onGeofenceListClick: () -> Unit, // Added new parameter for the list button
     onDismissAddDialog: () -> Unit,
     onAddGeofence: (String, LatLng, Double) -> Unit,
     onGeofenceSelected: (Geofence) -> Unit,
@@ -57,13 +58,17 @@ fun MapScreen(
                 )
             }
 
+            // Updated: Uses MapControlButtons to stack Geofence List and Recenter
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(bottom = bottomPadding, end = 16.dp),
                 contentAlignment = Alignment.BottomEnd
             ) {
-                RecenterButton(onClick = onRecenterClick)
+                MapControlButtons(
+                    onRecenterClick = onRecenterClick,
+                    onGeofenceListClick = onGeofenceListClick
+                )
             }
 
             if (longPressedLatLng != null) {

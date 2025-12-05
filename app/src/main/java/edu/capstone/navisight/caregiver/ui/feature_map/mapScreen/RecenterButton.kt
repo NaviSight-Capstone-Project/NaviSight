@@ -4,7 +4,9 @@ import edu.capstone.navisight.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
@@ -20,27 +22,58 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 
-
 private val ButtonSize = 50.dp
 private val ShadowElevation = 8.dp
-private val ShadowColor = Color(0xFF6041EC)
 private val ShadowAmbientAlpha = 0.3f
 private val ShadowSpotAlpha = 0.5f
-private val OuterGlowColor = Color(0x406041EC)
 private val OuterGlowRadius = 100f
-
-private val GradientLeftColor = Color(0xFFB644F1)
-private val GradientRightColor = Color(0xFF6041EC)
-private val RippleColor = Color(0xFF6041EC)
-private val InnerGlowColor = Color(0x106041EC)
 private val InnerGlowRadius = 60f
 private val IconTintColor = Color.White
 private val IconSize = 24.dp
 
+private val RecenterGradient = listOf(Color(0xFFB644F1), Color(0xFF6041EC))
+private val RecenterShadow = Color(0xFF6041EC)
+
+private val GeofenceGradient = listOf(Color(0xFF77F7ED), Color(0xFF4800FF))
+private val GeofenceShadow = Color(0xFF4800FF)
+
 @Composable
-fun RecenterButton(
+fun MapControlButtons(
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onRecenterClick: () -> Unit,
+    onGeofenceListClick: () -> Unit
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        MapActionButton(
+            iconResId = R.drawable.ic_geofence_list,
+            contentDescription = "Show Geofence List",
+            gradientColors = GeofenceGradient,
+            baseColor = GeofenceShadow,
+            onClick = onGeofenceListClick
+        )
+
+        MapActionButton(
+            iconResId = R.drawable.ic_recenter,
+            contentDescription = "Recenter Map",
+            gradientColors = RecenterGradient,
+            baseColor = RecenterShadow,
+            onClick = onRecenterClick
+        )
+    }
+}
+
+@Composable
+private fun MapActionButton(
+    iconResId: Int,
+    contentDescription: String,
+    gradientColors: List<Color>,
+    baseColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val interaction = remember { MutableInteractionSource() }
 
@@ -50,53 +83,46 @@ fun RecenterButton(
             .shadow(
                 elevation = ShadowElevation,
                 shape = CircleShape,
-                ambientColor = ShadowColor.copy(alpha = ShadowAmbientAlpha),
-                spotColor = ShadowColor.copy(alpha = ShadowSpotAlpha)
+                ambientColor = baseColor.copy(alpha = ShadowAmbientAlpha),
+                spotColor = baseColor.copy(alpha = ShadowSpotAlpha)
             )
             .clip(CircleShape)
             .background(
                 brush = Brush.radialGradient(
-                    colors = listOf(OuterGlowColor, Color.Transparent),
+                    colors = listOf(baseColor.copy(alpha = 0.25f), Color.Transparent),
                     radius = OuterGlowRadius
                 )
             )
+            // Main Gradient
             .background(
                 brush = Brush.horizontalGradient(
-                    colors = listOf(GradientLeftColor, GradientRightColor)
+                    colors = gradientColors
                 )
             )
             .clickable(
                 interactionSource = interaction,
-                indication = ripple(color = RippleColor),
+                indication = ripple(color = baseColor),
                 onClick = onClick
             ),
         contentAlignment = Alignment.Center
     ) {
-        ButtonGlowOverlay()
-        RecenterIcon()
-    }
-}
-
-@Composable
-private fun ButtonGlowOverlay(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .size(ButtonSize)
-            .background(
-                brush = Brush.radialGradient(
-                    colors = listOf(InnerGlowColor, Color.Transparent),
-                    radius = InnerGlowRadius
+        // Inner Glow Overlay
+        Box(
+            modifier = Modifier
+                .size(ButtonSize)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(baseColor.copy(alpha = 0.1f), Color.Transparent),
+                        radius = InnerGlowRadius
+                    )
                 )
-            )
-    )
-}
+        )
 
-@Composable
-private fun RecenterIcon(modifier: Modifier = Modifier) {
-    Icon(
-        painter = painterResource(id = R.drawable.ic_recenter),
-        contentDescription = "Recenter map",
-        tint = IconTintColor,
-        modifier = modifier.size(IconSize)
-    )
+        Icon(
+            painter = painterResource(id = iconResId),
+            contentDescription = contentDescription,
+            tint = IconTintColor,
+            modifier = Modifier.size(IconSize)
+        )
+    }
 }
