@@ -65,6 +65,14 @@ class MapFragment : Fragment(), OnMapReadyCallback {
     private val mapViewModel: MapViewModel by viewModels()
     private val geofenceViewModel: GeofenceViewModel by viewModels()
 
+    private val mapStyles = listOf(
+        "https://api.maptiler.com/maps/streets/style.json?key=${BuildConfig.MAPTILER_API_KEY}",
+        "https://api.maptiler.com/maps/satellite/style.json?key=${BuildConfig.MAPTILER_API_KEY}",
+        "https://api.maptiler.com/maps/hybrid/style.json?key=${BuildConfig.MAPTILER_API_KEY}",
+        "https://api.maptiler.com/maps/basic/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
+    )
+    private val currentStyleIndex = mutableStateOf(0)
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -83,15 +91,24 @@ class MapFragment : Fragment(), OnMapReadyCallback {
     override fun onMapReady(map: MapLibreMap) {
         this.mapState.value = map
 
-        val styleUrl = "https://api.maptiler.com/maps/satellite/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
-
-        map.setStyle(styleUrl) {
-            observeSelectedViuCamera()
-        }
+        setMapStyle(mapStyles[currentStyleIndex.value])
 
         map.addOnMapLongClickListener { point ->
             mapViewModel.onMapLongPress(point)
             true
+        }
+    }
+
+    private fun setMapStyle(styleUrl: String) {
+        mapState.value?.setStyle(styleUrl) {
+            observeSelectedViuCamera()
+        }
+    }
+
+    private fun changeMapStyle(index: Int) {
+        if (index in mapStyles.indices && index != currentStyleIndex.value) {
+            currentStyleIndex.value = index
+            setMapStyle(mapStyles[index])
         }
     }
 
@@ -106,7 +123,8 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                 val longPressedLatLng by mapViewModel.longPressedLatLng.collectAsState()
                 val selectedGeofence by mapViewModel.selectedGeofence.collectAsState()
 
-                // State to control Geofence List Dialog visibility
+                val currentStyleIdx by remember { currentStyleIndex }
+
                 var showGeofenceList by remember { mutableStateOf(false) }
 
                 LaunchedEffect(selectedViu?.uid) {
@@ -133,9 +151,10 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                     selectedGeofence = selectedGeofence,
                     onViuSelected = { uid -> mapViewModel.selectViu(uid) },
                     onRecenterClick = { recenterCamera(selectedViu) },
-
-                    // Added: Handle the new list button click
                     onGeofenceListClick = { showGeofenceList = true },
+
+                    currentStyleIndex = currentStyleIdx,
+                    onMapStyleChange = { newIndex -> changeMapStyle(newIndex) },
 
                     onDismissAddDialog = { mapViewModel.dismissAddGeofenceDialog() },
                     onAddGeofence = { name, location, radius ->
@@ -157,7 +176,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                     }
                 )
 
-                // Render the Geofence List Dialog when requested
                 if (showGeofenceList) {
                     GeofenceListDialog(
                         geofences = geofences,
@@ -189,9 +207,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
-    // New helper to jump to a specific geofence
     private fun recenterToGeofence(geofence: Geofence) {
-        // Assuming geofence.location is a GeoPoint or similar object with latitude/longitude
         geofence.location?.let { loc ->
             val lat = loc.latitude
             val lng = loc.longitude
@@ -212,7 +228,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
     }
 }
 
-// --- New Composable for the Geofence List UI ---
 @Composable
 fun GeofenceListDialog(
     geofences: List<Geofence>,
