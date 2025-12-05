@@ -272,7 +272,7 @@ private fun TransferRequestCard(
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                text = "Request to become Primary Caregiver",
+                text = "Transferring Primary Access To You",
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 color = Color(0xFFE65100)
@@ -349,10 +349,15 @@ private fun RequestRow(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = "VIU: ${request.viuName ?: "Unknown"}",
+                    text = "Requesting To Be Secondary Caregiver",
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     color = Color(0xFFB544F1)
+                )
+                Text(
+                    text = "VIU: ${request.viuName ?: "Unknown"}",
+                    fontSize = 13.sp,
+                    color = Color(0xFF414040)
                 )
                 Text(
                     text = "Requested by: ${request.requesterName}",
