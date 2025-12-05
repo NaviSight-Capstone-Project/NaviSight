@@ -186,4 +186,11 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+
+    // Document Scanner (Provides the ready-made Camera UI)
+    implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0-beta1")
+
+    // Text Recognition (OCR - Extracts text from the image)
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.0")
 }

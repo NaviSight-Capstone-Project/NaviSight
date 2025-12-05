@@ -36,6 +36,7 @@ fun ProfileScreen(
     onLogout: () -> Unit,
     onVideoCall: () -> Unit,
     onAudioCall: () -> Unit,
+    onScanDocument: () -> Unit,
     onBackClick: () -> Unit
 ) {
     when {
@@ -59,6 +60,7 @@ fun ProfileScreen(
                 onLogout = onLogout,
                 onVideoCall = onVideoCall,
                 onAudioCall = onAudioCall,
+                onScanDocument = onScanDocument,
                 onBackClick = onBackClick
             )
         }
@@ -74,6 +76,7 @@ fun ProfileContent(
     onLogout: () -> Unit,
     onVideoCall: () -> Unit,
     onAudioCall: () -> Unit,
+    onScanDocument: () -> Unit,
     onBackClick: () -> Unit
 ) {
     var showFullQrDialog by remember { mutableStateOf(false) }
@@ -204,6 +207,20 @@ fun ProfileContent(
             shape = RoundedCornerShape(25.dp)
         ) {
             Text("Audio call your caregiver", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Document Reader Button
+        Button(
+            onClick = onScanDocument,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6041EC)),
+            shape = RoundedCornerShape(25.dp)
+        ) {
+            Text("Read Document / Letter", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(8.dp))

@@ -11,11 +11,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatImageButton
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
@@ -38,6 +38,7 @@ import edu.capstone.navisight.common.webrtc.model.DataModel
 import edu.capstone.navisight.common.webrtc.model.DataModelType
 import edu.capstone.navisight.common.webrtc.utils.getCameraAndMicPermission
 import edu.capstone.navisight.viu.ui.camera.CameraFragment
+import edu.capstone.navisight.viu.ui.DocumentReaderScreen // Added Reader Screen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -85,24 +86,37 @@ class ProfileFragment : Fragment(), MainService.Listener {
                 val uiState by viewModel.uiState.collectAsState()
                 val targetCaregiverUid by viewModel.caregiverUid.collectAsState()
 
-                ProfileScreen(
-                    uiState = uiState,
-                    onLogout = { viewModel.logout() },
-                    onVideoCall = {
-                        targetCaregiverUid?.let { uid -> viewModel.videoCall(uid) }
-                            ?: Toast.makeText(context, "No caregiver linked.", Toast.LENGTH_SHORT).show()
-                    },
-                    onAudioCall = {
-                        targetCaregiverUid?.let { uid -> viewModel.audioCall(uid) }
-                            ?: Toast.makeText(context, "No caregiver linked.", Toast.LENGTH_SHORT).show()
-                    },
-                    onBackClick = {
-                        requireActivity().supportFragmentManager.commit {
-                            replace(R.id.fragment_container, CameraFragment())
-                            setReorderingAllowed(true)
+                // State to toggle between Profile and Reader
+                var showReader by remember { mutableStateOf(false) }
+
+                if (showReader) {
+                    // Handle hardware back button to return to Profile
+                    BackHandler { showReader = false }
+
+                    DocumentReaderScreen(
+                        onNavigateBack = { showReader = false }
+                    )
+                } else {
+                    ProfileScreen(
+                        uiState = uiState,
+                        onLogout = { viewModel.logout() },
+                        onVideoCall = {
+                            targetCaregiverUid?.let { uid -> viewModel.videoCall(uid) }
+                                ?: Toast.makeText(context, "No caregiver linked.", Toast.LENGTH_SHORT).show()
+                        },
+                        onAudioCall = {
+                            targetCaregiverUid?.let { uid -> viewModel.audioCall(uid) }
+                                ?: Toast.makeText(context, "No caregiver linked.", Toast.LENGTH_SHORT).show()
+                        },
+                        onScanDocument = { showReader = true }, // Trigger reader view
+                        onBackClick = {
+                            requireActivity().supportFragmentManager.commit {
+                                replace(R.id.fragment_container, CameraFragment())
+                                setReorderingAllowed(true)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
 

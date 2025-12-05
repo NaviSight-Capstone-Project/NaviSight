@@ -56,8 +56,8 @@ class ViuHomeFragment : Fragment() {
         if (savedInstanceState == null) {
             childFragmentManager.commit {
                 setReorderingAllowed(true)
-                // replace(R.id.viu_child_container, CameraFragment())
-                replace(R.id.viu_child_container, VoiceTestFragment()) // Switched for testing
+                replace(R.id.viu_child_container, CameraFragment())
+                //replace(R.id.viu_child_container, VoiceTestFragment()) // Switched for testing
             }
         }
     }
