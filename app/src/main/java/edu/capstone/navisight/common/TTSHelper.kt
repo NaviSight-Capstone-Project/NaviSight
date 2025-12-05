@@ -20,14 +20,25 @@ object TTSHelper : TextToSpeech.OnInitListener {
     private var isSpeaking = false
     private val handler = Handler(Looper.getMainLooper())
 
-    fun speak(context: Context, text: String) {
+
+    fun initialize(context: Context) {
         if (tts == null) {
+            // Use applicationContext to prevent memory leaks.
             tts = TextToSpeech(context.applicationContext, this)
-            pendingText = text
-        } else if (isInitialized) {
+        }
+        // If tts is already being initialized (not null), do nothing.
+    }
+
+    fun speak(context: Context, text: String) {
+        if (isInitialized) {
+            // Speak immediately if initialized
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString())
         } else {
+            // If not initialized, store as pending text and ensure initialization is running (fallback)
             pendingText = text
+            if (tts == null) {
+                initialize(context)
+            }
         }
     }
 
@@ -157,6 +168,10 @@ object TTSHelper : TextToSpeech.OnInitListener {
                     tts?.speak(it, TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString())
                     pendingText = null
                 }
+
+                // Engine primer
+                tts?.speak("", TextToSpeech.QUEUE_FLUSH, null, "")
+
 
                 // Start queue if anything waiting
                 if (speechQueue.isNotEmpty() && !isSpeaking) {

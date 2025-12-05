@@ -24,13 +24,12 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.Navigation.findNavController
 import edu.capstone.navisight.R
 import edu.capstone.navisight.guest.GuestFragment
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.viu.domain.usecase.GenerateOrFetchQrUseCase
 import edu.capstone.navisight.viu.domain.usecase.GetViuProfileUseCase
-import edu.capstone.navisight.viu.ui.call.ViuCallActivity
+import edu.capstone.navisight.viu.ui.call.CallActivity
 import edu.capstone.navisight.common.TTSHelper
 import edu.capstone.navisight.common.webrtc.repository.MainRepository
 import edu.capstone.navisight.common.webrtc.service.MainService
@@ -241,7 +240,7 @@ class ProfileFragment : Fragment(), MainService.Listener {
                 val activity = requireActivity() as? AppCompatActivity
 
                 activity?.getCameraAndMicPermission {
-                    val intent = Intent(requireActivity(), ViuCallActivity::class.java).apply {
+                    val intent = Intent(requireActivity(), CallActivity::class.java).apply {
                         putExtra("target", model.sender)
                         putExtra("isVideoCall", isVideoCall)
                         putExtra("isCaller", false)
@@ -292,7 +291,7 @@ class ProfileFragment : Fragment(), MainService.Listener {
             mainRepository.sendConnectionRequest(targetUid, isVideoCall) { success ->
                 if (success) {
                     service.startCallTimeoutTimer() // Begin expiration
-                    val intent = Intent(requireActivity(), ViuCallActivity::class.java).apply {
+                    val intent = Intent(requireActivity(), CallActivity::class.java).apply {
                         putExtra("target", targetUid)
                         putExtra("isVideoCall", isVideoCall)
                         putExtra("isCaller", true)

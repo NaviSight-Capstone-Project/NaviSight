@@ -5,6 +5,7 @@
     android:orientation="vertical"
     android:paddingBottom="15sp"
     android:id="@+id/incomingCallLayout"
+    android:fitsSystemWindows="true"
     android:background="@drawable/popup_request_background">
 
         <LinearLayout

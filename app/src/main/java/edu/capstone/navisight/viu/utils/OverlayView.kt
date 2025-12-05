@@ -40,9 +40,6 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
     private val redundancyDelay = 3000L // Default to three (3) seconds
     private val speechQueueThreshold = 5 // Speeches per queue until it auto-skips
 
-    // Init. vibration helper
-    private val vibrationHelper = VibrationHelper(context)
-
     init {
         initPaints()
     }
@@ -135,7 +132,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
 
     private fun doOnDetection(result : ObjectDetection) {
         speakWhenDetected(context, result)  // Do Text to Speech, with variability.
-        vibrationHelper.vibrate()
+        VibrationHelper.vibrate(context)
     }
 
     private fun calculateCurrentBBArea(result: ObjectDetection): Float {

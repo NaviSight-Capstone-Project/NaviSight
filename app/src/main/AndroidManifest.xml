@@ -63,12 +63,17 @@
 
         <activity
             android:theme="@style/Theme.AppCompat.NoActionBar"
-            android:name=".viu.ui.call.ViuCallActivity"
+            android:name=".viu.ui.call.CallActivity"
             android:exported="false" />
 
         <activity
             android:theme="@style/Theme.AppCompat.NoActionBar"
             android:name=".caregiver.ui.call.CaregiverCallActivity"
+            android:exported="false" />
+
+        <activity
+            android:theme="@style/Theme.AppCompat.NoActionBar"
+            android:name=".viu.ui.emergency.EmergencyActivity"
             android:exported="false" />
 
         <service

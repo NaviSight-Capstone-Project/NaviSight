@@ -40,7 +40,7 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
         super.onViewCreated(view, savedInstanceState)
 
         // Vibrate on start
-        VibrationHelper(requireContext()).vibrate()
+        VibrationHelper.vibrate(requireContext())
 
         ballViews = mapOf(
             R.id.ball_top to view.findViewById(R.id.ball_top),
@@ -101,7 +101,7 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
                         currentHighlightedId = targetId
 
                         // Vibrate on highlight.
-                        VibrationHelper(requireContext()).vibrate()
+                        VibrationHelper.vibrate(requireContext())
 
                         // TTS depending on action.
                         val ballId = v.resources.getResourceEntryName(targetId)

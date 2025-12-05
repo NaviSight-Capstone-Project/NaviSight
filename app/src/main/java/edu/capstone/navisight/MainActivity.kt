@@ -22,6 +22,7 @@ import edu.capstone.navisight.auth.AuthActivity
 import edu.capstone.navisight.auth.data.remote.CloudinaryDataSource
 import edu.capstone.navisight.auth.domain.GetUserCollectionUseCase
 import edu.capstone.navisight.caregiver.CaregiverHomeFragment
+import edu.capstone.navisight.common.TTSHelper
 import edu.capstone.navisight.disclaimer.DisclaimerFragment
 import edu.capstone.navisight.viu.ViuHomeFragment
 import edu.capstone.navisight.guest.GuestFragment
@@ -50,6 +51,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Init. TTS for faster processing times and prevent lazy loading
+        TTSHelper.initialize(applicationContext)
+
         setContentView(R.layout.activity_main)
 
         MapLibre.getInstance(this)
@@ -169,5 +174,8 @@ class MainActivity : AppCompatActivity() {
                 Log.d("MainActivity", "Skipping setOffline (User likely already logged out)")
             }
         }
+
+        // Clear TTS.
+        TTSHelper.shutdown()
     }
 }

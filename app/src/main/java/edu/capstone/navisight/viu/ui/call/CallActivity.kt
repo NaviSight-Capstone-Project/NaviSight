@@ -16,7 +16,7 @@ import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
 
-class ViuCallActivity : ComponentActivity(), MainService.EndAndDeniedCallListener {
+class CallActivity : ComponentActivity(), MainService.EndAndDeniedCallListener {
 
     private lateinit var serviceRepository: MainServiceRepository
     private var target: String? = null

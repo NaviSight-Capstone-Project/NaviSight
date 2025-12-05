@@ -10,27 +10,29 @@ Defaults to 500 milliseconds (0.5)
  */
 
 import android.content.Context
-import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
+import java.lang.Thread.sleep
 
-class VibrationHelper (private var context: Context?){
-    private val tag = "VibrationHelper"
-    private val defaultVibrationMilliseconds = 500L // Modify default here
+private const val tag = "VibrationHelper"
+private const val defaultVibrationMilliseconds = 500L // Modify default here
+private const val defaultDelayMilliseconds = 500L // Modify default here
 
-    fun vibrate(milliseconds:Long=defaultVibrationMilliseconds){
+object VibrationHelper {
+    fun vibrate(context: Context?, milliseconds:Long=defaultVibrationMilliseconds){
         val vibrator = context?.getSystemService(Vibrator::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator?.vibrate(
-                VibrationEffect.createOneShot(milliseconds,
-                    VibrationEffect.DEFAULT_AMPLITUDE))
-            Log.i(tag, "I just vibrated - New API (>=26) used.")
+        vibrator?.vibrate(
+            VibrationEffect.createOneShot(milliseconds,
+                VibrationEffect.DEFAULT_AMPLITUDE))
+        Log.i(tag, "Vibrated for $milliseconds milliseconds")
+    }
 
-        } else {
-            @Suppress("DEPRECATION")
-            (vibrator?.vibrate(milliseconds))
-            Log.i(tag, "I just vibrated - Old API (<26) used.")
-        }
+    fun vibrateAfterDelay(
+        context: Context?,
+        delayMilliseconds:Long=defaultDelayMilliseconds,
+        vibrationMilliseconds:Long=defaultVibrationMilliseconds) {
+        sleep(delayMilliseconds)
+        vibrate(context, vibrationMilliseconds)
     }
 }

@@ -20,6 +20,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.util.Size
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.View
@@ -48,7 +49,7 @@ import androidx.lifecycle.lifecycleScope
 import edu.capstone.navisight.R
 import edu.capstone.navisight.databinding.FragmentCameraBinding
 import edu.capstone.navisight.viu.detectors.ObjectDetection
-import edu.capstone.navisight.viu.ui.call.ViuCallActivity
+import edu.capstone.navisight.viu.ui.call.CallActivity
 import edu.capstone.navisight.viu.ui.profile.ProfileFragment
 import edu.capstone.navisight.viu.utils.ObjectDetectorHelper
 import edu.capstone.navisight.common.TTSHelper
@@ -70,12 +71,14 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.apply
 import androidx.core.content.edit
+import edu.capstone.navisight.viu.ui.emergency.EmergencyActivity
 
 private const val TAG = "CameraFragment"
 private const val QUICK_MENU_TAG = "QuickMenu"
 private const val SHARED_PREFERENCES_NAME = "NaviData"
 private const val LOW_BATTERY_WARN_FLAG_SHARED_PREF_NAME = "IsUserWarnedOnLowBatteryLevel"
 private var HAS_BATTERY_BEEN_DETECTED_ONCE = false
+private const val EMERGENCY_SYS_TAG = "EmergencySystem"
 
 // TODO: Make this fragment's camera front facing on deployment time
 
@@ -128,6 +131,24 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private val quadrupleTapHandler = Handler(Looper.getMainLooper())
     private val quadrupleTapRunnable = Runnable {
         clickCount = 0
+    }
+
+    // Init. emergency mode vars
+    private val volumeKeyResetHandler = Handler(Looper.getMainLooper())
+    private val volumeKeyResetDelay = 500L // Time the flag remains true after ACTION_UP
+    private val volumeKeyResetRunnable = Runnable {
+        isVolumeKeyPressed = false // Only truly reset the flag after the delay
+    }
+    private var didEmergencySequenceComplete = false
+    private val emergencyHoldDuration = 1500L
+    private val emergencyHoldHandler = Handler(Looper.getMainLooper())
+    private var isVolumeKeyPressed: Boolean = false
+    private val emergencyHoldRunnable = Runnable {
+        if (isAdded) {
+            initiateEmergencyModeSequence() // Trigger
+        }
+        isVolumeKeyPressed = false // Safety reset
+        volumeKeyResetHandler.removeCallbacks(volumeKeyResetRunnable) // Stop any pending reset
     }
 
     //  Init. variables for menu activation (long press)
@@ -316,7 +337,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                     val msg = "Photo capture successful. Saved to Gallery."
                     Log.d(QUICK_MENU_TAG, msg)
                     TTSHelper.speak(requireContext(), msg)
-                    VibrationHelper(requireContext()).vibrate()
+                    VibrationHelper.vibrate(requireContext())
                 }
             }
         )
@@ -330,8 +351,37 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     // Adjust binds here
     @SuppressLint("ClickableViewAccessibility")
     private fun bindTouchListener() {
+        fragmentCameraBinding?.previewModeHitbox?.apply {
+            // Make the view focusable to receive key events
+            isFocusableInTouchMode = true
+            requestFocus()
+
+            setOnKeyListener { _, keyCode, event ->
+                if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+                    when (event.action) {
+                        KeyEvent.ACTION_DOWN -> {
+                            // Stop any pending reset delay
+                            volumeKeyResetHandler.removeCallbacks(volumeKeyResetRunnable)
+                            if (!isVolumeKeyPressed) {
+                                isVolumeKeyPressed = true
+                            }
+                            return@setOnKeyListener true // Consume the key event
+                        }
+                        KeyEvent.ACTION_UP -> {
+                            // USE STICKY KEYS ARGH.
+                            volumeKeyResetHandler.postDelayed(
+                                volumeKeyResetRunnable, volumeKeyResetDelay)
+                            return@setOnKeyListener true // Consume the key event
+                        }
+                    }
+                }
+                false
+            }
+        }
+
         fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
             doAutoScreensaver()
+            doAutoScreensaver() // Start screensaver by default
             val action = event.actionMasked
 
             when (action) {
@@ -345,6 +395,24 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                         longPressRunnable,
                         longPressDuration)
 
+
+                    // Start emergency timer, else go to quick menu if volume keys not pressed
+                    // whilst long pressing screen.
+                    Log.d(EMERGENCY_SYS_TAG, "setOnTouchListener isVolumeKeyPressed: ${isVolumeKeyPressed}")
+
+                    if (isVolumeKeyPressed) {
+                        longPressHandler.removeCallbacks(longPressRunnable)
+                        volumeKeyResetHandler.removeCallbacks(volumeKeyResetRunnable)
+                        // Begin emergency process
+                        emergencyHoldHandler.postDelayed(
+                            emergencyHoldRunnable,
+                            emergencyHoldDuration
+                        )
+                    } else {
+                        longPressHandler.postDelayed(
+                            longPressRunnable,
+                            longPressDuration)
+                    }
                     if (clickCount == 4) {
                         context?.let { safeContext ->
                             if (isAdded) {
@@ -374,6 +442,21 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     // Cancel the long press if the finger is released early
                     longPressHandler.removeCallbacks(longPressRunnable)
+
+                    // If the screen is lifted while a Volume key is held (but before 1.5s) then
+                    // cancel the timer not unless the emergency has already been triggered
+                    if (isVolumeKeyPressed && !didEmergencySequenceComplete) {
+                        emergencyHoldHandler.removeCallbacks(emergencyHoldRunnable)
+                        context?.let { safeContext ->
+                            VibrationHelper.vibrate(safeContext)
+                            TTSHelper.speak(safeContext, "Emergency activation cancelled.")
+                        }
+                    }
+                    volumeKeyResetHandler.removeCallbacks(volumeKeyResetRunnable) // HUWAG KALIMUTAN
+
+                    // Force reset the volume key flag immediately when screen is released
+                    // (the sequence is over)
+                    isVolumeKeyPressed = false
                 }
             }
             // Maintain touch stream ownership
@@ -675,7 +758,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             mainRepository.sendConnectionRequest(targetUid, isVideoCall) { success ->
                 if (success) {
                     service.startCallTimeoutTimer()
-                    val intent = Intent(requireActivity(), ViuCallActivity::class.java).apply {
+                    val intent = Intent(requireActivity(), CallActivity::class.java).apply {
                         putExtra("target", targetUid)
                         putExtra("isVideoCall", isVideoCall)
                         putExtra("isCaller", true)
@@ -810,7 +893,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                     Log.w(TAG, "Mic and Camera permissions retrieved. Releasing camera...")
                     releaseCamera {
                         // Launch CallActivity using the launcher instead of startActivity
-                        val intent = Intent(requireActivity(), ViuCallActivity::class.java).apply {
+                        val intent = Intent(requireActivity(), CallActivity::class.java).apply {
                             putExtra("target", model.sender)
                             putExtra("isVideoCall", isVideoCall)
                             putExtra("isCaller", false)
@@ -994,4 +1077,31 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     //////////////////////////
     // END OF BATTERY ALERT
     /////////////////////////
+
+    private fun initiateEmergencyModeSequence() {
+        // Todo: FIX TIMING, PERHAPS MAKE DEDICATED queueSpeakEmergency (then combine with vibration)
+        VibrationHelper.vibrate(requireContext())
+        TTSHelper.queueSpeak(requireContext(), "Emergency mode initiating now." +
+                "Please hold for 3 seconds to continue.")
+        TTSHelper.queueSpeak(requireContext(), "Three")
+        VibrationHelper.vibrateAfterDelay(requireContext())
+        TTSHelper.queueSpeak(requireContext(), "Two")
+        VibrationHelper.vibrateAfterDelay(requireContext())
+        TTSHelper.queueSpeak(requireContext(), "One")
+        VibrationHelper.vibrateAfterDelay(requireContext())
+        didEmergencySequenceComplete = true // Set flag TODO: DO NOT FORGET TO ADD FALSE ONCE EMERGENCY IS COMPLETE
+        releaseCamera(onReleased = {
+            if (isAdded) {
+                val intent = Intent(requireContext(), EmergencyActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+                startActivity(intent)
+                // Do not remove immediately the camera, just in case of false alarm
+            }
+        })
+    }
+
+    /////////////////////////////////////
+    // END OF EMERGENCY MODE INITIATION
+    /////////////////////////////////////
 }
