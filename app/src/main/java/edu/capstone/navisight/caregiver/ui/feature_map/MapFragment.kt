@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf // Import this
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
@@ -30,7 +31,8 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
     private lateinit var mapView: MapView
     private lateinit var composeView: ComposeView
-    private var map: MapLibreMap? = null
+
+    private val mapState = mutableStateOf<MapLibreMap?>(null)
 
     private val mapViewModel: MapViewModel by viewModels()
     private val geofenceViewModel: GeofenceViewModel by viewModels()
@@ -51,7 +53,8 @@ class MapFragment : Fragment(), OnMapReadyCallback {
     }
 
     override fun onMapReady(map: MapLibreMap) {
-        this.map = map
+        this.mapState.value = map
+
         val styleUrl = "https://api.maptiler.com/maps/satellite/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
 
         map.setStyle(styleUrl) {
@@ -70,9 +73,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
             setContent {
                 val vius by mapViewModel.vius.collectAsState()
                 val selectedViu by mapViewModel.selectedViu.collectAsState()
-
                 val isPrimary by mapViewModel.isPrimary.collectAsState()
-
                 val geofences by geofenceViewModel.geofences.collectAsState()
                 val longPressedLatLng by mapViewModel.longPressedLatLng.collectAsState()
                 val selectedGeofence by mapViewModel.selectedGeofence.collectAsState()
@@ -93,15 +94,14 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                     selectedViu = selectedViu,
                     geofences = geofences,
                     isPrimary = isPrimary,
-                    map = map,
-                    mapView = mapView,
 
+                    map = mapState.value,
+
+                    mapView = mapView,
                     longPressedLatLng = longPressedLatLng,
                     selectedGeofence = selectedGeofence,
-
                     onViuSelected = { uid -> mapViewModel.selectViu(uid) },
                     onRecenterClick = { recenterCamera(selectedViu) },
-
                     onDismissAddDialog = { mapViewModel.dismissAddGeofenceDialog() },
                     onAddGeofence = { name, location, radius ->
                         if (isPrimary) {
@@ -112,7 +112,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                         }
                         mapViewModel.dismissAddGeofenceDialog()
                     },
-
                     onGeofenceSelected = { mapViewModel.selectGeofence(it) },
                     onDismissDetailsDialog = { mapViewModel.dismissGeofenceDetailsDialog() },
                     onDeleteGeofence = { id ->
@@ -139,11 +138,11 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
     private fun recenterCamera(viu: Viu?) {
         viu?.location?.let {
-            map?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.latitude, it.longitude), 16.0))
+            mapState.value?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.latitude, it.longitude), 16.0))
         }
     }
 
-    // Lifecycle Forwarding
+
     override fun onStart() { super.onStart(); mapView.onStart() }
     override fun onResume() { super.onResume(); mapView.onResume() }
     override fun onPause() { super.onPause(); mapView.onPause() }
@@ -151,7 +150,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
     override fun onLowMemory() { super.onLowMemory(); mapView.onLowMemory() }
     override fun onDestroyView() {
         super.onDestroyView()
-        map = null
+        mapState.value = null
         mapView.onDestroy()
     }
 }
