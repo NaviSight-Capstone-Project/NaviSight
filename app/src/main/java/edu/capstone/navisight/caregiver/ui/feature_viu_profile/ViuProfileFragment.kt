@@ -16,20 +16,18 @@ import com.yalantis.ucrop.UCrop
 import edu.capstone.navisight.caregiver.ui.feature_edit_viu_profile.EditViuProfileViewModel
 import edu.capstone.navisight.caregiver.ui.feature_travel_log.TravelLogViewModel
 import java.io.File
+import androidx.fragment.app.activityViewModels
 
 class ViuProfileFragment : Fragment() {
 
-    // Inject BOTH ViewModels here so they are scoped to this fragment
     private val editViewModel: EditViuProfileViewModel by viewModels()
-    private val travelLogViewModel: TravelLogViewModel by viewModels()
-
+    private val travelLogViewModel: TravelLogViewModel by activityViewModels()
     private lateinit var imagePickerLauncher: ActivityResultLauncher<String>
     private lateinit var ucropLauncher: ActivityResultLauncher<android.content.Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize uCrop logic (used by Edit VM)
         ucropLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK && result.data != null) {
                 val resultUri = UCrop.getOutput(result.data!!)
@@ -74,7 +72,6 @@ class ViuProfileFragment : Fragment() {
     ): View {
         return ComposeView(requireContext()).apply {
             setContent {
-                // We pass both ViewModels to the container
                 ViuProfileContainer(
                     editViewModel = editViewModel,
                     travelLogViewModel = travelLogViewModel,

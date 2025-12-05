@@ -39,6 +39,7 @@ import edu.capstone.navisight.caregiver.ui.feature_travel_log.TravelLogScreen
 import edu.capstone.navisight.caregiver.ui.feature_travel_log.TravelLogViewModel
 import edu.capstone.navisight.caregiver.ui.feature_viu_profile.components.ProfileHeader
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ViuProfileContainer(
@@ -58,7 +59,6 @@ fun ViuProfileContainer(
     var selectedTabIndex by remember { mutableStateOf(0) }
     val context = LocalContext.current
 
-    // Listen for Transfer Success
     val saveSuccess by editViewModel.saveSuccess.collectAsState()
     LaunchedEffect(saveSuccess) {
         if(saveSuccess) {
@@ -71,11 +71,10 @@ fun ViuProfileContainer(
     val unpairError by editViewModel.unpairError.collectAsState()
     val unpairSuccess by editViewModel.unpairSuccess.collectAsState()
 
-    // Handle Unpair Success (Navigate back effectively removing the profile from view)
     LaunchedEffect(unpairSuccess) {
         if (unpairSuccess) {
             Toast.makeText(context, "Unpaired successfully.", Toast.LENGTH_SHORT).show()
-            onNavigateBack() // Go back to list
+            onNavigateBack()
         }
     }
 
@@ -107,7 +106,7 @@ fun ViuProfileContainer(
                         else Toast.makeText(context, "View Only Mode", Toast.LENGTH_SHORT).show()
                     },
                     showMenu = true,
-                    isPrimaryCaregiver = canEdit, // Pass true if primary, false if secondary
+                    isPrimaryCaregiver = canEdit,
                     onTransferRightsClick = { editViewModel.startTransferFlow() },
                     onUnpairClick = { editViewModel.startUnpairFlow() }
                 )
@@ -151,7 +150,7 @@ fun ViuProfileContainer(
         Dialog(onDismissRequest = { editViewModel.cancelTransferFlow() }) {
             Surface(
                 modifier = Modifier
-                    .fillMaxWidth(0.95f) // Make it 95% of screen width
+                    .fillMaxWidth(0.95f)
                     .heightIn(min = 300.dp, max = 600.dp),
                 shape = RoundedCornerShape(24.dp),
                 color = Color.White,
@@ -245,7 +244,7 @@ fun CandidateItem(candidate: TransferPrimaryRequest, onClick: () -> Unit) {
     }
 }
 
-// Helper Composable for Password Dialog
+
 @Composable
 fun PasswordConfirmationDialog(
     isLoading: Boolean,

@@ -26,7 +26,6 @@ import edu.capstone.navisight.caregiver.ui.feature_edit_viu_profile.components.*
 import java.text.SimpleDateFormat
 import java.util.*
 
-// Helper function for age validation
 private fun ageValid(selectedMillis: Long?): Boolean {
     if (selectedMillis == null) return false
     val selectedDate = Date(selectedMillis)
@@ -63,7 +62,6 @@ fun EditViuProfileScreen(
 
     val context = LocalContext.current
 
-    // Local State for Form Fields
     var firstName by remember { mutableStateOf("") }
     var middleName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
@@ -84,9 +82,13 @@ fun EditViuProfileScreen(
 
     val gradientBrush = Brush.horizontalGradient(colors = listOf(Color(0xFFB644F1), Color(0xFF6041EC)))
 
-    // State Initialization
+    var loadedViuUid by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(viu) {
-        viu?.let {
+        if (viu != null && loadedViuUid != viu?.uid) {
+            val it = viu!!
+            loadedViuUid = it.uid
+
             firstName = it.firstName
             middleName = it.middleName
             lastName = it.lastName
@@ -108,7 +110,6 @@ fun EditViuProfileScreen(
         }
     }
 
-    // Handling Toasts for Success/Errors
     val saveSuccess by viewModel.saveSuccess.collectAsState()
     LaunchedEffect(saveSuccess) {
         if (saveSuccess) {
@@ -170,7 +171,6 @@ fun EditViuProfileScreen(
         )
     }
 
-    // LOGIC FLOW DIALOGS (Password/OTP)
     if (saveFlowState == SaveFlowState.PENDING_PASSWORD) {
         PasswordEntryDialog(
             title = "Enter Your Password",
