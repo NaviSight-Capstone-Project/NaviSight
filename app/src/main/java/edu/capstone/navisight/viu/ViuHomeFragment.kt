@@ -17,11 +17,12 @@ import edu.capstone.navisight.viu.ui.LocationEvent
 import edu.capstone.navisight.viu.ui.LocationTracker
 import edu.capstone.navisight.viu.ui.temp_feature.VoiceTestFragment // Added for testing
 
+private const val REQUEST_CHECK_SETTINGS = 1001
+
 class ViuHomeFragment : Fragment() {
 
     private val viewModel: ViuHomeViewModel by viewModels()
     private lateinit var locationTracker: LocationTracker
-    private val REQUEST_CHECK_SETTINGS = 1001
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->

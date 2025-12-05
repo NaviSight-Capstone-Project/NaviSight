@@ -37,7 +37,7 @@ import edu.capstone.navisight.common.webrtc.model.DataModel
 import edu.capstone.navisight.common.webrtc.model.DataModelType
 import edu.capstone.navisight.common.webrtc.utils.getCameraAndMicPermission
 import edu.capstone.navisight.viu.ui.camera.CameraFragment
-import edu.capstone.navisight.viu.ui.DocumentReaderScreen // Added Reader Screen
+import edu.capstone.navisight.viu.ui.ocr.DocumentReaderScreen // Added Reader Screen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
