@@ -22,10 +22,6 @@ class CallActivity : ComponentActivity(), MainService.EndAndDeniedCallListener {
     private var target: String? = null
     private var isVideoCall: Boolean = true
     private var isCaller: Boolean = true
-
-    private var isMicrophoneMuted = false
-    private var isCameraMuted = false
-    private var isSpeakerMode = true
     private var isScreenCasting = false
     private var viuRemoteDataSource = ViuDataSource()
 

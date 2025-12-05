@@ -14,6 +14,7 @@ import com.google.gson.Gson
 import edu.capstone.navisight.MainActivity
 import edu.capstone.navisight.caregiver.model.Viu
 import edu.capstone.navisight.common.webrtc.GsonSingleton
+import edu.capstone.navisight.common.webrtc.service.MainService
 import org.webrtc.MediaStream
 import org.webrtc.PeerConnection
 import org.webrtc.SessionDescription
@@ -45,10 +46,6 @@ class MainRepository private constructor(
 
     fun getUserType(): String{
         return firebaseClient.getUserType()
-    }
-
-    fun getUserUID(): String {
-        return firebaseClient.getUserUID()
     }
 
     fun initFirebase() {
@@ -191,8 +188,9 @@ class MainRepository private constructor(
 
                 when (newState) {
                     PeerConnection.PeerConnectionState.CONNECTED -> {
-                        changeMyStatus(UserStatus.IN_CALL)
                         firebaseClient.clearLatestEvent()
+                        changeMyStatus(UserStatus.IN_CALL)
+                        MainService.stopCallTimer() // Stop missed call timer
                     }
                     // Check for failure/disconnection states
                     PeerConnection.PeerConnectionState.DISCONNECTED,
@@ -222,8 +220,6 @@ class MainRepository private constructor(
     fun endCall() {
         webRTCClient.closeConnection()
         changeMyStatus(UserStatus.ONLINE)
-
-        // CLEANUP: Remove the status listener when the call is over (or aborted)
         caregiverStatusListener?.invoke()
         caregiverStatusListener = null
     }

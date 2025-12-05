@@ -49,7 +49,7 @@ class MainService : Service(), MainRepository.Listener {
         TTSHelper.queueSpeak(applicationContext, message)
     }
 
-        // This Runnable defines the action to take when the 30 seconds expire
+    // This Runnable defines the action to take when the 30 seconds expire
     private val callTimeoutRunnable = Runnable {
         Log.w("calltimeout", "callTimeoutRunnable is now working")
         currentIncomingCallerId?.let { targetId ->
@@ -92,6 +92,11 @@ class MainService : Service(), MainRepository.Listener {
         fun start(context: Context, intent: Intent) {
             intent.setClass(context, MainService::class.java)
             context.startService(intent)
+        }
+
+        fun stopCallTimer() {
+            // Safely call the instance's method if the service is running
+            INSTANCE?.stopCallTimeoutTimer()
         }
     }
 
