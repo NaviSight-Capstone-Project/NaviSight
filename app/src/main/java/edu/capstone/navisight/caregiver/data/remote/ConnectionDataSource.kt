@@ -138,13 +138,22 @@ class ConnectionDataSource(
                 return RequestStatus.AlreadySent
             }
 
+            val caregiverSnapshot = firestore.collection("caregivers")
+                .document(requesterUid)
+                .get()
+                .await()
+
+            val firstName = caregiverSnapshot.getString("firstName") ?: ""
+            val lastName = caregiverSnapshot.getString("lastName") ?: ""
+            val requesterName = "$firstName $lastName".trim().ifEmpty { "Caregiver" }
+
             val request = SecondaryPairingRequest(
                 createdAt = Timestamp.now(),
                 requesterUid = requesterUid,
                 status = "pending",
                 viuName = viuName,
                 viuUid = viuUid,
-                requesterName = "Caregiver"
+                requesterName = requesterName
             )
 
             firestore.collection("secondary_pairing_requests")
@@ -243,7 +252,6 @@ class ConnectionDataSource(
     }
     suspend fun getTransferCandidates(viuUid: String, currentUid: String): List<TransferPrimaryRequest> {
         return try {
-            // Get all relationships for this VIU
             val relSnapshot = firestore.collection("relationships")
                 .whereEqualTo("viuUid", viuUid)
                 .get()
@@ -255,7 +263,6 @@ class ConnectionDataSource(
 
             if (otherCaregiverUids.isEmpty()) return emptyList()
 
-            // Fetch caregiver names
             val usersSnapshot = firestore.collection("caregivers")
                 .whereIn("uid", otherCaregiverUids)
                 .get()

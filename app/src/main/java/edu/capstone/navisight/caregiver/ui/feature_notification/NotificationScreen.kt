@@ -31,6 +31,9 @@ import edu.capstone.navisight.caregiver.model.TransferPrimaryRequest
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+
 @Composable
 fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
     var selectedTab by remember { mutableStateOf("Activity") }
@@ -322,45 +325,78 @@ private fun RequestRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .shadow(elevation = 8.dp, shape = RoundedCornerShape(24.dp)),
+            .shadow(elevation = 6.dp, shape = RoundedCornerShape(24.dp)),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "VIU: ${request.viuName ?: "Unknown"}",
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                color = Color(0xFFB544F1)
-            )
-            Text(
-                text = "Requested by: ${request.requesterName}",
-                fontSize = 13.sp,
-                color = Color(0xFF414040)
+            // Icon
+            Icon(
+                painter = painterResource(id = R.drawable.ic_req),
+                contentDescription = null,
+                tint = Color(0xFFB544F1),
+                modifier = Modifier.size(50.dp)
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = onApprove,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                    shape = RoundedCornerShape(50.dp),
-                    contentPadding = PaddingValues(vertical = 0.dp),
-                    modifier = Modifier.height(32.dp).weight(1f)
-                ) {
-                    Text("APPROVE", color = Color.White, fontSize = 12.sp)
-                }
+            // Right Side Content
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "VIU: ${request.viuName ?: "Unknown"}",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = Color(0xFFB544F1)
+                )
+                Text(
+                    text = "Requested by: ${request.requesterName}",
+                    fontSize = 13.sp,
+                    color = Color(0xFF414040)
+                )
 
-                Button(
-                    onClick = onDeny,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336)),
-                    shape = RoundedCornerShape(50.dp),
-                    contentPadding = PaddingValues(vertical = 0.dp),
-                    modifier = Modifier.height(32.dp).weight(1f)
-                ) {
-                    Text("DENY", color = Color.White, fontSize = 12.sp)
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Buttons
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = onApprove,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                        shape = RoundedCornerShape(50.dp),
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier
+                            .height(30.dp)
+                            .weight(1f)
+                    ) {
+                        Text(
+                            "APPROVE",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Button(
+                        onClick = onDeny,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336)),
+                        shape = RoundedCornerShape(50.dp),
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier
+                            .height(30.dp)
+                            .weight(1f)
+                    ) {
+                        Text(
+                            "DENY",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
