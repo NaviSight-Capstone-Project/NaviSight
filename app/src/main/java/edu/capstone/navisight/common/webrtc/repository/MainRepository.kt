@@ -208,6 +208,10 @@ class MainRepository private constructor(
         webRTCClient.initLocalSurfaceView(view, isVideoCall)
     }
 
+    fun initLocalAudioOnly() {
+        webRTCClient.initLocalAudioOnly()
+    }
+
     fun initRemoteSurfaceView(view: SurfaceViewRenderer) {
         webRTCClient.initRemoteSurfaceView(view)
         this.remoteView = view

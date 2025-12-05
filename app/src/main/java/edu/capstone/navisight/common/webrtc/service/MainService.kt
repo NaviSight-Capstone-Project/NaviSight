@@ -303,8 +303,7 @@ class MainService : Service(), MainRepository.Listener {
                 mainRepository.initRemoteSurfaceView(it)
             }
         } else {
-            Log.d("CallCheck",
-                "Audio Call: Skipping SurfaceView init., audio calls don't need this.")
+            mainRepository.initLocalAudioOnly()
         }
         if (!isCaller){
             Log.d("CallCheck", "Starting video call")

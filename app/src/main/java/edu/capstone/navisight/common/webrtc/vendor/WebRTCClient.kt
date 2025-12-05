@@ -212,6 +212,18 @@ class WebRTCClient (
         localStream?.addTrack(localAudioTrack)
         peerConnection?.addStream(localStream)
     }
+
+    fun initLocalAudioOnly() {
+        // Check for safety, pero bihira mangyari ito not unless of memory corruption
+        if (localStream != null) {
+            return
+        }
+        localStream = peerConnectionFactory.createLocalMediaStream(localStreamId)
+        localAudioTrack = peerConnectionFactory.createAudioTrack(localTrackId+"_audio",localAudioSource)
+        localStream?.addTrack(localAudioTrack)
+        peerConnection?.addStream(localStream)
+    }
+
     private fun startCapturingCamera(localView: SurfaceViewRenderer){
         surfaceTextureHelper = SurfaceTextureHelper.create(
             Thread.currentThread().name,eglBaseContext
