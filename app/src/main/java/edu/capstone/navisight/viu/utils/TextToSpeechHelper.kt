@@ -6,33 +6,51 @@ import android.util.Log
 import java.util.Locale
 
 class TextToSpeechHelper(context: Context) : TextToSpeech.OnInitListener {
+    private var tts: TextToSpeech? = TextToSpeech(context.applicationContext, this)
 
-    private var tts: TextToSpeech? = TextToSpeech(context, this)
+    @Volatile
     private var isInitialized = false
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             val result = tts?.setLanguage(Locale.US)
+
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                Log.e("TTS", "Language not supported")
+                Log.e("NaviSightTTS", "Language not supported or missing data")
             } else {
                 isInitialized = true
+                tts?.setSpeechRate(1.0f)
             }
         } else {
-            Log.e("TTS", "Initialization failed")
+            Log.e("NaviSightTTS", "Initialization failed")
         }
     }
 
-    fun speak(text: String) {
+    fun speak(text: String, flush: Boolean = true) {
         if (isInitialized) {
-            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+            val queueMode = if (flush) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
+            tts?.speak(text, queueMode, null, null)
         } else {
-            Log.e("TTS", "TTS not ready yet")
+            Log.e("NaviSightTTS", "TTS not ready yet. Attempted to speak: $text")
+        }
+    }
+
+    fun stop() {
+        if (isInitialized) {
+            tts?.stop()
+        }
+    }
+
+    fun setRate(rate: Float) {
+        if (isInitialized) {
+            tts?.setSpeechRate(rate)
         }
     }
 
     fun shutdown() {
         tts?.stop()
         tts?.shutdown()
+        tts = null
+        isInitialized = false
     }
 }

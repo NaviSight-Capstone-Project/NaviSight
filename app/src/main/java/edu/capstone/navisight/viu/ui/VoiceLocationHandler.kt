@@ -2,6 +2,7 @@ package edu.capstone.navisight.viu.ui
 
 import android.content.Context
 import android.location.Geocoder
+import android.os.Build
 import android.util.Log
 import edu.capstone.navisight.viu.utils.TextToSpeechHelper
 import edu.capstone.navisight.viu.utils.VoiceRecognitionHelper
@@ -9,73 +10,95 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.IOException
 import java.util.Locale
 
 class VoiceLocationHandler(
     private val context: Context,
     private val ttsHelper: TextToSpeechHelper,
-    private val scope: CoroutineScope // Need scope for background work
+    private val scope: CoroutineScope
 ) {
 
     private var voiceHelper: VoiceRecognitionHelper? = null
-    var currentLat: Double? = null
-    var currentLon: Double? = null
+
+    @Volatile var currentLat: Double? = null
+    @Volatile var currentLon: Double? = null
 
     fun initialize() {
         voiceHelper = VoiceRecognitionHelper(
             context = context,
             onResult = { spokenText -> processCommand(spokenText) },
-            onError = { errorMsg -> Log.e("VoiceHandler", errorMsg) }
+            onError = { errorMsg ->
+                Log.e("VoiceHandler", "Error: $errorMsg")
+            }
         )
     }
 
     fun startListeningForCommand() {
-        // You might want to vibrate here to signal listening started
+        ttsHelper.stop()
         voiceHelper?.startListening()
     }
 
     private fun processCommand(text: String) {
-        val cleanText = text.lowercase()
-        if (cleanText.contains("where") && (cleanText.contains("am i") || cleanText.contains("are we"))) {
+        val cleanText = text.lowercase().trim()
+        Log.d("VoiceHandler", "Command received: $cleanText")
+
+        if (cleanText.contains("where") && (cleanText.contains("am i") || cleanText.contains("location"))) {
             handleWhereAmI()
         } else {
-            // Optional: Provide feedback if command not recognized
-            // ttsHelper.speak("I didn't understand.")
         }
     }
 
     private fun handleWhereAmI() {
-        if (currentLat != null && currentLon != null) {
-            // Move Geocoding to IO thread to prevent freezing
+        val lat = currentLat
+        val lon = currentLon
+
+        if (lat != null && lon != null) {
+            ttsHelper.speak("Getting your location...")
+
             scope.launch(Dispatchers.IO) {
-                val address = getAddressFromLocation(currentLat!!, currentLon!!)
-                // Switch back to Main thread to speak (though TTS is usually async, it's safer)
+                val addressText = getAddressFromLocation(lat, lon)
+
                 withContext(Dispatchers.Main) {
-                    ttsHelper.speak("You are currently at $address")
+                    ttsHelper.speak("You are currently at $addressText")
                 }
             }
         } else {
-            ttsHelper.speak("I am still finding your location.")
+            ttsHelper.speak("I am waiting for a GPS signal. Please try again in a moment.")
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun getAddressFromLocation(lat: Double, lon: Double): String {
         return try {
             val geocoder = Geocoder(context, Locale.getDefault())
+
             val addresses = geocoder.getFromLocation(lat, lon, 1)
+
             if (!addresses.isNullOrEmpty()) {
                 val address = addresses[0]
-                "${address.thoroughfare ?: address.featureName ?: ""}, ${address.locality ?: ""}"
+
+                val parts = listOfNotNull(
+                    address.thoroughfare, // Street name
+                    address.featureName,  // Landmark/Building name
+                    address.locality      // City
+                ).distinct()
+
+                if (parts.isNotEmpty()) {
+                    parts.joinToString(", ")
+                } else {
+                    address.getAddressLine(0) ?: "an unknown street"
+                }
             } else {
                 "an unknown location"
             }
         } catch (e: Exception) {
-            "coordinate $lat, $lon"
+            Log.e("VoiceHandler", "Geocoding failed", e)
+            "GPS coordinates only."
         }
     }
 
     fun cleanup() {
         voiceHelper?.cleanup()
+        ttsHelper.stop()
     }
 }
