@@ -24,9 +24,13 @@ class SpeechToTextHandler(
     fun initialize() {
         voiceHelper = SpeechToTextHelper(
             context = context,
-            onResult = { spokenText -> processCommand(spokenText) },
+            onResult = { spokenText ->
+                processCommand(spokenText)
+                startListeningForCommand() // Loop
+            },
             onError = { errorMsg ->
                 Log.e("VoiceHandler", "Error: $errorMsg")
+                startListeningForCommand() // Loop
             }
         )
     }
@@ -45,7 +49,6 @@ class SpeechToTextHandler(
         } else {
             // Do nothing for now, or unless Charles' has another idea
         }
-        startListeningForCommand() // Loop
     }
 
     private fun returnDateTime(){
