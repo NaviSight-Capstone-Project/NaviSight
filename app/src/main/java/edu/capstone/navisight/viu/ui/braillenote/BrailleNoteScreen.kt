@@ -1,5 +1,9 @@
 package edu.capstone.navisight.viu.ui.braillenote
 
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.Context
+import android.view.inputmethod.InputMethodManager
+import android.view.accessibility.AccessibilityManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -7,15 +11,37 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.getSystemService
+
+fun showKeyboardPicker(context: Context) {
+    val imeManager: InputMethodManager? = context.getSystemService()
+    if (imeManager != null) {
+        imeManager.showInputMethodPicker()
+    } else {
+        android.widget.Toast.makeText(
+            context,
+            "Could not access Input Method Manager.",
+            android.widget.Toast.LENGTH_SHORT).show()
+    }
+}
+
+fun isAccessibilityServiceEnabled(context: Context): Boolean {
+    val accessibilityManager = context.getSystemService(
+        Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
+    return accessibilityManager?.let {
+        it.isEnabled && !it.getEnabledAccessibilityServiceList(
+            AccessibilityServiceInfo.FEEDBACK_ALL_MASK
+        ).isNullOrEmpty()
+    } ?: false
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BrailleNoteAppScreen() {
+fun BrailleNoteScreen() {
+
     val context = LocalContext.current
 
-    // State for the note content
     var noteContent by remember { mutableStateOf("") }
-    // State to control the visibility of the accessibility dialog
     var showAccessibilityDialog by remember { mutableStateOf(false) }
 
     // Check accessibility status when the screen is first composed
@@ -67,35 +93,31 @@ fun BrailleNoteAppScreen() {
         }
     }
 
-    // Accessibility Assistance Dialog
     if (showAccessibilityDialog) {
         AccessibilityAssistDialog(
             onDismiss = { showAccessibilityDialog = false },
-            onGoToSettings = {
-                context.startActivity(createAccessibilitySettingsIntent())
-                showAccessibilityDialog = false // Dismiss after starting intent
+            onGoToKeyboardPicker = {
+                showKeyboardPicker(context)
+                showAccessibilityDialog = false // Dismiss after triggering the picker
             }
         )
     }
 }
 
-/**
- * The Composable function for the AlertDialog.
- */
 @Composable
 fun AccessibilityAssistDialog(
     onDismiss: () -> Unit,
-    onGoToSettings: () -> Unit
+    onGoToKeyboardPicker: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Accessibility Required") },
+        title = { Text("Braille Keyboard Setup") },
         text = {
-            Text("For Braille input, please ensure an accessibility service (like TalkBack) is enabled and the Braille keyboard is active. Would you like to go to settings now?")
+            Text("To use Braille input, you need to switch your current keyboard. Please select the Braille keyboard option from the menu.")
         },
         confirmButton = {
-            Button(onClick = onGoToSettings) {
-                Text("Go to Settings")
+            Button(onClick = onGoToKeyboardPicker) {
+                Text("Select Keyboard")
             }
         },
         dismissButton = {

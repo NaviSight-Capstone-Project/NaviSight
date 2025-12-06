@@ -145,7 +145,7 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
             "ball_flip_camera" -> return if (isVerbose) "Switch your Camera" else "Switch camera"
             "ball_snap" -> return "Take a picture"
             "ball_bk_note" -> return if (isVerbose)
-                "Note take with Braille Keyboard" else "Note with Braille Keyboard"
+                "Take notes with your keyboard" else "Quick Notes"
             "ball_ocr" -> return if (isVerbose) "Use OCR" else "OCR"
         }
         throw IllegalArgumentException(

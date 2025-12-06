@@ -19,7 +19,7 @@ class BrailleNoteFragment : Fragment() {
             setContent {
                 MaterialTheme {
                     Surface {
-                        BrailleNoteAppScreen()
+                        BrailleNoteScreen()
                     }
                 }
             }
