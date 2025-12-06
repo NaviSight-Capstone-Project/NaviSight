@@ -72,6 +72,7 @@ import java.util.concurrent.Executors
 import kotlin.apply
 import androidx.core.content.edit
 import edu.capstone.navisight.common.DeveloperTools
+import edu.capstone.navisight.viu.ui.braillenote.BrailleNoteFragment
 import edu.capstone.navisight.viu.ui.emergency.EmergencyActivity
 import edu.capstone.navisight.viu.ui.ocr.DocumentReaderFragment
 
@@ -269,13 +270,20 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             }
             R.id.ball_ocr -> {
                 requireActivity().supportFragmentManager.beginTransaction()
-                    .replace(R.id.fragment_container, DocumentReaderFragment())
+                    .replace(
+                        R.id.fragment_container,
+                        DocumentReaderFragment())
                     .addToBackStack(null)
                     .commit()
                 Log.d(QUICK_MENU_TAG, "Executed: OCR")
             }
             R.id.ball_bk_note -> {
-                DeveloperTools.showUnderConstruction(requireContext()) // TODO
+                requireActivity().supportFragmentManager.beginTransaction()
+                    .replace(
+                        R.id.fragment_container,
+                        BrailleNoteFragment())
+                    .addToBackStack(null)
+                    .commit()
                 Log.d(QUICK_MENU_TAG, "Executed: Braille Keyboard note app")
             }
         }
