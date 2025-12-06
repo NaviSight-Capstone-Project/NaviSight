@@ -38,20 +38,20 @@ class SpeechToTextHandler(
     private fun processCommand(text: String) {
         val cleanText = text.lowercase().trim()
         Log.d("VoiceHandler", "Command received: $cleanText")
-
-        if (cleanText.contains("where") && (cleanText.contains("am i") || cleanText.contains("location"))) {
-            handleWhereAmI()
-        } else if (cleanText.contains("time") && (cleanText.contains("date") || cleanText.contains("time"))) {
+        if (cleanText.contains("time")) {
             returnDateTime()
+        } else if ((cleanText == "where am i") || cleanText.contains("location")) {
+            handleWhereAmI()
         } else {
             // Do nothing for now, or unless Charles' has another idea
         }
+        startListeningForCommand() // Loop
     }
 
     private fun returnDateTime(){
         // Say time
         val currentTime = CameraTTSHelper.getCurrentDateTime()
-        TextToSpeechHelper.speak(context, "Quick Menu activated. Current time is: $currentTime")
+        TextToSpeechHelper.speak(context, "The current time is $currentTime.")
     }
 
     private fun handleWhereAmI() {
@@ -59,13 +59,13 @@ class SpeechToTextHandler(
         val lon = currentLon
 
         if (lat != null && lon != null) {
-            TextToSpeechHelper.speak(context,"Getting your location...")
+            TextToSpeechHelper.queueSpeak(context,"Getting your location...")
 
             scope.launch(Dispatchers.IO) {
                 val addressText = getAddressFromLocation(lat, lon)
 
                 withContext(Dispatchers.Main) {
-                    TextToSpeechHelper.speak(context, "You are currently at $addressText")
+                    TextToSpeechHelper.queueSpeak(context, "You are currently at $addressText")
                 }
             }
         } else {

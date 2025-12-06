@@ -1,6 +1,11 @@
 package edu.capstone.navisight.viu.ui.camera
 
+import android.annotation.SuppressLint
 import android.content.ClipDescription
+import android.content.Context
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
 import android.view.DragEvent
@@ -27,7 +32,7 @@ interface QuickMenuListener {
 
 private const val UNHIGHLIGHTED_ALPHA = 0.4f
 private const val HIGHLIGHTED_ALPHA = 1.0f
-
+private const val STT_GPS_TAG = "QuickMenu STT GPS"
 private const val TAG = "QuickMenuFragment (Not inside CameraFragment)"
 
 class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
@@ -38,6 +43,43 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
 
     // Init. Speech to Text
     private lateinit var speechToTextHelper: SpeechToTextHandler
+
+    // Init. STT get location
+    private var locationManager: LocationManager? = null
+    private val locationListener = object : LocationListener {
+        override fun onLocationChanged(location: Location) {
+            speechToTextHelper.currentLat = location.latitude
+            speechToTextHelper.currentLon = location.longitude
+        }
+        override fun onProviderEnabled(provider: String) {
+            Log.d(STT_GPS_TAG, "GPS Provider Enabled: $provider") }
+        override fun onProviderDisabled(provider: String) {
+            Log.d(STT_GPS_TAG, "GPS Provider Disabled: $provider") }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startLocationUpdates() {
+        try {
+            Log.d(STT_GPS_TAG, "Requesting GPS updates...")
+
+            locationManager?.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER,
+                5000L,
+                5f,
+                locationListener
+            )
+
+            locationManager?.requestLocationUpdates(
+                LocationManager.NETWORK_PROVIDER,
+                5000L,
+                5f,
+                locationListener
+            )
+
+        } catch (e: Exception) {
+            Log.d(STT_GPS_TAG, "Error starting location: ${e.message}")
+        }
+    }
 
     // Static variable to track the last highlighted view ID during a drag operation
     private var currentHighlightedId: Int? = null
@@ -60,6 +102,10 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
         // Alert user that quick menu is active
         TextToSpeechHelper.speak(requireContext(),
             "Quick Menu activated. Say 'where am I' or 'time'.")
+
+        // Assume GPS and other stuff is activated before app is continued
+        locationManager = requireContext().getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        startLocationUpdates()
 
         // Vibrate on start
         VibrationHelper.vibrate(requireContext())
