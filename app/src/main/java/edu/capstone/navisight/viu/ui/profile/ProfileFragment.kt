@@ -83,6 +83,7 @@ class ProfileFragment : Fragment(), MainService.Listener {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 val uiState by viewModel.uiState.collectAsState()
+                var showLogoutDialog by remember { mutableStateOf(false) }
                 val targetCaregiverUid by viewModel.caregiverUid.collectAsState()
 
                 // State to toggle between Profile and Reader
@@ -98,7 +99,9 @@ class ProfileFragment : Fragment(), MainService.Listener {
                 } else {
                     ProfileScreen(
                         uiState = uiState,
-                        onLogout = { viewModel.logout() },
+                        onLogout = {
+                            showLogoutDialog = true
+                                   },
                         onVideoCall = {
                             targetCaregiverUid?.let { uid -> viewModel.videoCall(uid) }
                                 ?: Toast.makeText(context, "No caregiver linked.", Toast.LENGTH_SHORT).show()
@@ -113,6 +116,34 @@ class ProfileFragment : Fragment(), MainService.Listener {
                                 replace(R.id.fragment_container, CameraFragment())
                                 setReorderingAllowed(true)
                             }
+                        }
+                    )
+                }
+
+                if (showLogoutDialog) {
+                    // Perform alert
+                    TextToSpeechHelper.queueSpeak(
+                        requireContext(),
+                        "You are about to logout. Are you sure?")
+                    LogoutDialogScreen(
+                        onDismissRequest = {
+                            // User tapped outside or pressed back, dismiss the dialog
+                            showLogoutDialog = false
+                        },
+                        onConfirm = {
+                            // User clicked "Yes, Logout"
+                            showLogoutDialog = false // Reset
+                            try {
+                                val repo = MainRepository.getInstance(requireContext())
+                                repo.setOffline()
+                            } catch (e: Exception) {
+                                Log.e("SettingsFragment", "Error setting offline: ${e.message}")
+                            }
+                            viewModel.logout()
+                        },
+                        onCancel = {
+                            // User clicked "No, Stay Logged In" or something something
+                            showLogoutDialog = false
                         }
                     )
                 }

@@ -21,8 +21,6 @@ import edu.capstone.navisight.viu.ui.SpeechToTextHandler
 
 QuickMenuFragment.kt
 
-The comments do be wordy.
-
  */
 
 interface QuickMenuListener {
@@ -149,7 +147,7 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
             "ball_ocr" -> return if (isVerbose) "Use OCR" else "OCR"
         }
         throw IllegalArgumentException(
-            "viewId must only be either ball_top, ball_bottom, ball_right, or ball_left")
+            "viewId used is invalid. Choose a correct ID")
     }
 
     // Actual Drag Listener Implementation
