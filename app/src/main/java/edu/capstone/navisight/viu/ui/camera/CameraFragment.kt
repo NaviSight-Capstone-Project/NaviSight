@@ -72,6 +72,7 @@ import java.util.concurrent.Executors
 import kotlin.apply
 import androidx.core.content.edit
 import edu.capstone.navisight.viu.ui.emergency.EmergencyActivity
+import edu.capstone.navisight.viu.ui.ocr.DocumentReaderFragment
 
 private const val TAG = "CameraFragment"
 private const val QUICK_MENU_TAG = "QuickMenu"
@@ -268,6 +269,17 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             R.id.ball_flip_camera -> {
                 switchCamera()
                 Log.d(QUICK_MENU_TAG, "Executed: Switch Camera")
+            }
+            R.id.ball_ocr -> {
+                requireActivity().supportFragmentManager.beginTransaction()
+                    .replace(R.id.fragment_container, DocumentReaderFragment())
+                    .addToBackStack(null)
+                    .commit()
+                Log.d(QUICK_MENU_TAG, "Executed: OCR")
+            }
+            R.id.ball_bk_note -> {
+                // TODO
+                Log.d(QUICK_MENU_TAG, "Executed: Braille Keyboard note app")
             }
         }
     }
