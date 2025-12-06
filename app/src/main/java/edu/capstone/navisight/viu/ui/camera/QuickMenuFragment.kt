@@ -10,6 +10,14 @@ import edu.capstone.navisight.R
 import edu.capstone.navisight.common.TTSHelper
 import edu.capstone.navisight.common.VibrationHelper
 
+/*
+
+QuickMenuFragment.kt
+
+The comments do be wordy.
+
+ */
+
 interface QuickMenuListener {
     fun onQuickMenuDismissed()
     fun onQuickMenuAction(actionId: Int)
@@ -84,7 +92,6 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
         val targetId = v.id // The ID of the View receiving the event (root or a ball)
 
         when (event.action) {
-            // This is required for the view to receive subsequent events (ENTERED, DROPPED)
             DragEvent.ACTION_DRAG_STARTED -> {
                 if (event.clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
                     // Indicate that this View can accept the drag data
