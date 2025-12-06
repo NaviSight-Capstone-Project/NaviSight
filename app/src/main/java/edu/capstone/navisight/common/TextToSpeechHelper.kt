@@ -1,5 +1,15 @@
 package edu.capstone.navisight.common
 
+/*
+
+TTSHelper.kt
+
+Formerly named as TTSHelper.kt
+This is in commons as both VIU and Guest mode utilizes the feature.
+Please try to use this instead of making a new one unless the said helper is a dedicated one.
+
+ */
+
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -11,7 +21,7 @@ import java.util.Locale
 import java.util.Queue
 import java.util.UUID
 
-object TTSHelper : TextToSpeech.OnInitListener {
+object TextToSpeechHelper : TextToSpeech.OnInitListener {
 
     private var tts: TextToSpeech? = null
     private var isInitialized = false
@@ -27,6 +37,12 @@ object TTSHelper : TextToSpeech.OnInitListener {
             tts = TextToSpeech(context.applicationContext, this)
         }
         // If tts is already being initialized (not null), do nothing.
+    }
+
+    fun setRate(rate: Float) {
+        if (isInitialized) {
+            tts?.setSpeechRate(rate)
+        }
     }
 
     fun speak(context: Context, text: String) {

@@ -15,7 +15,7 @@ While this activity is enabled, this does the following:
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import edu.capstone.navisight.common.TTSHelper
+import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
@@ -31,7 +31,7 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
         super.onCreate(savedInstanceState)
 
         // Init.
-        TTSHelper.speak(applicationContext, "Emergency mode is activated. ")
+        TextToSpeechHelper.speak(applicationContext, "Emergency mode is activated. ")
 
         serviceRepository = MainServiceRepository.getInstance(applicationContext)
 

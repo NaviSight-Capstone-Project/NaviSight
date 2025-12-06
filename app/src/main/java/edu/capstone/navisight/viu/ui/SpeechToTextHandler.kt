@@ -2,29 +2,27 @@ package edu.capstone.navisight.viu.ui
 
 import android.content.Context
 import android.location.Geocoder
-import android.os.Build
 import android.util.Log
-import edu.capstone.navisight.viu.utils.TextToSpeechHelper
-import edu.capstone.navisight.viu.utils.VoiceRecognitionHelper
+import edu.capstone.navisight.common.TextToSpeechHelper
+import edu.capstone.navisight.viu.ui.camera.CameraTTSHelper
+import edu.capstone.navisight.viu.utils.SpeechToTextHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-class VoiceLocationHandler(
+class SpeechToTextHandler(
     private val context: Context,
-    private val ttsHelper: TextToSpeechHelper,
     private val scope: CoroutineScope
 ) {
-
-    private var voiceHelper: VoiceRecognitionHelper? = null
+    private var voiceHelper: SpeechToTextHelper? = null
 
     @Volatile var currentLat: Double? = null
     @Volatile var currentLon: Double? = null
 
     fun initialize() {
-        voiceHelper = VoiceRecognitionHelper(
+        voiceHelper = SpeechToTextHelper(
             context = context,
             onResult = { spokenText -> processCommand(spokenText) },
             onError = { errorMsg ->
@@ -34,7 +32,6 @@ class VoiceLocationHandler(
     }
 
     fun startListeningForCommand() {
-        ttsHelper.stop()
         voiceHelper?.startListening()
     }
 
@@ -44,8 +41,17 @@ class VoiceLocationHandler(
 
         if (cleanText.contains("where") && (cleanText.contains("am i") || cleanText.contains("location"))) {
             handleWhereAmI()
+        } else if (cleanText.contains("time") && (cleanText.contains("date") || cleanText.contains("time"))) {
+            returnDateTime()
         } else {
+            // Do nothing for now, or unless Charles' has another idea
         }
+    }
+
+    private fun returnDateTime(){
+        // Say time
+        val currentTime = CameraTTSHelper.getCurrentDateTime()
+        TextToSpeechHelper.speak(context, "Quick Menu activated. Current time is: $currentTime")
     }
 
     private fun handleWhereAmI() {
@@ -53,17 +59,17 @@ class VoiceLocationHandler(
         val lon = currentLon
 
         if (lat != null && lon != null) {
-            ttsHelper.speak("Getting your location...")
+            TextToSpeechHelper.speak(context,"Getting your location...")
 
             scope.launch(Dispatchers.IO) {
                 val addressText = getAddressFromLocation(lat, lon)
 
                 withContext(Dispatchers.Main) {
-                    ttsHelper.speak("You are currently at $addressText")
+                    TextToSpeechHelper.speak(context, "You are currently at $addressText")
                 }
             }
         } else {
-            ttsHelper.speak("I am waiting for a GPS signal. Please try again in a moment.")
+            TextToSpeechHelper.speak(context,"I am waiting for a GPS signal. Please try again in a moment.")
         }
     }
 
@@ -97,8 +103,8 @@ class VoiceLocationHandler(
         }
     }
 
-    fun cleanup() {
+    fun stopAndCleanup() {
         voiceHelper?.cleanup()
-        ttsHelper.stop()
+        // DO NOT TURN OFF TTS. PAPATAYIN YUNG BUONG TTS NG APP IF SO
     }
 }

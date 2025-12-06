@@ -39,7 +39,7 @@ import edu.capstone.navisight.auth.AuthActivity
 import edu.capstone.navisight.databinding.FragmentCameraBinding
 import edu.capstone.navisight.viu.detectors.ObjectDetection
 import edu.capstone.navisight.viu.utils.ObjectDetectorHelper
-import edu.capstone.navisight.common.TTSHelper
+import edu.capstone.navisight.common.TextToSpeechHelper
 import java.util.LinkedList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -126,7 +126,7 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
 
                     if (clickCount == 4) {
                         context?.let { safeContext ->
-                            TTSHelper.speak(safeContext, "Navigating to Login Page")
+                            TextToSpeechHelper.speak(safeContext, "Navigating to Login Page")
                             if (isAdded) {
                                 // Start activity to Login.
                                 val intent = Intent(

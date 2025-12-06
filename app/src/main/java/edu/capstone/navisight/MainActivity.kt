@@ -22,7 +22,7 @@ import edu.capstone.navisight.auth.AuthActivity
 import edu.capstone.navisight.auth.data.remote.CloudinaryDataSource
 import edu.capstone.navisight.auth.domain.GetUserCollectionUseCase
 import edu.capstone.navisight.caregiver.CaregiverHomeFragment
-import edu.capstone.navisight.common.TTSHelper
+import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.disclaimer.DisclaimerFragment
 import edu.capstone.navisight.viu.ViuHomeFragment
 import edu.capstone.navisight.guest.GuestFragment
@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         // Init. TTS for faster processing times and prevent lazy loading
-        TTSHelper.initialize(applicationContext)
+        TextToSpeechHelper.initialize(applicationContext)
 
         setContentView(R.layout.activity_main)
 
@@ -176,6 +176,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Clear TTS.
-        TTSHelper.shutdown()
+        TextToSpeechHelper.shutdown()
     }
 }

@@ -16,7 +16,7 @@ import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import edu.capstone.navisight.R
 import edu.capstone.navisight.MainActivity
-import edu.capstone.navisight.common.TTSHelper
+import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.webrtc.vendor.RTCAudioManager
 import edu.capstone.navisight.common.webrtc.service.MainServiceActions.*
 import edu.capstone.navisight.common.webrtc.model.DataModel
@@ -46,7 +46,7 @@ class MainService : Service(), MainRepository.Listener {
         Handler(Looper.getMainLooper()).post {
             Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
         }
-        TTSHelper.queueSpeak(applicationContext, message)
+        TextToSpeechHelper.queueSpeak(applicationContext, message)
     }
 
     // This Runnable defines the action to take when the 30 seconds expire

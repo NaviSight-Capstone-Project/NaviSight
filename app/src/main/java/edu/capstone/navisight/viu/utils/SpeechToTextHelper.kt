@@ -9,7 +9,7 @@ import android.speech.SpeechRecognizer
 import android.util.Log
 import java.util.Locale
 
-class VoiceRecognitionHelper(
+class SpeechToTextHelper(
     context: Context,
     private val onResult: (String) -> Unit,
     private val onError: (String) -> Unit

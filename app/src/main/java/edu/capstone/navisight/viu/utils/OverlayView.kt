@@ -16,7 +16,7 @@ import java.util.LinkedList
 import kotlin.math.abs
 import kotlin.math.max
 import edu.capstone.navisight.R
-import edu.capstone.navisight.common.TTSHelper
+import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.VibrationHelper
 
 class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs) {
@@ -181,17 +181,17 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
     private fun speakWhenDetected(context: Context, result: ObjectDetection){
         val currentLabel = result.category.label
         val currentDetectedArea = calculateCurrentBBArea(result)
-        val currentSpeechQueue = TTSHelper.getSpeechQueue()
+        val currentSpeechQueue = TextToSpeechHelper.getSpeechQueue()
         if (lastLabel != currentLabel || didBBAThresholdChanged(currentDetectedArea)) {
-            if (currentSpeechQueue.size > speechQueueThreshold) TTSHelper.clearQueue()
+            if (currentSpeechQueue.size > speechQueueThreshold) TextToSpeechHelper.clearQueue()
             val proximityStatus = bbEstimatedProximity(currentDetectedArea, currentLabel)
             if (lastLabel == currentLabel) {
-                if (currentAreaThreshold > lastAreaThreshold) TTSHelper.queueSpeakLatest(
+                if (currentAreaThreshold > lastAreaThreshold) TextToSpeechHelper.queueSpeakLatest(
                     context,
                     proximityStatus, redundancyDelay
                 )
                 lastAreaThreshold = currentAreaThreshold
-            } else TTSHelper.queueSpeakLatest(context, proximityStatus)
+            } else TextToSpeechHelper.queueSpeakLatest(context, proximityStatus)
             lastLabel = currentLabel
             lastDetectedArea = currentDetectedArea
         }

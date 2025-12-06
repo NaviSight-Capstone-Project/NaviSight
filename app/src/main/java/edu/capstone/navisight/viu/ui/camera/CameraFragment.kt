@@ -52,7 +52,7 @@ import edu.capstone.navisight.viu.detectors.ObjectDetection
 import edu.capstone.navisight.viu.ui.call.CallActivity
 import edu.capstone.navisight.viu.ui.profile.ProfileFragment
 import edu.capstone.navisight.viu.utils.ObjectDetectorHelper
-import edu.capstone.navisight.common.TTSHelper
+import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.VibrationHelper
 import edu.capstone.navisight.common.webrtc.model.DataModel
 import edu.capstone.navisight.common.webrtc.model.DataModelType
@@ -168,10 +168,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private var initialDownY: Float = 0f
     private val longPressRunnable = Runnable {
         context?.let { safeContext ->
-            // Say time
-            val currentTime = CameraTTSHelper.getCurrentDateTime()
-            TTSHelper.speak(safeContext, "Quick Menu activated. Current time is: $currentTime")
-
             // Show the drag fragment (the drop targets)
             showQuickMenuFragment()
 
@@ -315,7 +311,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private fun takePicture() {
         val imageCapture = imageCapture ?: run {
             Log.e(TAG, "ImageCapture use case not bound.")
-            TTSHelper.speak(requireContext(), "Photo capture failed. Camera is not ready.")
+            TextToSpeechHelper.speak(requireContext(), "Photo capture failed. Camera is not ready.")
             return
         }
 
@@ -342,14 +338,14 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onError(exc: ImageCaptureException) {
                     Log.e(QUICK_MENU_TAG, "Photo capture failed: ${exc.message}", exc)
-                    TTSHelper.speak(requireContext(), "Photo capture failed.")
+                    TextToSpeechHelper.speak(requireContext(), "Photo capture failed.")
                     Toast.makeText(requireContext(), "Photo capture failed.", Toast.LENGTH_SHORT).show()
                 }
 
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     val msg = "Photo capture successful. Saved to Gallery."
                     Log.d(QUICK_MENU_TAG, msg)
-                    TTSHelper.speak(requireContext(), msg)
+                    TextToSpeechHelper.speak(requireContext(), msg)
                     VibrationHelper.vibrate(requireContext())
                 }
             }
@@ -429,7 +425,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                     if (clickCount == 4) {
                         context?.let { safeContext ->
                             if (isAdded) {
-                                TTSHelper.speak(safeContext, "Navigating to Profile Page")
+                                TextToSpeechHelper.speak(safeContext, "Navigating to Profile Page")
                                 if (isAdded) {
                                     requireActivity().supportFragmentManager.commit {
                                         setReorderingAllowed(true)
@@ -462,7 +458,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                         emergencyHoldHandler.removeCallbacks(emergencyHoldRunnable)
                         context?.let { safeContext ->
                             VibrationHelper.vibrate(safeContext)
-                            TTSHelper.speak(safeContext, "Emergency activation cancelled.")
+                            TextToSpeechHelper.speak(safeContext, "Emergency activation cancelled.")
                         }
                     }
                     volumeKeyResetHandler.removeCallbacks(volumeKeyResetRunnable) // HUWAG KALIMUTAN
@@ -706,7 +702,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         // Announce the switch via TTS
         context?.let { safeContext ->
             val cameraName = if (currentCameraFacing == CameraSelector.LENS_FACING_FRONT) "Front" else "Back"
-            TTSHelper.speak(safeContext, "$cameraName camera activated")
+            TextToSpeechHelper.speak(safeContext, "$cameraName camera activated")
         }
 
         // Rebind the camera use cases with the new selector
@@ -1006,7 +1002,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             return
         }
 
-        TTSHelper.speak(requireContext(), "Warning! Battery is low. Please charge your device.")
+        TextToSpeechHelper.speak(requireContext(), "Warning! Battery is low. Please charge your device.")
 
         try {
             val inflater = requireActivity().layoutInflater
@@ -1094,13 +1090,13 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private fun initiateEmergencyModeSequence() {
         // Todo: FIX TIMING, PERHAPS MAKE DEDICATED queueSpeakEmergency (then combine with vibration)
         VibrationHelper.vibrate(requireContext())
-        TTSHelper.queueSpeak(requireContext(), "Emergency mode initiating now." +
+        TextToSpeechHelper.queueSpeak(requireContext(), "Emergency mode initiating now." +
                 "Please hold for 3 seconds to continue.")
-        TTSHelper.queueSpeak(requireContext(), "Three")
+        TextToSpeechHelper.queueSpeak(requireContext(), "Three")
         VibrationHelper.vibrateAfterDelay(requireContext())
-        TTSHelper.queueSpeak(requireContext(), "Two")
+        TextToSpeechHelper.queueSpeak(requireContext(), "Two")
         VibrationHelper.vibrateAfterDelay(requireContext())
-        TTSHelper.queueSpeak(requireContext(), "One")
+        TextToSpeechHelper.queueSpeak(requireContext(), "One")
         VibrationHelper.vibrateAfterDelay(requireContext())
         didEmergencySequenceComplete = true // Set flag TODO: DO NOT FORGET TO ADD FALSE ONCE EMERGENCY IS COMPLETE
         releaseCamera(onReleased = {

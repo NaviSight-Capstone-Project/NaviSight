@@ -15,7 +15,6 @@ import edu.capstone.navisight.R
 import edu.capstone.navisight.viu.ui.camera.CameraFragment
 import edu.capstone.navisight.viu.ui.LocationEvent
 import edu.capstone.navisight.viu.ui.LocationTracker
-import edu.capstone.navisight.viu.ui.temp_feature.VoiceTestFragment // Added for testing
 
 private const val REQUEST_CHECK_SETTINGS = 1001
 
@@ -58,7 +57,6 @@ class ViuHomeFragment : Fragment() {
             childFragmentManager.commit {
                 setReorderingAllowed(true)
                 replace(R.id.viu_child_container, CameraFragment())
-                //replace(R.id.viu_child_container, VoiceTestFragment()) // Switched for testing
             }
         }
     }

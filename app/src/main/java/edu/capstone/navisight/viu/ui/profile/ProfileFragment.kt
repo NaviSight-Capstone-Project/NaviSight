@@ -30,7 +30,7 @@ import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.viu.domain.usecase.GenerateOrFetchQrUseCase
 import edu.capstone.navisight.viu.domain.usecase.GetViuProfileUseCase
 import edu.capstone.navisight.viu.ui.call.CallActivity
-import edu.capstone.navisight.common.TTSHelper
+import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.webrtc.repository.MainRepository
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.model.DataModel
@@ -187,7 +187,7 @@ class ProfileFragment : Fragment(), MainService.Listener {
 
     private fun showToastMessageThenTTS(message: String){
         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-        context?.let { TTSHelper.queueSpeak(it, message) }
+        context?.let { TextToSpeechHelper.queueSpeak(it, message) }
     }
 
     override fun onCallMissed(senderId: String) {

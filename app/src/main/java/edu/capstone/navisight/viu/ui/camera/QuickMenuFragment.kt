@@ -6,9 +6,11 @@ import android.util.Log
 import android.view.DragEvent
 import android.view.View
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import edu.capstone.navisight.R
-import edu.capstone.navisight.common.TTSHelper
+import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.VibrationHelper
+import edu.capstone.navisight.viu.ui.SpeechToTextHandler
 
 /*
 
@@ -34,6 +36,9 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
     // Map View IDs to their respective Views for easy access
     private lateinit var ballViews: Map<Int, View>
 
+    // Init. Speech to Text
+    private lateinit var speechToTextHelper: SpeechToTextHandler
+
     // Static variable to track the last highlighted view ID during a drag operation
     private var currentHighlightedId: Int? = null
 
@@ -44,11 +49,25 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
             ?: throw IllegalStateException("Parent must implement QuickMenuListener")
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        speechToTextHelper.stopAndCleanup()
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Alert user that quick menu is active
+        TextToSpeechHelper.speak(requireContext(),
+            "Quick Menu activated. Say 'where am I' or 'time'.")
+
         // Vibrate on start
         VibrationHelper.vibrate(requireContext())
+
+        // Activate STT
+        speechToTextHelper = SpeechToTextHandler(requireContext(), viewLifecycleOwner.lifecycleScope)
+        speechToTextHelper.initialize()
+        speechToTextHelper.startListeningForCommand()
 
         ballViews = mapOf(
             R.id.ball_video_call to view.findViewById(R.id.ball_video_call),
@@ -117,7 +136,7 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
 
                         // TTS depending on action.
                         val ballId = v.resources.getResourceEntryName(targetId)
-                        TTSHelper.speak(
+                        TextToSpeechHelper.speak(
                             requireContext(),
                             getIdTTSDescription(ballId))
 
@@ -152,7 +171,7 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
             DragEvent.ACTION_DRAG_ENDED -> {
                 if (currentHighlightedId == null) { // Check if no consumption nangyari
                     // Make TTS say "cancel" to alert user
-                    TTSHelper.speak(requireContext(), "Quick Menu cancelled")
+                    TextToSpeechHelper.speak(requireContext(), "Quick Menu cancelled")
                 }
                 dragListener?.onQuickMenuDismissed()
                 return@OnDragListener true

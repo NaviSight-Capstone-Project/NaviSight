@@ -19,7 +19,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import com.google.firebase.auth.FirebaseAuth
 import edu.capstone.navisight.R
-import edu.capstone.navisight.common.TTSHelper
+import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.disclaimer.audioVisualizer.AudioVisualizerViewModel
 import edu.capstone.navisight.guest.GuestFragment
 import edu.capstone.navisight.viu.ViuHomeFragment
@@ -78,13 +78,13 @@ class DisclaimerFragment : Fragment() {
 
     private fun startDisclaimer() {
         isConfirming = false
-        TTSHelper.queueSpeakLatest(requireContext(), disclaimerText)
+        TextToSpeechHelper.queueSpeakLatest(requireContext(), disclaimerText)
         startListening()
     }
 
     private fun stopAllSpeech() {
         try {
-            TTSHelper.shutdown()
+            TextToSpeechHelper.shutdown()
             speechRecognizer?.stopListening()
         } catch (e: Exception) {
             Log.e("Disclaimer", "Error stopping speech: ${e.message}")
@@ -128,7 +128,7 @@ class DisclaimerFragment : Fragment() {
         if (!isConfirming && text.contains("agree")) {
             confirmAgree()
         } else if (!isConfirming && text.contains("repeat")) {
-            TTSHelper.speak(requireContext(), "Repeating the disclaimer")
+            TextToSpeechHelper.speak(requireContext(), "Repeating the disclaimer")
             startDisclaimer()
         } else if (isConfirming) {
             handleConfirmation(text)
@@ -139,7 +139,7 @@ class DisclaimerFragment : Fragment() {
 
     private fun confirmAgree() {
         isConfirming = true
-        TTSHelper.speak(requireContext(), "Did you say agree? Please say yes or no.")
+        TextToSpeechHelper.speak(requireContext(), "Did you say agree? Please say yes or no.")
         Handler(Looper.getMainLooper()).postDelayed({ startListening() }, 2000)
     }
 
@@ -147,12 +147,12 @@ class DisclaimerFragment : Fragment() {
         when {
             text.contains("yes") -> handleAgreement()
             text.contains("no") -> {
-                TTSHelper.speak(requireContext(), "Continuing the disclaimer.")
+                TextToSpeechHelper.speak(requireContext(), "Continuing the disclaimer.")
                 isConfirming = false
                 startDisclaimer()
             }
             else -> {
-                TTSHelper.speak(requireContext(), "Please say yes or no.")
+                TextToSpeechHelper.speak(requireContext(), "Please say yes or no.")
                 startListening()
             }
         }
@@ -164,7 +164,7 @@ class DisclaimerFragment : Fragment() {
 
     private fun handleAgreement() {
         saveDisclaimerAgreement()
-        TTSHelper.speak(requireContext(), "Thank you. Proceeding now.")
+        TextToSpeechHelper.speak(requireContext(), "Thank you. Proceeding now.")
         Handler(Looper.getMainLooper()).postDelayed({
             navigateNext()
         }, 2000)
