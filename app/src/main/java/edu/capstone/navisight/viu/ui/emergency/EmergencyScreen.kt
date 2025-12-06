@@ -1,6 +1,10 @@
 package edu.capstone.navisight.viu.ui.emergency
 
+import android.app.Activity
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
@@ -52,6 +56,14 @@ fun EmergencyScreen(
     // Retrieve caregiver record.
     var caregiverRecord by remember { mutableStateOf<Caregiver?>(null) }
 
+    //
+    var isVolumeUpPressed by remember { mutableStateOf(false) }
+    var isVolumeDownPressed by remember { mutableStateOf(false) }
+    val debounceHandler = remember { Handler(Looper.getMainLooper()) }
+    val DEBOUNCE_DELAY_MS = 150L // Time to confirm simultaneous press (e.g., 150ms)
+    val handler = remember { Handler(Looper.getMainLooper()) }
+
+
     LaunchedEffect(target) {
         launch {
             try {
@@ -72,6 +84,41 @@ fun EmergencyScreen(
         }
     }
 
+    // Double hold button to stop emergency mode
+    val emergencyRunnable = remember {
+        Runnable {
+            // Final check that the state is still pressed (safety measure)
+            if (isVolumeUpPressed && isVolumeDownPressed) {
+                Toast.makeText(context, "EMERGENCY TRIGGERED!", Toast.LENGTH_LONG).show()
+                onEndCall()
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            handler.removeCallbacksAndMessages(null)
+        }
+    }
+
+    val debounceRunnable = remember {
+        Runnable {
+            // Run after 150ms. If both are STILL true, start the 5-second emergency timer.
+            if (isVolumeUpPressed && isVolumeDownPressed) {
+                handler.postDelayed(emergencyRunnable, 5000L)
+                Toast.makeText(context, "Emergency hold started (5s)", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val startOrStopTimer: () -> Unit = {
+        handler.removeCallbacks(emergencyRunnable)
+        debounceHandler.removeCallbacks(debounceRunnable)
+
+        if (isVolumeUpPressed && isVolumeDownPressed) {
+            debounceHandler.postDelayed(debounceRunnable, DEBOUNCE_DELAY_MS)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -80,16 +127,19 @@ fun EmergencyScreen(
             .windowInsetsPadding(WindowInsets.statusBars)
             .focusRequester(focusRequester)
             .focusable()
-//            .onKeyEvent{ event ->
-//                if (event.key == Key.VolumeUp || event.key == Key.VolumeDown) {
-//                    when (event.key) {
-//                        println("Both ")
-//                    }
-//                    return@onKeyEvent true
-//                }
-//                // Return false to allow propagation
-//                false
-//            }
+            .onKeyEvent{ event ->
+                if (event.key == Key.VolumeDown) {
+                    val isPressed = event.type == KeyEventType.KeyDown
+                    when (event.key) {
+                        Key.VolumeUp -> isVolumeUpPressed = isPressed
+                        Key.VolumeDown -> isVolumeDownPressed = isPressed
+                    }
+                    startOrStopTimer() // Check state immediately, stop timer pag-let go
+                    return@onKeyEvent true
+                }
+                // Return false to allow propagation
+                false
+            }
     ) {
         // Top bar with stopwatch
         Row(

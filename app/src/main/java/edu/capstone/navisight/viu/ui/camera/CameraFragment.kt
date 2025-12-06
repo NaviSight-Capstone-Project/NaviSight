@@ -71,6 +71,8 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.apply
 import androidx.core.content.edit
+import edu.capstone.navisight.common.Constants.SP_IS_EMERGENCY_MODE_ACTIVE
+import edu.capstone.navisight.common.Constants.SP_IS_USER_WARNED_OF_LOWBAT
 import edu.capstone.navisight.common.DeveloperTools
 import edu.capstone.navisight.viu.ui.braillenote.BrailleNoteFragment
 import edu.capstone.navisight.viu.ui.emergency.EmergencyActivity
@@ -79,7 +81,7 @@ import edu.capstone.navisight.viu.ui.ocr.DocumentReaderFragment
 private const val TAG = "CameraFragment"
 private const val QUICK_MENU_TAG = "QuickMenu"
 private const val SHARED_PREFERENCES_NAME = "NaviData"
-private const val LOW_BATTERY_WARN_FLAG_SHARED_PREF_NAME = "IsUserWarnedOnLowBatteryLevel"
+
 private var HAS_BATTERY_BEEN_DETECTED_ONCE = false
 private const val EMERGENCY_SYS_TAG = "EmergencySystem"
 
@@ -561,9 +563,15 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             setUpCamera()
         }
 
-        // Bind/set extra functionalities here
-        toggleScreenSaver(requireContext()) // Begin screen saving
-        bindTouchListener() // Set and start the binding. Do not remove.
+        // Jump to emergency mode if activated on startup
+        if (checkIfEmergencyMode()) {
+            launchEmergencyMode()
+        } else {
+            // Bind/set extra functionalities here
+            toggleScreenSaver(requireContext()) // Begin screen saving
+            bindTouchListener() // Set and start the binding. Do not remove.
+        }
+        // Use in both emergency mode and camera mode
         observeCaregiverUid() // Set for calling using Quick Menu
     }
 
@@ -984,7 +992,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
 
     override fun onBatteryLow() {
         if (sharedPreferences.getBoolean(
-                LOW_BATTERY_WARN_FLAG_SHARED_PREF_NAME,
+                SP_IS_USER_WARNED_OF_LOWBAT,
                 false) || !HAS_BATTERY_BEEN_DETECTED_ONCE) {
             activity?.runOnUiThread {
                 showLowBatteryAlert()
@@ -1084,11 +1092,11 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     }
 
     private fun saveBatteryWarnFlag() {
-        sharedPreferences.edit { putBoolean(LOW_BATTERY_WARN_FLAG_SHARED_PREF_NAME, true) }
+        sharedPreferences.edit { putBoolean(SP_IS_USER_WARNED_OF_LOWBAT, true) }
     }
 
     private fun removeBatteryWarnFlag() {
-        sharedPreferences.edit { putBoolean(LOW_BATTERY_WARN_FLAG_SHARED_PREF_NAME, false) }
+        sharedPreferences.edit { putBoolean(SP_IS_USER_WARNED_OF_LOWBAT, false) }
     }
 
     //////////////////////////
@@ -1107,15 +1115,27 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         TextToSpeechHelper.queueSpeak(requireContext(), "One")
         VibrationHelper.vibrateAfterDelay(requireContext())
         didEmergencySequenceComplete = true // Set flag TODO: DO NOT FORGET TO ADD FALSE ONCE EMERGENCY IS COMPLETE
+        setEmergencyModeFlag()
         releaseCamera(onReleased = {
             if (isAdded) {
-                val intent = Intent(requireContext(), EmergencyActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                }
-                startActivity(intent)
-                // Do not remove immediately the camera, just in case of false alarm
+                launchEmergencyMode()
             }
         })
+    }
+
+    private fun setEmergencyModeFlag() {
+        sharedPreferences.edit { putBoolean(SP_IS_EMERGENCY_MODE_ACTIVE, true) }
+    }
+
+    private fun checkIfEmergencyMode() : Boolean{
+        return sharedPreferences.getBoolean(SP_IS_EMERGENCY_MODE_ACTIVE, false)
+    }
+
+    private fun launchEmergencyMode() {
+        val intent = Intent(requireContext(), EmergencyActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
     }
 
     /////////////////////////////////////

@@ -12,13 +12,19 @@ While this activity is enabled, this does the following:
 
  */
 
+import android.content.SharedPreferences
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.content.edit
+import edu.capstone.navisight.common.Constants.SHARED_PREFERENCES_NAME
+import edu.capstone.navisight.common.Constants.SP_IS_EMERGENCY_MODE_ACTIVE
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
+
+private const val EMERGENCY_MODE_ACTIVATED_TAG = "isEmergencyModeActive"
 
 class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListener {
     private lateinit var serviceRepository: MainServiceRepository
@@ -26,6 +32,7 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
     private var isVideoCall: Boolean = false // Default to audio call first
     private var isCaller: Boolean = true
     private var viuRemoteDataSource = ViuDataSource()
+    private lateinit var sharedPreferences: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +41,10 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
         TextToSpeechHelper.speak(applicationContext, "Emergency mode is activated. ")
 
         serviceRepository = MainServiceRepository.getInstance(applicationContext)
+
+        sharedPreferences = applicationContext.getSharedPreferences(
+            SHARED_PREFERENCES_NAME,
+            MODE_PRIVATE)
 
         // Set the listener to handle remote end call signals
         MainService.endAndDeniedCallListener = this
@@ -51,6 +62,7 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
                 serviceRepository = serviceRepository,
                 onEndCall = {
                     serviceRepository.sendEndOrAbortCall()
+                    removeEmergencyModeFlag()
                     finish()
                 },
                 viuDataSource = viuRemoteDataSource,
@@ -60,6 +72,10 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
 
     override fun onCallEnded() {
         finish()
+    }
+
+    private fun removeEmergencyModeFlag() {
+        sharedPreferences.edit { putBoolean(SP_IS_EMERGENCY_MODE_ACTIVE, false) }
     }
 
     override fun onCallDenied() {
