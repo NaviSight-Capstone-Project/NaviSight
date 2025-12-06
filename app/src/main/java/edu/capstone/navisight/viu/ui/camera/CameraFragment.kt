@@ -253,19 +253,19 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
 
     override fun onQuickMenuAction(actionId: Int) {
         when(actionId) {
-            R.id.ball_top -> {
+            R.id.ball_video_call -> {
                 handleStartCall(isVideoCall=true) // Start video call
                 Log.d(QUICK_MENU_TAG, "Executed: Video Calling Primary Caregiver")
             }
-            R.id.ball_bottom -> {
+            R.id.ball_audio_call -> {
                 handleStartCall(isVideoCall=false) // Start audio call
                 Log.d(QUICK_MENU_TAG, "Executed: Audio Calling Primary Caregiver")
             }
-            R.id.ball_left -> {
+            R.id.ball_snap -> {
                 takePicture() // Take a picture
                 Log.d(QUICK_MENU_TAG, "Executed: Quick Action #1")
             }
-            R.id.ball_right -> {
+            R.id.ball_flip_camera -> {
                 switchCamera()
                 Log.d(QUICK_MENU_TAG, "Executed: Switch Camera")
             }

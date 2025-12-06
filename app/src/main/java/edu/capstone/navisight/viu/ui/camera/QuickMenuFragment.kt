@@ -20,7 +20,7 @@ private const val HIGHLIGHTED_ALPHA = 1.0f
 
 private const val TAG = "QuickMenuFragment (Not inside CameraFragment)"
 
-class QuickMenuFragment : Fragment(R.layout.quick_menu) {
+class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
     var dragListener: QuickMenuListener? = null
 
     // Map View IDs to their respective Views for easy access
@@ -43,10 +43,12 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
         VibrationHelper.vibrate(requireContext())
 
         ballViews = mapOf(
-            R.id.ball_top to view.findViewById(R.id.ball_top),
-            R.id.ball_bottom to view.findViewById(R.id.ball_bottom),
-            R.id.ball_left to view.findViewById(R.id.ball_left),
-            R.id.ball_right to view.findViewById(R.id.ball_right)
+            R.id.ball_video_call to view.findViewById(R.id.ball_video_call),
+            R.id.ball_audio_call to view.findViewById(R.id.ball_audio_call),
+            R.id.ball_snap to view.findViewById(R.id.ball_snap),
+            R.id.ball_flip_camera to view.findViewById(R.id.ball_flip_camera),
+            R.id.ball_ocr to view.findViewById(R.id.ball_ocr),
+            R.id.ball_bk_note to view.findViewById(R.id.ball_bk_note),
         )
 
         // Set the drag listener on the entire root view of the fragment
@@ -63,12 +65,15 @@ class QuickMenuFragment : Fragment(R.layout.quick_menu) {
     }
 
     // Edit and set custom TTS statements when the ball is highlighted here
-    private fun getIdTTSDescription(viewId:String): String {
+    private fun getIdTTSDescription(viewId:String, isVerbose: Boolean = false): String {
         when (viewId) {
-            "ball_top" -> return "Video call"
-            "ball_bottom" -> return "Audio call"
-            "ball_right" -> return "Switch Camera"
-            "ball_left" -> return "Take a picture"
+            "ball_video_call" -> return if (isVerbose) "Start a Video call" else "Video call"
+            "ball_audio_call" -> return if (isVerbose) "Stat a Audio call" else "Audio call"
+            "ball_flip_camera" -> return if (isVerbose) "Switch your Camera" else "Switch camera"
+            "ball_snap" -> return "Take a picture"
+            "ball_bk_note" -> return if (isVerbose)
+                "Note take with Braille Keyboard" else "Note with Braille Keyboard"
+            "ball_ocr" -> return if (isVerbose) "Use OCR" else "OCR"
         }
         throw IllegalArgumentException(
             "viewId must only be either ball_top, ball_bottom, ball_right, or ball_left")
