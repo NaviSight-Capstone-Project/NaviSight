@@ -20,6 +20,7 @@
     <color name="pink">#FFBCBC</color>
 
     <color name="light_orange">#FF9800</color>
+    <color name="emergency_orange">#FF9800</color>
     <color name="light_blue">#D5F5FF</color>
     <color name="blue">#0F7BD3</color>
     <color name="ash">#474747</color>

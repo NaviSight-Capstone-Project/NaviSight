@@ -69,7 +69,7 @@ fun CallScreen(
 
     // Timer coroutine
     LaunchedEffect(Unit) {
-        for (i in 0..3600) {
+        for (i in 0..360000) {
             delay(1000)
             callTime = i.convertToHumanTime()
         }
