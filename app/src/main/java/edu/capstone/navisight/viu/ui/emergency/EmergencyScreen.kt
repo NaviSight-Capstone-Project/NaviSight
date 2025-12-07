@@ -209,8 +209,7 @@ fun EmergencyScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "You have activated emergency mode. To disable, please quickly press: " +
-                            "Volume Up (x2), Volume Down (x2), then Volume Up (x1) in sequence.",
+                    text = emergencyModeDescription,
                     color = Color.Red,
                     fontSize = 24.sp,
                     textAlign = TextAlign.Center,
@@ -218,19 +217,19 @@ fun EmergencyScreen(
                 )
 
                 Text(
-                    text = "Otherwise, please wait for assistance as NaviSight will try to call your caregiver.",
+                    text = emergencyModeDescription2,
                     color = Color.Black,
                     fontSize = 24.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                Text(
-                    text = "This message will repeat.",
-                    color = Color.Red,
-                    fontSize = 24.sp,
-                    textAlign = TextAlign.Center
-                )
+//                Text(
+//                    text = emergencyModeDescription3,
+//                    color = Color.Red,
+//                    fontSize = 24.sp,
+//                    textAlign = TextAlign.Center
+//                )
             }
         }
 

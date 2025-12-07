@@ -39,7 +39,8 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
         super.onCreate(savedInstanceState)
 
         // Init.
-        TextToSpeechHelper.speak(applicationContext, "Emergency mode is activated. ")
+        TextToSpeechHelper.speak(applicationContext, "Emergency mode is active. ")
+        sayEmergencyModeDescription()
 
         serviceRepository = MainServiceRepository.getInstance(applicationContext)
 
@@ -64,6 +65,8 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
                 onEndEmergencyMode = {
                     serviceRepository.sendEndOrAbortCall()
                     removeEmergencyModeFlag()
+                    TextToSpeechHelper.queueSpeak(
+                        applicationContext,"Emergency mode deactivated")
                     finish()
                 },
                 viuDataSource = viuRemoteDataSource,
@@ -87,6 +90,13 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
 
     private fun removeEmergencyModeFlag() {
         sharedPreferences.edit { putBoolean(SP_IS_EMERGENCY_MODE_ACTIVE, false) }
+    }
+
+    private fun sayEmergencyModeDescription(){
+        TextToSpeechHelper.speak(applicationContext,
+            emergencyModeDescription +
+                    emergencyModeDescription2 )
+//                    emergencyModeDescription3
     }
 
     override fun onCallDenied() {

@@ -77,6 +77,7 @@ import edu.capstone.navisight.common.DeveloperTools
 import edu.capstone.navisight.viu.ui.braillenote.BrailleNoteFragment
 import edu.capstone.navisight.viu.ui.emergency.EmergencyActivity
 import edu.capstone.navisight.viu.ui.ocr.DocumentReaderFragment
+import java.lang.Thread.sleep
 
 private const val TAG = "CameraFragment"
 private const val QUICK_MENU_TAG = "QuickMenu"
@@ -1105,12 +1106,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         VibrationHelper.vibrate(requireContext())
         TextToSpeechHelper.queueSpeak(requireContext(), "Emergency mode initiating now." +
                 "Please hold for 3 seconds to continue.")
-        TextToSpeechHelper.queueSpeak(requireContext(), "Three")
-        VibrationHelper.vibrateAfterDelay(requireContext())
-        TextToSpeechHelper.queueSpeak(requireContext(), "Two")
-        VibrationHelper.vibrateAfterDelay(requireContext())
-        TextToSpeechHelper.queueSpeak(requireContext(), "One")
-        VibrationHelper.vibrateAfterDelay(requireContext())
         didEmergencySequenceComplete = true // Set flag TODO: DO NOT FORGET TO ADD FALSE ONCE EMERGENCY IS COMPLETE
         setEmergencyModeFlag()
         releaseCamera(onReleased = {
