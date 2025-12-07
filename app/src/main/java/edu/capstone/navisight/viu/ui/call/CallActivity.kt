@@ -48,7 +48,6 @@ class CallActivity : ComponentActivity(), MainService.EndAndDeniedCallListener {
                 stopAndCleanUp()
             }
             if (intent?.action == BR_ACTION_DENIED_CALL) {
-                Log.d("denysignal", "starting cleanup")
                 serviceRepository.showToastOnServiceRepoThreadAndTTS(
                     "Your caregiver declined your call. Try again?")
                 stopAndCleanUp()
@@ -84,14 +83,14 @@ class CallActivity : ComponentActivity(), MainService.EndAndDeniedCallListener {
         MainService.endAndDeniedCallListener = this
 
         val finishFilter = IntentFilter().apply {
-            addAction("TARGET_MISSED_YOUR_CALL")
-            addAction("TARGET_DENIED_YOUR_CALL")
+            addAction(BR_ACTION_MISSED_CALL)
+            addAction(BR_ACTION_DENIED_CALL)
         }
         LocalBroadcastManager.getInstance(this).registerReceiver(
             finishReceiver, finishFilter)
         LocalBroadcastManager.getInstance(this)
             .registerReceiver(
-                connectionReceiver, IntentFilter("CONNECTION_ESTABLISHED"))
+                connectionReceiver, IntentFilter(BR_CONNECTION_ESTABLISHED))
 
         // Screen share var init.
         setupScreenCaptureLauncher()

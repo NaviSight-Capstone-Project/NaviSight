@@ -49,6 +49,7 @@ class MainRepository private constructor(
     }
 
     fun initFirebase() {
+        firebaseClient.clearLatestEvent()
         firebaseClient.observeLatestEvents(object : FirebaseClient.Listener {
             override fun onLatestEventReceived(event: DataModel) {
                 Log.d("MainRepository", "Detected a change on latestevent triggered.")

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,6 +15,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.mutableStateOf
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import edu.capstone.navisight.caregiver.data.remote.ViuDataSource
+import edu.capstone.navisight.common.Constants.BR_ACTION_DENIED_CALL
+import edu.capstone.navisight.common.Constants.BR_ACTION_MISSED_CALL
+import edu.capstone.navisight.common.Constants.BR_CONNECTION_ESTABLISHED
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
 
@@ -32,42 +36,51 @@ class CaregiverCallActivity : ComponentActivity(), MainService.EndAndDeniedCallL
 
     private val finishReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "TARGET_MISSED_YOUR_CALL") {
-                Toast.makeText(
-                    context,
-                    "Your VIU missed your call. Try again?",
-                    Toast.LENGTH_LONG).show()
-                serviceRepository.sendEndOrAbortCall() // TODO: Formalize this to Missed Call
-                MainService.remoteSurfaceView?.release()
-                MainService.remoteSurfaceView = null
-                MainService.localSurfaceView?.release()
-                MainService.localSurfaceView = null
-                finish()
+            if (intent?.action == BR_ACTION_MISSED_CALL) {
+                serviceRepository.showToastOnServiceRepoThreadAndTTS(
+                    "Your VIU missed your call. Try again?")
+                stopAndCleanUp()
+            }
+            if (intent?.action == BR_ACTION_DENIED_CALL) {
+                serviceRepository.showToastOnServiceRepoThreadAndTTS(
+                    "Your VIU declined your call. Try again?")
+                stopAndCleanUp()
             }
         }
     }
 
     private val connectionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "CONNECTION_ESTABLISHED") {
+            if (intent?.action == BR_CONNECTION_ESTABLISHED) {
                 isConnectedState.value = true
             }
         }
+    }
+
+    private fun stopAndCleanUp(){
+        serviceRepository.sendEndOrAbortCall() // TODO: Formalize this to Missed Call
+        MainService.remoteSurfaceView?.release()
+        MainService.remoteSurfaceView = null
+        MainService.localSurfaceView?.release()
+        MainService.localSurfaceView = null
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         serviceRepository = MainServiceRepository.getInstance(applicationContext)
 
-        LocalBroadcastManager.getInstance(this)
-            .registerReceiver(finishReceiver, IntentFilter("TARGET_MISSED_YOUR_CALL"))
-
-
-        LocalBroadcastManager.getInstance(this)
-            .registerReceiver(connectionReceiver, IntentFilter("CONNECTION_ESTABLISHED"))
-
         // Set the listener to handle remote end call signals
         MainService.endAndDeniedCallListener = this
+
+        val finishFilter = IntentFilter().apply {
+            addAction(BR_ACTION_MISSED_CALL)
+            addAction(BR_ACTION_DENIED_CALL)
+        }
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            finishReceiver, finishFilter)
+        LocalBroadcastManager.getInstance(this)
+            .registerReceiver(
+                connectionReceiver, IntentFilter(BR_CONNECTION_ESTABLISHED))
 
         // Screen share var init.
         setupScreenCaptureLauncher()

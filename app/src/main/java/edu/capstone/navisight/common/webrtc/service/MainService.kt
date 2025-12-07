@@ -106,7 +106,9 @@ class MainService : Service(), MainRepository.Listener {
         super.onCreate()
         Log.d("CallSignal", "making mainservice")
         INSTANCE = this
+
         mainRepository = MainRepository.getInstance(applicationContext)
+
         rtcAudioManager = RTCAudioManager.create(this)
         rtcAudioManager.setDefaultAudioDevice(RTCAudioManager.AudioDevice.SPEAKER_PHONE)
         notificationManager = getSystemService(
