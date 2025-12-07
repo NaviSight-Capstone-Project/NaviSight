@@ -11,6 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.mutableStateOf
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import edu.capstone.navisight.caregiver.data.remote.ViuDataSource
 import edu.capstone.navisight.common.webrtc.service.MainService
@@ -20,6 +21,7 @@ class CaregiverCallActivity : ComponentActivity(), MainService.EndAndDeniedCallL
 
     private lateinit var serviceRepository: MainServiceRepository
     private var target: String? = null
+    private var isConnectedState = mutableStateOf(false)
     private var isVideoCall: Boolean = true
     private var isCaller: Boolean = true
     private var isScreenCasting = false
@@ -45,12 +47,24 @@ class CaregiverCallActivity : ComponentActivity(), MainService.EndAndDeniedCallL
         }
     }
 
+    private val connectionReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "CONNECTION_ESTABLISHED") {
+                isConnectedState.value = true
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         serviceRepository = MainServiceRepository.getInstance(applicationContext)
 
         LocalBroadcastManager.getInstance(this)
             .registerReceiver(finishReceiver, IntentFilter("TARGET_MISSED_YOUR_CALL"))
+
+
+        LocalBroadcastManager.getInstance(this)
+            .registerReceiver(connectionReceiver, IntentFilter("CONNECTION_ESTABLISHED"))
 
         // Set the listener to handle remote end call signals
         MainService.endAndDeniedCallListener = this
@@ -75,7 +89,8 @@ class CaregiverCallActivity : ComponentActivity(), MainService.EndAndDeniedCallL
                 },
                 // Pass the function to trigger the screen capture request
                 onRequestScreenCapture = { startScreenCapture() },
-                viuRemoteDataSource = viuRemoteDataSource
+                viuRemoteDataSource = viuRemoteDataSource,
+                isConnected = isConnectedState.value
             )
         }
     }
@@ -120,11 +135,12 @@ class CaregiverCallActivity : ComponentActivity(), MainService.EndAndDeniedCallL
     }
 
     override fun onDestroy() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(finishReceiver)
         super.onDestroy()
         if (MainService.endAndDeniedCallListener == this) {
             MainService.endAndDeniedCallListener = null
         }
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(finishReceiver)
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(connectionReceiver)
         MainService.remoteSurfaceView?.release()
         MainService.remoteSurfaceView = null
         MainService.localSurfaceView?.release()

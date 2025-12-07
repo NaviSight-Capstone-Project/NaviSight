@@ -148,6 +148,7 @@ class MainRepository private constructor(
         fun onAbortCallConnectionBased(targetId: String)
         fun onMissCall(targetId: String)
         fun missCall()
+        fun onConnectionEstablished()
         fun abortCall()
     }
 
@@ -191,6 +192,7 @@ class MainRepository private constructor(
                         firebaseClient.clearLatestEvent()
                         changeMyStatus(UserStatus.IN_CALL)
                         MainService.stopCallTimer() // Stop missed call timer
+                        listener?.onConnectionEstablished()
                     }
                     // Check for failure/disconnection states
                     PeerConnection.PeerConnectionState.DISCONNECTED,

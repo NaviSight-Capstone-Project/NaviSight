@@ -438,4 +438,10 @@ class MainService : Service(), MainRepository.Listener {
         fun onCallEnded()
         fun onCallDenied()
     }
+
+    override fun onConnectionEstablished() {
+        Log.d("MainService", "WebRTC connection established. Notifying CallActivity.")
+        val intent = Intent("CONNECTION_ESTABLISHED")
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+    }
 }

@@ -9,6 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
@@ -16,11 +17,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.viu.model.Caregiver
@@ -40,18 +44,21 @@ fun CallScreen(
     onEndCall: () -> Unit,
     serviceRepository: MainServiceRepository,
     onRequestScreenCapture: () -> Unit,
+    isConnected: Boolean,
     viuDataSource: ViuDataSource
 ) {
     val context = LocalContext.current
 
-    var callTime by remember { mutableStateOf("00:00") }
+    var callTime by remember { mutableStateOf("00:00:00") }
     var isMicrophoneMuted by remember { mutableStateOf(false) }
     var isCameraMuted by remember { mutableStateOf(false) }
     var isSpeakerMode by remember { mutableStateOf(true) }
     var isScreenCasting by remember { mutableStateOf(false) }
 
-    // Retrieve caregiver record.
+    // Retrieve caregiver record for cool UI details
     var caregiverRecord by remember { mutableStateOf<Caregiver?>(null) }
+    val imageUrl = caregiverRecord?.profileImageUrl.takeUnless { it.isNullOrEmpty() }
+
     LaunchedEffect(target) {
         launch {
             try {
@@ -64,11 +71,18 @@ fun CallScreen(
     }
 
     // Timer coroutine
-    LaunchedEffect(Unit) {
-        for (i in 0..360000) {
-            delay(1000)
-            callTime = i.convertToHumanTime()
+    LaunchedEffect(isConnected) {
+        if (isConnected) {
+            for (i in 0..360000) {
+                delay(1000)
+                callTime = i.convertToHumanTime()
+            }
         }
+    }
+
+    LaunchedEffect(Unit) {
+        // Calling setupViews here for better control
+        serviceRepository.setupViews(isVideoCall, isCaller, target)
     }
 
     // Launcher for screen capture
@@ -87,20 +101,18 @@ fun CallScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .padding(bottom=50.dp)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
-        // Remote video view (full screen)
         AndroidView(
             factory = { context ->
                 SurfaceViewRenderer(context).apply {
                     MainService.remoteSurfaceView = this
-                    serviceRepository.setupViews(isVideoCall, isCaller, target)
                 }
             },
             modifier = Modifier.fillMaxSize()
         )
 
-        // Local video preview (small corner view)
         if (!isScreenCasting && isVideoCall) {
             AndroidView(
                 factory = { context ->
@@ -109,34 +121,100 @@ fun CallScreen(
                     }
                 },
                 modifier = Modifier
-                    .size(width = 100.dp, height = 150.dp)
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 10.dp, bottom = 70.dp)
+                    .size(width = 125.dp, height = 250.dp)
+                    .align(Alignment.TopEnd)
+                    .padding(end = 10.dp, top = 40.dp)
             )
         }
 
-        // Top bar with timer + title
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .background(Color(0xAA000000))
-                .align(Alignment.TopCenter),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = callTime,
-                color = Color.White,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(horizontal = 10.dp)
-            )
-            Text(
-                text = "In call with Caregiver ${caregiverRecord?.firstName}",
-                color = Color.White,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
-            )
+        if (!isConnected) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xC0000000))
+                    .padding(bottom=50.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    AsyncImage(
+                        model = imageUrl ?: R.drawable.default_profile,
+                        contentDescription = "Caregiver Profile Image",
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.size(12.dp))
+                    Text(
+                        text = "Calling Caregiver${(" " + caregiverRecord?.firstName)}...",
+                        color = Color.White,
+                        style = MaterialTheme.typography.headlineMedium,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else if (!isVideoCall){
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xC0000000))
+                    .padding(bottom=50.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    AsyncImage(
+                        model = imageUrl ?: R.drawable.default_profile,
+                        contentDescription = "Caregiver Profile Image",
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.size(12.dp))
+                    Text(
+                        text = "Caregiver ${caregiverRecord?.firstName}",
+                        color = Color.White,
+                        style = MaterialTheme.typography.headlineMedium,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = callTime,
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(horizontal = 10.dp)
+                    )
+                }
+            }
+        } else {
+            // Top bar with timer + title, assumes video calling
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .background(Color(0xAA000000))
+                    .align(Alignment.TopCenter),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = callTime,
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(horizontal = 10.dp)
+                )
+                Text(
+                    text = "In call with ${caregiverRecord?.firstName}",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
 
         // Bottom control panel
@@ -153,10 +231,15 @@ fun CallScreen(
             IconButton(onClick = {
                 serviceRepository.sendEndOrAbortCall()
                 onEndCall()
-            }) {
+            },
+                modifier = Modifier
+                    .padding(12.dp)
+                    .background(Color.White, shape = CircleShape)
+                ) {
                 Icon(
                     painter = rememberAsyncImagePainter(R.drawable.ic_end_call),
                     contentDescription = "End Call",
+
                     tint = Color.Red
                 )
             }
