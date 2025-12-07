@@ -7,6 +7,8 @@ import edu.capstone.navisight.caregiver.domain.connectionUseCase.SecondaryConnec
 import edu.capstone.navisight.caregiver.domain.connectionUseCase.TransferPrimaryUseCase
 import edu.capstone.navisight.caregiver.domain.notificationUseCase.DismissActivityUseCase
 import edu.capstone.navisight.caregiver.domain.notificationUseCase.GetActivityFeedUseCase
+import edu.capstone.navisight.caregiver.model.AlertNotification
+import edu.capstone.navisight.caregiver.model.AlertType
 import edu.capstone.navisight.caregiver.model.RequestStatus
 import edu.capstone.navisight.caregiver.model.SecondaryPairingRequest
 import edu.capstone.navisight.caregiver.model.TransferPrimaryRequest
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import edu.capstone.navisight.caregiver.model.GeofenceActivity
+import java.util.Date
 
 class NotificationViewModel(
     private val secondaryConnectionUseCase: SecondaryConnectionUseCase = SecondaryConnectionUseCase(),
@@ -24,13 +27,19 @@ class NotificationViewModel(
     private val dismissActivityUseCase: DismissActivityUseCase = DismissActivityUseCase()
 ) : ViewModel() {
 
+    // Geofence activities
     private val _activities = MutableStateFlow<List<GeofenceActivity>>(emptyList())
     val activities = _activities.asStateFlow()
 
+    // Alerts and general
+    private val _alerts = MutableStateFlow<List<AlertNotification>>(emptyList())
+    val alerts = _alerts.asStateFlow()
+
+    // Requests (pending)
     private val _pendingRequests = MutableStateFlow<List<SecondaryPairingRequest>>(emptyList())
     val pendingRequests = _pendingRequests.asStateFlow()
 
-    // NEW: Transfer Requests Flow
+    // Requests (transfers)
     private val _transferRequests = MutableStateFlow<List<TransferPrimaryRequest>>(emptyList())
     val transferRequests = _transferRequests.asStateFlow()
 
@@ -43,18 +52,70 @@ class NotificationViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage = _errorMessage.asStateFlow()
 
+    private val _combinedFeed = MutableStateFlow<List<Any>>(emptyList())
+    val combinedFeed = _combinedFeed.asStateFlow()
+
     init {
         viewModelScope.launch {
-            getActivityFeedUseCase().collect { feedList ->
-                _activities.value = feedList
+            // Collect lahat ng activities
+            launch {
+                getActivityFeedUseCase().collect { feedList ->
+                    _activities.value = feedList
+                    updateCombinedFeed()
+                }
+            }
+            // Add new alerts
+            launch {
+                _alerts.collect {
+                    updateCombinedFeed()
+                }
             }
         }
     }
 
+    private fun updateCombinedFeed() {
+        val allItems = (_activities.value + _alerts.value).sortedByDescending { item ->
+            when (item) {
+                is GeofenceActivity -> item.timestamp?.toDate()?.time ?: 0L
+                is AlertNotification -> item.timestamp?.time ?: 0L
+                else -> 0L
+            }
+        }
+        _combinedFeed.value = allItems
+    }
 
-    fun deleteActivity(activityId: String) {
+    fun createEmergencyAlert(viuName: String) {
+        val newAlert = AlertNotification(
+            id = System.currentTimeMillis().toString(), // Random, uses datetime
+            title = "🚨 Emergency Alert Activated",
+            message = "$viuName has activated the emergency feature.",
+            type = AlertType.EMERGENCY,
+            timestamp = Date()
+        )
+        _alerts.value = listOf(newAlert) + _alerts.value // Add to the beginning
+    }
+
+    fun createLowBatteryAlert(viuName: String) {
+        val newAlert = AlertNotification(
+            id = System.currentTimeMillis().toString(),
+            title = "⚠\uFE0F Low Battery Detected",
+            message = "$viuName is running low on battery.",
+            type = AlertType.LOW_BATTERY,
+            timestamp=Date()
+        )
+        _alerts.value = listOf(newAlert) + _alerts.value // Add to the beginning
+    }
+
+    // You will need to modify deleteActivity to handle both types
+    fun deleteFeedItem(itemId: String, isAlert: Boolean) {
         viewModelScope.launch {
-            dismissActivityUseCase(activityId)
+            if (isAlert) {
+                // If it's an alert, remove it from the alerts list
+                _alerts.value = _alerts.value.filter { it.id != itemId }
+            } else {
+                // If it's a GeofenceActivity, call the use case
+                dismissActivityUseCase(itemId)
+            }
         }
     }
 

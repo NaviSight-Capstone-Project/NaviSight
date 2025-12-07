@@ -33,15 +33,17 @@ import java.util.Locale
 
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
+import edu.capstone.navisight.caregiver.model.AlertNotification
+import edu.capstone.navisight.caregiver.model.AlertType
 
 @Composable
 fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
     var selectedTab by remember { mutableStateOf("Activity") }
 
     // Observers
-    val activities by viewModel.activities.collectAsState()
+    val combinedFeed by viewModel.combinedFeed.collectAsState()
     val secondaryRequests by viewModel.pendingRequests.collectAsState()
-    val transferRequests by viewModel.transferRequests.collectAsState() // NEW
+    val transferRequests by viewModel.transferRequests.collectAsState()
     val loading by viewModel.isLoading.collectAsState()
     val error by viewModel.errorMessage.collectAsState()
 
@@ -56,7 +58,7 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
             .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        // --- Header ---
+        // Header ni chongke
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -79,7 +81,6 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // --- Tabs ---
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -90,23 +91,29 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // --- Tab Content ---
         when (selectedTab) {
             "Activity" -> {
-                if (activities.isEmpty()) {
+                if (combinedFeed.isEmpty()) { // Use combinedFeed here
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No recent activity", color = Color.Gray)
+                        Text("No recent activity or alerts", color = Color.Gray)
                     }
                 } else {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
-                        items(activities) { activity ->
-                            ActivityRow(
-                                activity = activity,
-                                onDelete = { viewModel.deleteActivity(activity.id) }
-                            )
+                        items(combinedFeed) { item ->
+                            when (item) {
+                                is GeofenceActivity -> ActivityRow(
+                                    activity = item,
+                                    onDelete = { viewModel.deleteFeedItem(item.id, false) }
+                                )
+                                is AlertNotification -> AlertRow(
+                                    alert = item,
+                                    onDelete = { viewModel.deleteFeedItem(item.id, true) }
+                                )
+                                // TODO: Add more types dito
+                            }
                         }
                     }
                 }
@@ -142,6 +149,88 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun AlertRow(
+    alert: AlertNotification,
+    onDelete: () -> Unit
+) {
+    val dateString = alert.timestamp?.let {
+        SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault()).format(it)
+    } ?: "Just now"
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = if (alert.type == AlertType.LOW_BATTERY)
+            Color(0xFFFFFCF3) else Color(0xFFFFF3F3)
+        ), // Light Yellow and Red
+        modifier = Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(16.dp))
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Icon Bubble
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (alert.type == AlertType.LOW_BATTERY)
+                        {Color(0xFFF4B536).copy(alpha = 0.1f)} // Yellow
+                        else Color(0xFFF44336).copy(alpha = 0.1f) // Red icon background
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("!", fontSize = 20.sp, fontWeight = FontWeight.Black,
+                    color = if (alert.type == AlertType.LOW_BATTERY)
+                    Color(0xFFF4B536) // Yellow
+                    else Color(0xFFF44336) // Red icon background
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Text Info
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = alert.title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = if (alert.type == AlertType.LOW_BATTERY)
+                    Color(0xFF9D8C1C) // Yellow
+                    else Color(0xFF9D281C) // Red
+                )
+                Spacer(Modifier.size(8.dp))
+                Text(
+                    text = alert.message,
+                    fontSize = 13.sp,
+                    color = Color(0xFF414040)
+                )
+                Spacer(Modifier.size(8.dp))
+                Text(
+                    text = dateString,
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+            }
+
+            // Delete Button
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Dismiss Alert",
+                    tint = Color.LightGray,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }

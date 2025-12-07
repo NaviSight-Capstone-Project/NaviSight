@@ -42,6 +42,12 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
         TextToSpeechHelper.speak(applicationContext, "Emergency mode is active. ")
         sayEmergencyModeDescription()
 
+        // Retrieve coordinates
+
+        // Text using SMS
+
+
+
         serviceRepository = MainServiceRepository.getInstance(applicationContext)
 
         sharedPreferences = applicationContext.getSharedPreferences(
