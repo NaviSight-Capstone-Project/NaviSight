@@ -101,6 +101,7 @@ class MainRepository private constructor(
                         listener?.endCall()
                     }
                     DenyCall -> {
+                        Log.d("DenySignal", "Denied call detected")
                         listener?.deniedCall()
                     }
                     AbortCall -> {
@@ -251,7 +252,6 @@ class MainRepository private constructor(
     }
 
     fun sendMissCall() {
-        Log.d("misscall", "triggered send misscall, current uid is: $abortSignalSenderUidToCheck")
         onTransferEventToSocket(
             DataModel(
                 type = MissCall,

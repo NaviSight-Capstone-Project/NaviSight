@@ -16,6 +16,8 @@ import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import edu.capstone.navisight.R
 import edu.capstone.navisight.MainActivity
+import edu.capstone.navisight.common.Constants.BR_ACTION_DENIED_CALL
+import edu.capstone.navisight.common.Constants.BR_CONNECTION_ESTABLISHED
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.webrtc.vendor.RTCAudioManager
 import edu.capstone.navisight.common.webrtc.service.MainServiceActions.*
@@ -386,13 +388,8 @@ class MainService : Service(), MainRepository.Listener {
     }
 
     override fun deniedCall() {
-        MainActivity.firstTimeLaunched.let {
-            if (!it) {
-                showToastOnMainThreadAndTTS("Your caregiver denied your call. Try again?")
-                deniedCallAndRestartRepository()
-            } else {
-            }
-        }
+        LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(
+            Intent(BR_ACTION_DENIED_CALL))
     }
 
     interface Listener {
@@ -413,7 +410,6 @@ class MainService : Service(), MainRepository.Listener {
         if (listener != null) {
             listener?.onCallMissed(targetId)
         }
-        Log.d("misscall", "countdown expired. sending misscall status to caregiver")
         mainRepository.sendMissCall()
     }
 
@@ -441,7 +437,7 @@ class MainService : Service(), MainRepository.Listener {
 
     override fun onConnectionEstablished() {
         Log.d("MainService", "WebRTC connection established. Notifying CallActivity.")
-        val intent = Intent("CONNECTION_ESTABLISHED")
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+        LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(
+            Intent(BR_CONNECTION_ESTABLISHED))
     }
 }

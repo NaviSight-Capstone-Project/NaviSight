@@ -1,18 +1,28 @@
 package edu.capstone.navisight.viu.ui.call
 
+// All TTS on cleanup must be passed kay MainServiceRepository to prevent ignore
+
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.mutableStateOf
+import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import edu.capstone.navisight.common.Constants.BR_CONNECTION_ESTABLISHED
+import edu.capstone.navisight.common.Constants.BR_ACTION_DENIED_CALL
+import edu.capstone.navisight.common.Constants.BR_ACTION_MISSED_CALL
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
@@ -32,30 +42,39 @@ class CallActivity : ComponentActivity(), MainService.EndAndDeniedCallListener {
 
     private val finishReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "TARGET_MISSED_YOUR_CALL") {
-                Toast.makeText(
-                    context,
-                    "Your caregiver missed your call. Try again?",
-                    Toast.LENGTH_LONG).show()
-
-                serviceRepository.sendEndOrAbortCall() // TODO: Formalize this to Missed Call
-                MainService.remoteSurfaceView?.release()
-                MainService.remoteSurfaceView = null
-                MainService.localSurfaceView?.release()
-                MainService.localSurfaceView = null
-                finish()
+            if (intent?.action == BR_ACTION_MISSED_CALL) {
+                serviceRepository.showToastOnServiceRepoThreadAndTTS(
+                    "Your caregiver missed your call. Try again?")
+                stopAndCleanUp()
+            }
+            if (intent?.action == BR_ACTION_DENIED_CALL) {
+                Log.d("denysignal", "starting cleanup")
+                serviceRepository.showToastOnServiceRepoThreadAndTTS(
+                    "Your caregiver declined your call. Try again?")
+                stopAndCleanUp()
             }
         }
     }
 
     private val connectionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "CONNECTION_ESTABLISHED") {
+            if (intent?.action == BR_CONNECTION_ESTABLISHED) {
                 isConnectedState.value = true
             }
         }
     }
 
+    private fun stopAndCleanUp(){
+        serviceRepository.sendEndOrAbortCall() // TODO: Formalize this to Missed Call
+        MainService.remoteSurfaceView?.release()
+        MainService.remoteSurfaceView = null
+        MainService.localSurfaceView?.release()
+        MainService.localSurfaceView = null
+    }
+
+
+
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -64,12 +83,15 @@ class CallActivity : ComponentActivity(), MainService.EndAndDeniedCallListener {
         // Set the listener to handle remote end call signals
         MainService.endAndDeniedCallListener = this
 
-        // Register for detecting missed call
+        val finishFilter = IntentFilter().apply {
+            addAction("TARGET_MISSED_YOUR_CALL")
+            addAction("TARGET_DENIED_YOUR_CALL")
+        }
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            finishReceiver, finishFilter)
         LocalBroadcastManager.getInstance(this)
-            .registerReceiver(finishReceiver, IntentFilter("TARGET_MISSED_YOUR_CALL"))
-
-        LocalBroadcastManager.getInstance(this)
-            .registerReceiver(connectionReceiver, IntentFilter("CONNECTION_ESTABLISHED"))
+            .registerReceiver(
+                connectionReceiver, IntentFilter("CONNECTION_ESTABLISHED"))
 
         // Screen share var init.
         setupScreenCaptureLauncher()

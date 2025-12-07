@@ -3,7 +3,11 @@ package edu.capstone.navisight.common.webrtc.service
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.widget.Toast
+import edu.capstone.navisight.common.TextToSpeechHelper
 
 class MainServiceRepository(private val context: Context) {
     private fun startServiceIntent(intent: Intent) {
@@ -14,6 +18,11 @@ class MainServiceRepository(private val context: Context) {
             context.startService(intent)
             Log.d("ServiceCheck", "Service ran on plain startService")
         }
+    }
+
+    fun showToastOnServiceRepoThreadAndTTS(message: String) {
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        TextToSpeechHelper.queueSpeak(context, message)
     }
 
     fun setupViews(videoCall: Boolean, caller: Boolean, target: String) {

@@ -231,8 +231,6 @@ class CaregiverHomeFragment : Fragment(),
 
     override fun onCallReceived(model: DataModel) {
         releaseMediaPlayer()
-
-        // 1. Setup Ringtone
         val notificationUri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
         val audioAttributes = android.media.AudioAttributes.Builder()
             .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
@@ -263,7 +261,8 @@ class CaregiverHomeFragment : Fragment(),
 
         val onDeclineAction: (DataModel) -> Unit = {
             releaseMediaPlayer()
-            MainService.getMainRepository()?.sendDeniedCall()
+            MainService.getMainRepository()?.sendDeniedCall(model.sender)
+            service.stopCallTimeoutTimer()
         }
 
         // Create and Show Dialog (Using null initially, as before)
