@@ -1,9 +1,6 @@
 package edu.capstone.navisight.viu.ui.emergency
 
-import android.app.Activity
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
+import android.view.KeyEvent
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
@@ -19,25 +16,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.colorResource
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.R
 import edu.capstone.navisight.viu.model.Caregiver
 import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
-import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.utils.convertToHumanTime
 import kotlinx.coroutines.*
-import androidx.compose.ui.res.colorResource
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+
+private const val SEQUENCE_TIMEOUT_DELAY = 800L
+private const val REQUIRED_SEQUENCE_STEPS = 5
 
 @Composable
 fun EmergencyScreen(
@@ -49,6 +46,7 @@ fun EmergencyScreen(
     viuDataSource: ViuDataSource
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope() // Still needed for other coroutines (like the fetch and timer)
     var emergencyDuration by remember { mutableStateOf("00:00:00") }
     val emergencyOrange = colorResource(id = R.color.emergency_orange)
     val focusRequester = remember { FocusRequester() }
@@ -56,21 +54,70 @@ fun EmergencyScreen(
     // Retrieve caregiver record.
     var caregiverRecord by remember { mutableStateOf<Caregiver?>(null) }
 
-    //
-    var isVolumeUpPressed by remember { mutableStateOf(false) }
-    var isVolumeDownPressed by remember { mutableStateOf(false) }
-    val debounceHandler = remember { Handler(Looper.getMainLooper()) }
-    val DEBOUNCE_DELAY_MS = 150L // Time to confirm simultaneous press (e.g., 150ms)
+    // Init. key sequence vars.
+    var keySequenceStep by remember { mutableStateOf(0) }
     val handler = remember { Handler(Looper.getMainLooper()) }
+    val keySequenceResetRunnable = rememberUpdatedState {
+        Log.d("Sequence", "Timeout reached, resetting sequence.")
+        keySequenceStep = 0 // Reset sequence on timeout
+    }
 
+    // DisposableEffect for cleanup
+    DisposableEffect(Unit) {
+        onDispose {
+            handler.removeCallbacks(keySequenceResetRunnable.value)
+        }
+    }
 
+    // Logic for sequence processing and reset
+    val processKeySequence: (Int) -> Unit = { keyCode ->
+        handler.removeCallbacks(keySequenceResetRunnable.value)
+        val nextStep = keySequenceStep + 1
+        var shouldAdvance = false
+
+        when (nextStep) {
+            // Require Volume UP (V-UP x2, then V-UP x1 to finish)
+            1, 2, 5 -> {
+                if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+                    shouldAdvance = true
+                }
+            }
+            // Require Volume DOWN (V-DOWN x2)
+            3, 4 -> {
+                if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+                    shouldAdvance = true
+                }
+            }
+            else -> {}
+        }
+
+        if (shouldAdvance) {
+            keySequenceStep = nextStep
+
+            if (keySequenceStep == REQUIRED_SEQUENCE_STEPS) {
+                keySequenceStep = 0 // Reset
+                Toast.makeText(context,
+                    "EMERGENCY RESET TRIGGERED by SEQUENCE!",
+                    Toast.LENGTH_LONG).show()
+                onEndCall()
+
+            } else {
+                // Not finished, but advanced. Start/restart the timeout timer using Handler
+                handler.postDelayed(keySequenceResetRunnable.value, SEQUENCE_TIMEOUT_DELAY)
+            }
+        } else {
+            // Wrong key pressed. Reset sequence immediately.
+            keySequenceStep = 0
+        }
+    }
+
+    // LaunchedEffect to fetch caregiver data
     LaunchedEffect(target) {
         launch {
             try {
                 // Call the suspend function
                 caregiverRecord = viuDataSource.getRegisteredCaregiver()
             } catch (e: Exception) {
-                Log.e("CallScreen", "Failed to fetch caregiver profile: ${e.message}")
             }
         }
     }
@@ -84,41 +131,6 @@ fun EmergencyScreen(
         }
     }
 
-    // Double hold button to stop emergency mode
-    val emergencyRunnable = remember {
-        Runnable {
-            // Final check that the state is still pressed (safety measure)
-            if (isVolumeUpPressed && isVolumeDownPressed) {
-                Toast.makeText(context, "EMERGENCY TRIGGERED!", Toast.LENGTH_LONG).show()
-                onEndCall()
-            }
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            handler.removeCallbacksAndMessages(null)
-        }
-    }
-
-    val debounceRunnable = remember {
-        Runnable {
-            // Run after 150ms. If both are STILL true, start the 5-second emergency timer.
-            if (isVolumeUpPressed && isVolumeDownPressed) {
-                handler.postDelayed(emergencyRunnable, 5000L)
-                Toast.makeText(context, "Emergency hold started (5s)", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    val startOrStopTimer: () -> Unit = {
-        handler.removeCallbacks(emergencyRunnable)
-        debounceHandler.removeCallbacks(debounceRunnable)
-
-        if (isVolumeUpPressed && isVolumeDownPressed) {
-            debounceHandler.postDelayed(debounceRunnable, DEBOUNCE_DELAY_MS)
-        }
-    }
 
     Box(
         modifier = Modifier
@@ -127,19 +139,21 @@ fun EmergencyScreen(
             .windowInsetsPadding(WindowInsets.statusBars)
             .focusRequester(focusRequester)
             .focusable()
-            .onKeyEvent{ event ->
-                if (event.key == Key.VolumeDown) {
-                    val isPressed = event.type == KeyEventType.KeyDown
-                    when (event.key) {
-                        Key.VolumeUp -> isVolumeUpPressed = isPressed
-                        Key.VolumeDown -> isVolumeDownPressed = isPressed
+            .onKeyEvent { event ->
+                val keyCode = event.nativeKeyEvent.keyCode
+                val isVolumeKey = keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+
+                if (isVolumeKey) {
+                    // Only process the key press on ACTION_DOWN for the sequence
+                    if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                        processKeySequence(keyCode)
                     }
-                    startOrStopTimer() // Check state immediately, stop timer pag-let go
+                    // Consume the key event (both UP and DOWN) so the OS doesn't adjust volume
                     return@onKeyEvent true
                 }
-                // Return false to allow propagation
-                false
+                false // Do not consume other key events
             }
+
     ) {
         // Top bar with stopwatch
         Row(
@@ -182,23 +196,6 @@ fun EmergencyScreen(
                 fontSize = 24.sp,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
-//            Spacer(
-//                modifier = Modifier
-//                    .size(64.dp) // Match the original icon size
-//                    .padding(bottom = 64.dp)
-//                // TODO: Replace this Spacer with AndroidView(factory = { ... })
-//                // Remote video view (full screen)
-//                //        AndroidView(
-//                //            factory = { context ->
-//                //                SurfaceViewRenderer(context).apply {
-//                //                    MainService.remoteSurfaceView = this
-//                //                    serviceRepository.setupViews(isVideoCall, isCaller, target)
-//                //                    setBackgroundColor(android.graphics.Color.WHITE)
-//                //                }
-//                //            },
-//                //            modifier = Modifier.fillMaxSize()
-//                //        )
-//            )
 
             Icon(
                 imageVector = Icons.Filled.Warning,
@@ -216,9 +213,8 @@ fun EmergencyScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "You have activated emergency mode." +
-                            "To disable, please hold both volume up and down buttons for " +
-                            "5 seconds.",
+                    text = "You have activated emergency mode. To disable, please quickly press: " +
+                            "Volume Up (x2), Volume Down (x2), then Volume Up (x1) in sequence.",
                     color = Color.Red,
                     fontSize = 24.sp,
                     textAlign = TextAlign.Center,
