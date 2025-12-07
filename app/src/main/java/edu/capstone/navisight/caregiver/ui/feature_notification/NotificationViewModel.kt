@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import edu.capstone.navisight.caregiver.model.GeofenceActivity
+import edu.capstone.navisight.caregiver.model.Viu
 import java.util.Date
 
 class NotificationViewModel(
@@ -32,8 +33,11 @@ class NotificationViewModel(
     val activities = _activities.asStateFlow()
 
     // Alerts and general
-    private val _alerts = MutableStateFlow<List<AlertNotification>>(emptyList())
-    val alerts = _alerts.asStateFlow()
+    private val _unreadAlerts = MutableStateFlow<List<AlertNotification>>(emptyList())
+    val unreadAlerts = _unreadAlerts.asStateFlow()
+
+    private val _readAlerts = MutableStateFlow<List<AlertNotification>>(emptyList())
+    val readAlerts = _readAlerts.asStateFlow()
 
     // Requests (pending)
     private val _pendingRequests = MutableStateFlow<List<SecondaryPairingRequest>>(emptyList())
@@ -57,16 +61,16 @@ class NotificationViewModel(
 
     init {
         viewModelScope.launch {
-            // Collect lahat ng activities
+            // Collect Geofence activities
             launch {
                 getActivityFeedUseCase().collect { feedList ->
                     _activities.value = feedList
                     updateCombinedFeed()
                 }
             }
-            // Add new alerts
+            // Collect UNREAD alerts
             launch {
-                _alerts.collect {
+                _unreadAlerts.collect {
                     updateCombinedFeed()
                 }
             }
@@ -74,7 +78,7 @@ class NotificationViewModel(
     }
 
     private fun updateCombinedFeed() {
-        val allItems = (_activities.value + _alerts.value).sortedByDescending { item ->
+        val allItems = (_activities.value + _unreadAlerts.value).sortedByDescending { item ->
             when (item) {
                 is GeofenceActivity -> item.timestamp?.toDate()?.time ?: 0L
                 is AlertNotification -> item.timestamp?.time ?: 0L
@@ -84,34 +88,63 @@ class NotificationViewModel(
         _combinedFeed.value = allItems
     }
 
-    fun createEmergencyAlert(viuName: String) {
+    fun createEmergencyAlert(viu: Viu, lastLocation: String) {
         val newAlert = AlertNotification(
-            id = System.currentTimeMillis().toString(), // Random, uses datetime
+            id = System.currentTimeMillis().toString(),
             title = "🚨 Emergency Alert Activated",
-            message = "$viuName has activated the emergency feature.",
+            message = "${viu.firstName} has activated the emergency feature.",
             type = AlertType.EMERGENCY,
-            timestamp = Date()
+            timestamp = Date(),
+            extraDetails = mapOf(
+                "lastKnownLocation" to lastLocation,
+                "batteryLevel" to 45 // Example
+            ),
+            viu = viu,
+            isViewed = false
         )
-        _alerts.value = listOf(newAlert) + _alerts.value // Add to the beginning
+        // Add to the UNREAD list
+        _unreadAlerts.value = listOf(newAlert) + _unreadAlerts.value
     }
 
-    fun createLowBatteryAlert(viuName: String) {
+    fun createLowBatteryAlert(viu: Viu) {
         val newAlert = AlertNotification(
             id = System.currentTimeMillis().toString(),
             title = "⚠\uFE0F Low Battery Detected",
-            message = "$viuName is running low on battery.",
+            message = "${viu.firstName} is running low on battery.",
             type = AlertType.LOW_BATTERY,
-            timestamp=Date()
+            timestamp=Date(),
+            viu = viu,
+            isViewed = false
         )
-        _alerts.value = listOf(newAlert) + _alerts.value // Add to the beginning
+        _unreadAlerts.value = listOf(newAlert) + _unreadAlerts.value
     }
 
-    // You will need to modify deleteActivity to handle both types
-    fun deleteFeedItem(itemId: String, isAlert: Boolean) {
+    fun markAlertAsRead(alertId: String) {
+        val alertToMove = _unreadAlerts.value.find { it.id == alertId }
+
+        if (alertToMove != null) {
+            // Remove from Unread
+            _unreadAlerts.value = _unreadAlerts.value.filter { it.id != alertId }
+
+            // Add to Read list, sorted by time
+            val updatedAlert = alertToMove.copy(isViewed = true)
+            _readAlerts.value = (_readAlerts.value + updatedAlert)
+                .sortedByDescending { it.timestamp?.time ?: 0L }
+
+            _message.value = "Alert moved to Read."
+        }
+    }
+
+    fun deleteFeedItem(itemId: String, isAlert: Boolean, isRead: Boolean = false) {
         viewModelScope.launch {
             if (isAlert) {
-                // If it's an alert, remove it from the alerts list
-                _alerts.value = _alerts.value.filter { it.id != itemId }
+                if (isRead) {
+                    // Remove from the Read list
+                    _readAlerts.value = _readAlerts.value.filter { it.id != itemId }
+                } else {
+                    // Remove from the Unread list
+                    _unreadAlerts.value = _unreadAlerts.value.filter { it.id != itemId }
+                }
             } else {
                 // If it's a GeofenceActivity, call the use case
                 dismissActivityUseCase(itemId)
@@ -132,14 +165,11 @@ class NotificationViewModel(
             }
 
             try {
-                // 1. Get Secondary Requests (Existing)
                 launch {
                     secondaryConnectionUseCase.getPendingRequests(caregiverUid).collect { requests ->
                         _pendingRequests.value = requests
                     }
                 }
-
-                // 2. Get Transfer Requests (NEW)
                 launch {
                     transferPrimaryUseCase.getIncomingRequests(caregiverUid).collect { requests ->
                         _transferRequests.value = requests

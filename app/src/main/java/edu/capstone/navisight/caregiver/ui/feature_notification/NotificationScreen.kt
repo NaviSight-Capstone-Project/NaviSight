@@ -42,6 +42,8 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
 
     // Observers
     val combinedFeed by viewModel.combinedFeed.collectAsState()
+    val readAlerts by viewModel.readAlerts.collectAsState()
+
     val secondaryRequests by viewModel.pendingRequests.collectAsState()
     val transferRequests by viewModel.transferRequests.collectAsState()
     val loading by viewModel.isLoading.collectAsState()
@@ -51,6 +53,18 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
         viewModel.loadPendingRequests()
     }
 
+    val onAlertTapped: (AlertNotification) -> Unit = { alert ->
+        viewModel.markAlertAsRead(alert.id)
+
+        println("Alert tapped! ID: ${alert.id}, VIU: ${alert.viu.firstName}")
+
+        val details = alert.extraDetails
+        val viuName = alert.viu.firstName
+
+        println("Details for ${alert.title} from $viuName coming soon. " +
+                "Last Location: ${details["lastKnownLocation"]}")
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -58,7 +72,7 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
             .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        // Header ni chongke
+        // Header
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -87,6 +101,8 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
         ) {
             TabButton("Activity", selectedTab == "Activity", { selectedTab = "Activity" }, Modifier.weight(1f))
             TabButton("Request", selectedTab == "Request", { selectedTab = "Request" }, Modifier.weight(1f))
+            TabButton("Read", selectedTab == "Read",
+                { selectedTab = "Read" }, Modifier.weight(1f))
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -110,13 +126,15 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
                                 )
                                 is AlertNotification -> AlertRow(
                                     alert = item,
-                                    onDelete = { viewModel.deleteFeedItem(item.id, true) }
+                                    onDelete = { viewModel.deleteFeedItem(item.id, isAlert = true, isRead = false) },
+                                    onClick = { onAlertTapped(item) }
                                 )
                                 // TODO: Add more types dito
                             }
                         }
                     }
                 }
+
             }
             "Request" -> {
                 when {
@@ -150,6 +168,32 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
                     }
                 }
             }
+            "Read" -> {
+                if (readAlerts.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No read alerts", color = Color.Gray)
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(readAlerts) { alert ->
+                            AlertRow(
+                                alert = alert,
+                                onDelete = { viewModel.deleteFeedItem(
+                                    alert.id,
+                                    isAlert = true,
+                                    isRead = true) }, // Pass isRead = true for deletion
+                                onClick = {
+                                    // Optionally show details again, but don't mark as read
+                                    println("Read Alert :D! ID: ${alert.id}")
+                                }
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -158,7 +202,8 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
 @Composable
 fun AlertRow(
     alert: AlertNotification,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onClick: () -> Unit
 ) {
     val dateString = alert.timestamp?.let {
         SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault()).format(it)
@@ -166,10 +211,12 @@ fun AlertRow(
 
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = if (alert.type == AlertType.LOW_BATTERY)
-            Color(0xFFFFFCF3) else Color(0xFFFFF3F3)
-        ), // Light Yellow and Red
-        modifier = Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(16.dp))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3F3)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(2.dp, RoundedCornerShape(16.dp))
+            // Apply clickable modifier to the card, but exclude the delete button area
+            .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier.padding(12.dp).fillMaxWidth(),

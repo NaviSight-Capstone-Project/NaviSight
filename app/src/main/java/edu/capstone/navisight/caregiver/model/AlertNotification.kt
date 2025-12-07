@@ -15,7 +15,9 @@ data class AlertNotification(
     val message: String, // e.g., "VIU Juan has triggered an emergency alert."
     val type: AlertType, // e.g., AlertType.EMERGENCY
     val isViewed: Boolean = false,
-    val timestamp: Date? = Date()
+    val viu: Viu = Viu(),
+    val timestamp: Date? = Date(),
+    val extraDetails: Map<String, Any?> = emptyMap()
 )
 
 enum class AlertType {

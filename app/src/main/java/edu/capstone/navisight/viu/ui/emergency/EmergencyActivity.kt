@@ -44,8 +44,8 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
 
         // Retrieve coordinates
 
-        // Text using SMS
 
+        // Text using SMS
 
 
         serviceRepository = MainServiceRepository.getInstance(applicationContext)

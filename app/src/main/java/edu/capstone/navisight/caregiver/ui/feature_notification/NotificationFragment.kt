@@ -8,6 +8,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import edu.capstone.navisight.R
+import edu.capstone.navisight.caregiver.model.Viu
 
 class NotificationFragment : Fragment() {
 
@@ -24,7 +25,6 @@ class NotificationFragment : Fragment() {
         composeView.setContent {
             NotificationScreen(viewModel = viewModel)
         }
-
         return root
     }
 }
