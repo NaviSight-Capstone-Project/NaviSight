@@ -33,4 +33,16 @@
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowIsTranslucent">true</item>
     </style>
+
+    <style name="DialogAnimation.SlideFromTop" parent="@android:style/Theme.Dialog">
+        <item name="android:windowAnimationStyle">@style/WindowAnimation.SlideFromTop</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">true</item>
+    </style>
+
+    <style name="WindowAnimation.SlideFromTop" parent="@android:style/Animation.Dialog">
+        <item name="android:windowEnterAnimation">@anim/slide_in_top</item>
+        <item name="android:windowExitAnimation">@anim/slide_out_top</item>
+    </style>
 </resources>

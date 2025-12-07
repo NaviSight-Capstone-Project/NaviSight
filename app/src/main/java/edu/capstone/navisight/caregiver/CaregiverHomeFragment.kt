@@ -9,16 +9,13 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.AppCompatButton
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.os.bundleOf
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -63,6 +60,7 @@ class CaregiverHomeFragment : Fragment(),
     private val viuDataSource = ViuDataSource()
     private lateinit var mainRepository: MainRepository
     private var incomingMediaPlayer: MediaPlayer? = null
+    private var incomingCallDialog: IncomingCallDialog? = null
 
     companion object {
         var firstTimeLaunched: Boolean = true
@@ -209,44 +207,32 @@ class CaregiverHomeFragment : Fragment(),
 
     override fun onCallAborted() {
         activity?.runOnUiThread {
-            view?.let { v ->
-                val callRequestDialog = v.findViewById<View>(R.id.incomingCallLayout)
-                if (callRequestDialog.isVisible) {
-                    callRequestDialog.isVisible = false
-                    Toast.makeText(requireContext(), "VIU aborted their call.", Toast.LENGTH_LONG).show()
-                    releaseMediaPlayer()
-                    Log.d("calldeniedmissed", "Incoming call aborted, UI dismissed.")
-                }
+            if (incomingCallDialog?.isShowing == true) { // Check if the dialog is showing
+                incomingCallDialog?.dismiss() // Dismiss the dialog
+                incomingCallDialog = null
+                Toast.makeText(requireContext(), "VIU aborted their call.", Toast.LENGTH_LONG).show()
+                releaseMediaPlayer()
+                Log.d("calldeniedmissed", "Incoming call aborted, UI dismissed.")
             }
         }
     }
 
     override fun onCallMissed(senderId: String) {
         activity?.runOnUiThread {
-            view?.let { v ->
-                val callRequestDialog = v.findViewById<View>(R.id.incomingCallLayout)
-                if (callRequestDialog.isVisible) {
-                    callRequestDialog.isVisible = false
-                    Toast.makeText(requireContext(), "You've missed your VIU's call!", Toast.LENGTH_LONG).show()
-                    releaseMediaPlayer()
-                    Log.d("callmissed", "Incoming call missed, dialog dismissed.")
-                }
+            if (incomingCallDialog?.isShowing == true) { // Check if the dialog is showing
+                incomingCallDialog?.dismiss() // Dismiss the dialog
+                incomingCallDialog = null
+                Toast.makeText(requireContext(), "You've missed your VIU's call!", Toast.LENGTH_LONG).show()
+                releaseMediaPlayer()
+                Log.d("callmissed", "Incoming call missed, dialog dismissed.")
             }
         }
     }
 
     override fun onCallReceived(model: DataModel) {
-        val v = view ?: return
+        releaseMediaPlayer()
 
-        val callRequestDialog = v.findViewById<View>(R.id.incomingCallLayout)
-        val incomingCallTitleTv = v.findViewById<TextView>(R.id.incomingCallTitleTv)
-        val acceptButton = v.findViewById<AppCompatButton>(R.id.acceptButton)
-        val declineButton = v.findViewById<AppCompatButton>(R.id.declineButton)
-
-        incomingMediaPlayer?.stop()
-        incomingMediaPlayer?.release()
-        incomingMediaPlayer = null
-
+        // 1. Setup Ringtone
         val notificationUri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
         val audioAttributes = android.media.AudioAttributes.Builder()
             .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
@@ -260,45 +246,52 @@ class CaregiverHomeFragment : Fragment(),
         }
 
         val isVideoCall = model.type == DataModelType.StartVideoCall
-        val isVideoCallText = if (isVideoCall) "video" else "audio"
         val senderUid = model.sender
-        val initialText = "${senderUid ?: "Unknown"} wants to $isVideoCallText call you"
 
-        incomingCallTitleTv.text = initialText
-        callRequestDialog.isVisible = true
-        callRequestDialog.bringToFront()
-
-        if (!senderUid.isNullOrBlank()) {
-            fragmentScope.launch(Dispatchers.IO) {
-                try {
-                    val viu = viuDataSource.getViuDetails(senderUid).first()
-                    launch(Dispatchers.Main) {
-                        val viuName = viu?.firstName ?: "VIU ($senderUid)"
-                        incomingCallTitleTv.text = "$viuName wants to $isVideoCallText call you"
-                    }
-                } catch (e: Exception) {
-                    Log.e("CallSignal", "Failed to fetch VIU profile: ${e.message}")
-                }
-            }
-        }
-
-        acceptButton.setOnClickListener {
+        // Define Call Actions
+        val onAcceptAction: (DataModel) -> Unit = { callModel ->
             (requireActivity() as AppCompatActivity).getCameraAndMicPermission{
                 releaseMediaPlayer()
                 service.stopCallTimeoutTimer() // Stop timer on end/miss call timeout
-                callRequestDialog.isVisible = false
                 startActivity(Intent(requireContext(), CaregiverCallActivity::class.java).apply {
-                    putExtra("target", model.sender)
+                    putExtra("target", callModel.sender)
                     putExtra("isVideoCall", isVideoCall)
                     putExtra("isCaller", false)
                 })
             }
         }
 
-        declineButton.setOnClickListener {
+        val onDeclineAction: (DataModel) -> Unit = {
             releaseMediaPlayer()
-            callRequestDialog.isVisible = false
             MainService.getMainRepository()?.sendDeniedCall()
+        }
+
+        // Create and Show Dialog (Using null initially, as before)
+        incomingCallDialog = IncomingCallDialog(
+            context = requireContext(),
+            callModel = model,
+            onAccept = onAcceptAction,
+            onDecline = onDeclineAction,
+            viuName = null // Still start with null
+        )
+        // Show the dialog FIRST. This triggers the smooth slide-down animation.
+        incomingCallDialog?.show()
+
+        // Fetch VIU Name to Update Dialog
+        if (!senderUid.isNullOrBlank()) {
+            fragmentScope.launch(Dispatchers.IO) {
+                try {
+                    Log.e("CallSignal", "tryinbg....")
+                    val viu = viuDataSource.getViuDetails(senderUid).first()
+                    launch(Dispatchers.Main) {
+                        val viuName = viu?.firstName ?: "VIU ($senderUid)"
+                        // This call will now correctly update the TextView inside the dialog
+                        incomingCallDialog?.updateViuName(viuName)
+                    }
+                } catch (e: Exception) {
+                Log.e("CallSignal", "Failed to fetch VIU profile: ${e.message}")
+            }
+            }
         }
     }
 

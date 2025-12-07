@@ -3,16 +3,18 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:paddingBottom="15sp"
+    android:paddingBottom="15dp"
     android:id="@+id/incomingCallLayout"
     android:fitsSystemWindows="true"
-    android:background="@drawable/popup_request_background">
+    android:background="@drawable/popup_request_background"
+    >
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="10sp">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="10dp">
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -23,6 +25,7 @@
             android:fontFamily="verdana"
             android:textStyle="bold"
             android:text="Incoming call"/>
+
         <TextView
             android:layout_width="match_parent"
             android:id="@+id/incomingCallTitleTv"
@@ -31,17 +34,21 @@
             android:fontFamily="verdana"
             android:text="One of your VIU is calling you!"
             android:layout_height="match_parent"/>
-        </LinearLayout>
+    </LinearLayout>
+
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center"
-        android:layout_gravity="center">
+        android:layout_gravity="center"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp">
+
         <androidx.appcompat.widget.AppCompatButton
             android:drawableLeft="@drawable/ic_call"
-            android:paddingLeft="20sp"
-            android:paddingRight="20sp"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
             android:layout_width="150dp"
             android:drawableTint="#003807"
             android:layout_height="40dp"
@@ -49,14 +56,16 @@
             android:background="@drawable/rounded_corners_accept_button"
             android:textColor="@color/white"
             android:id="@+id/acceptButton"/>
+
         <Space
-            android:layout_width="50sp"
+            android:layout_width="50dp"
             android:layout_height="match_parent"/>
+
         <androidx.appcompat.widget.AppCompatButton
             android:drawableLeft="@drawable/ic_end_call"
-            android:paddingLeft="20sp"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
             android:drawableTint="#470711"
-            android:paddingRight="20sp"
             android:layout_width="150dp"
             android:layout_height="40dp"
             android:text="Decline"
