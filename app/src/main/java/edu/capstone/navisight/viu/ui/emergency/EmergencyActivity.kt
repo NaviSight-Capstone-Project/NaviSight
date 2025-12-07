@@ -14,6 +14,7 @@ While this activity is enabled, this does the following:
 
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.content.edit
@@ -60,7 +61,7 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
                 isVideoCall = isVideoCall,
                 isCaller = isCaller,
                 serviceRepository = serviceRepository,
-                onEndCall = {
+                onEndEmergencyMode = {
                     serviceRepository.sendEndOrAbortCall()
                     removeEmergencyModeFlag()
                     finish()
@@ -68,6 +69,16 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
                 viuDataSource = viuRemoteDataSource,
             )
         }
+
+        onBackPressedDispatcher.addCallback(this,
+            object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                Toast.makeText(
+                    applicationContext,
+                    "App is locked in Emergency Mode.",
+                    Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 
     override fun onCallEnded() {

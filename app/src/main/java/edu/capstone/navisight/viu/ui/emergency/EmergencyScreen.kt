@@ -1,7 +1,6 @@
 package edu.capstone.navisight.viu.ui.emergency
 
 import android.view.KeyEvent
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
@@ -41,7 +40,7 @@ fun EmergencyScreen(
     target: String,
     isVideoCall: Boolean,
     isCaller: Boolean,
-    onEndCall: () -> Unit,
+    onEndEmergencyMode: () -> Unit,
     serviceRepository: MainServiceRepository,
     viuDataSource: ViuDataSource
 ) {
@@ -96,10 +95,7 @@ fun EmergencyScreen(
 
             if (keySequenceStep == REQUIRED_SEQUENCE_STEPS) {
                 keySequenceStep = 0 // Reset
-                Toast.makeText(context,
-                    "EMERGENCY RESET TRIGGERED by SEQUENCE!",
-                    Toast.LENGTH_LONG).show()
-                onEndCall()
+                onEndEmergencyMode() // Stop.
 
             } else {
                 // Not finished, but advanced. Start/restart the timeout timer using Handler

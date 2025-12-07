@@ -563,16 +563,13 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             setUpCamera()
         }
 
-        // Jump to emergency mode if activated on startup
-        if (checkIfEmergencyMode()) {
-            launchEmergencyMode()
-        } else {
-            // Bind/set extra functionalities here
-            toggleScreenSaver(requireContext()) // Begin screen saving
-            bindTouchListener() // Set and start the binding. Do not remove.
-        }
-        // Use in both emergency mode and camera mode
+        // Bind/set extra functionalities here
+        toggleScreenSaver(requireContext()) // Begin screen saving
+        bindTouchListener() // Set and start the binding. Do not remove.
         observeCaregiverUid() // Set for calling using Quick Menu
+
+        // Jump to emergency mode if activated on startup
+        if (checkIfEmergencyMode()) launchEmergencyMode()
     }
 
     private fun setUpCamera() {
@@ -1133,7 +1130,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
 
     private fun launchEmergencyMode() {
         val intent = Intent(requireContext(), EmergencyActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         startActivity(intent)
     }
