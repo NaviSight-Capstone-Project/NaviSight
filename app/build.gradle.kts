@@ -65,6 +65,11 @@ android {
 
     kotlinOptions {
         jvmTarget = "11"
+
+        freeCompilerArgs += listOf(
+            "-opt-in=androidx.camera.core.ExperimentalGetImage",
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
+        )
     }
 
     packaging {
