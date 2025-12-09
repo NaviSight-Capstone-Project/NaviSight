@@ -23,6 +23,8 @@ import edu.capstone.navisight.common.Constants.SP_IS_EMERGENCY_MODE_ACTIVE
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
+import edu.capstone.navisight.viu.ViuHomeViewModel
+import edu.capstone.navisight.viu.data.remote.RealtimeDataSource
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
 
 private const val EMERGENCY_MODE_ACTIVATED_TAG = "isEmergencyModeActive"
@@ -33,6 +35,7 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
     private var isVideoCall: Boolean = false // Default to audio call first
     private var isCaller: Boolean = true
     private var viuRemoteDataSource = ViuDataSource()
+    private val viuHomeViewModel: ViuHomeViewModel? = ViuHomeViewModel.getInstance()
     private lateinit var sharedPreferences: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,7 +73,7 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
                 serviceRepository = serviceRepository,
                 onEndEmergencyMode = {
                     serviceRepository.sendEndOrAbortCall()
-                    removeEmergencyModeFlag()
+                    viuHomeViewModel?.removeUserEmergencyActivated()
                     TextToSpeechHelper.queueSpeak(
                         applicationContext,"Emergency mode deactivated")
                     finish()
@@ -94,9 +97,7 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
         finish()
     }
 
-    private fun removeEmergencyModeFlag() {
-        sharedPreferences.edit { putBoolean(SP_IS_EMERGENCY_MODE_ACTIVE, false) }
-    }
+
 
     private fun sayEmergencyModeDescription(){
         TextToSpeechHelper.speak(applicationContext,

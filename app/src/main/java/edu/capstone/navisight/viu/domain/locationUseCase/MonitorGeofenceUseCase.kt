@@ -1,14 +1,17 @@
 package edu.capstone.navisight.viu.domain.locationUseCase
 
+// Updated variables of locationRepository to realTimeRepository (9/12/2025)
+
+
 import android.location.Location
 import com.google.firebase.auth.FirebaseAuth
-import edu.capstone.navisight.viu.data.repository.LocationRepository
+import edu.capstone.navisight.viu.data.repository.RealtimeRepository
 import edu.capstone.navisight.viu.data.repository.ViuRepository
 import edu.capstone.navisight.viu.model.GeofenceEvent
 import edu.capstone.navisight.viu.model.GeofenceItem
 
 class MonitorGeofenceUseCase(
-    private val locationRepository: LocationRepository = LocationRepository(),
+    private val realTimeRepository: RealtimeRepository = RealtimeRepository(),
     private val viuRepository: ViuRepository = ViuRepository()
 ) {
     private val auth = FirebaseAuth.getInstance()
@@ -17,7 +20,7 @@ class MonitorGeofenceUseCase(
     private var cachedViuName: String? = null
 
     fun startMonitoring() {
-        locationRepository.startGeofenceListener()
+        realTimeRepository.startGeofenceListener()
     }
 
     suspend operator fun invoke(lat: Double, lon: Double) {
@@ -32,7 +35,7 @@ class MonitorGeofenceUseCase(
         }
         val finalName = cachedViuName ?: "Viu User"
 
-        val activeFences = locationRepository.getActiveGeofences()
+        val activeFences = realTimeRepository.getActiveGeofences()
 
         val activeIds = activeFences.map { it.id }.toSet()
         fenceStateMap.keys.retainAll(activeIds)
@@ -66,6 +69,6 @@ class MonitorGeofenceUseCase(
             triggerLat = lat,
             triggerLng = lon
         )
-        locationRepository.uploadGeofenceEvent(event)
+        realTimeRepository.uploadGeofenceEvent(event)
     }
 }

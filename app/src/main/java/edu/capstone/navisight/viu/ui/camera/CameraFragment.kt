@@ -31,6 +31,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.lifecycleScope
 import edu.capstone.navisight.R
 import edu.capstone.navisight.databinding.FragmentCameraBinding
 import edu.capstone.navisight.viu.detectors.ObjectDetection
@@ -40,6 +42,7 @@ import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.VibrationHelper
 import edu.capstone.navisight.common.webrtc.repository.MainRepository
 import edu.capstone.navisight.common.webrtc.service.MainService
+import edu.capstone.navisight.viu.ViuHomeViewModel
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.viu.ui.profile.ProfileViewModel
 import edu.capstone.navisight.viu.utils.BatteryStateReceiver
@@ -55,6 +58,7 @@ import edu.capstone.navisight.viu.ui.camera.managers.QuickMenuHandler
 import edu.capstone.navisight.viu.ui.camera.managers.ScreensaverHandler
 import edu.capstone.navisight.viu.ui.camera.managers.WebRTCManager
 import edu.capstone.navisight.viu.ui.ocr.DocumentReaderFragment
+import kotlinx.coroutines.launch
 
 private const val TAG = "CameraFragment"
 private const val QUICK_MENU_TAG = "QuickMenu"
@@ -63,7 +67,8 @@ private const val EMERGENCY_SYS_TAG = "EmergencySystem"
 
 // TODO: Make this fragment's camera front facing on deployment time
 
-class CameraFragment : Fragment(R.layout.fragment_camera),
+class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
+    Fragment(R.layout.fragment_camera),
     ObjectDetectorHelper.DetectorListener,  QuickMenuListener {
 
     // Init. battery receivers and related
@@ -338,7 +343,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                                         setReorderingAllowed(true)
                                         replace(
                                             R.id.fragment_container,
-                                            ProfileFragment())
+                                            ProfileFragment(realTimeViewModel))
                                         addToBackStack(null)
                                     }
                                 }
@@ -448,7 +453,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         screensaverHandler = ScreensaverHandler(this)
         cameraBindsHandler = CameraBindsHandler(this)
         webRTCManager = WebRTCManager(this)
-        emergencyManager = EmergencyManager(this, webRTCManager)
+        emergencyManager = EmergencyManager(this, webRTCManager, realTimeViewModel)
         quickMenuHandler = QuickMenuHandler(this)
 
         // Link Main Service listener and Main Repository
@@ -472,7 +477,11 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         quickMenuHandler.observeCaregiverUid() // Set for calling using Quick Menu
 
         // Jump to emergency mode if activated on startup
-        if (emergencyManager.checkIfEmergencyMode()) emergencyManager.launchEmergencyMode()
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (emergencyManager.checkIfEmergencyMode()) {
+                emergencyManager.launchEmergencyMode()
+            }
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

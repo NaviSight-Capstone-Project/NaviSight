@@ -1,18 +1,21 @@
 package edu.capstone.navisight.viu.ui.camera.managers
 
 import android.content.Intent
+import android.content.SharedPreferences
 import androidx.core.content.edit
+import androidx.lifecycle.ViewModel
 import edu.capstone.navisight.common.Constants.SP_IS_EMERGENCY_MODE_ACTIVE
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.VibrationHelper
+import edu.capstone.navisight.viu.ViuHomeViewModel
 import edu.capstone.navisight.viu.ui.camera.CameraFragment
 import edu.capstone.navisight.viu.ui.emergency.EmergencyActivity
 
 class EmergencyManager (
     private val cameraFragment: CameraFragment,
-    private val webRTCManager: WebRTCManager
+    private val webRTCManager: WebRTCManager,
+    private val realTimeViewModel : ViuHomeViewModel
 ){
-
     fun initiateEmergencyModeSequence() {
         // Todo: FIX TIMING, PERHAPS MAKE DEDICATED queueSpeakEmergency (then combine with vibration)
         VibrationHelper.vibrate(cameraFragment.context)
@@ -28,11 +31,12 @@ class EmergencyManager (
     }
 
     fun setEmergencyModeFlag() {
-        cameraFragment.sharedPreferences.edit { putBoolean(SP_IS_EMERGENCY_MODE_ACTIVE, true) }
+        realTimeViewModel.setUserEmergencyActivated()
     }
 
-    fun checkIfEmergencyMode() : Boolean{
-        return cameraFragment.sharedPreferences.getBoolean(SP_IS_EMERGENCY_MODE_ACTIVE, false)
+    suspend fun checkIfEmergencyMode(): Boolean {
+        val isEmergencyActivated = realTimeViewModel.getUserEmergencyActivated() ?: false
+        return isEmergencyActivated
     }
 
     fun launchEmergencyMode() {

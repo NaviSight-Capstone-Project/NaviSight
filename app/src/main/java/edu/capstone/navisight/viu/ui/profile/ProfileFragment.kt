@@ -36,13 +36,14 @@ import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.model.DataModel
 import edu.capstone.navisight.common.webrtc.model.DataModelType
 import edu.capstone.navisight.common.webrtc.utils.getCameraAndMicPermission
+import edu.capstone.navisight.viu.ViuHomeViewModel
 import edu.capstone.navisight.viu.ui.camera.CameraFragment
 import edu.capstone.navisight.viu.ui.ocr.DocumentReaderScreen // Added Reader Screen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-class ProfileFragment : Fragment(), MainService.Listener {
+class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragment(), MainService.Listener {
     private lateinit var mainRepository : MainRepository
     private lateinit var service: MainService
     private val viewModel: ProfileViewModel by viewModels {
@@ -113,7 +114,7 @@ class ProfileFragment : Fragment(), MainService.Listener {
                         onScanDocument = { showReader = true }, // Trigger reader view
                         onBackClick = {
                             requireActivity().supportFragmentManager.commit {
-                                replace(R.id.fragment_container, CameraFragment())
+                                replace(R.id.fragment_container, CameraFragment(realTimeViewModel))
                                 setReorderingAllowed(true)
                             }
                         }

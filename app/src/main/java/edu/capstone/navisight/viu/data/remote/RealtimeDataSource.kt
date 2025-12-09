@@ -1,5 +1,14 @@
 package edu.capstone.navisight.viu.data.remote
 
+/*
+
+RealtimeDataSource.kt
+
+Formerly ViuLocationDataSource.
+Renamed to this as it now handles MULTIPLE realtime events such as location, emergency and battery
+
+ */
+
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
@@ -14,7 +23,7 @@ import edu.capstone.navisight.viu.model.GeofenceItem
 import edu.capstone.navisight.viu.model.ViuLocation
 import kotlinx.coroutines.tasks.await
 
-class LocationDataSource {
+class RealtimeDataSource {
 
     private val db = FirebaseDatabase.getInstance().getReference("viu_location")
     private val firestore = FirebaseFirestore.getInstance()
@@ -54,6 +63,62 @@ class LocationDataSource {
         )
         try { userRef.updateChildren(updateMap).await() } catch (e: Exception) { }
     }
+
+    //////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    fun setUserEmergencyActivated() {
+        val user = auth.currentUser ?: return
+        db.child(user.uid).child("status")
+            .child("emergencyActivated").setValue(true)
+    }
+
+    fun removeUserEmergencyActivated() {
+        val user = auth.currentUser ?: return
+        db.child(user.uid).child("status")
+            .child("emergencyActivated").setValue(false)
+    }
+
+    suspend fun getUserEmergencyActivated() : Boolean? {
+        val user = auth.currentUser ?: return null
+        val ref = db.child(user.uid).child("status")
+            .child("emergencyActivated")
+        return try {
+            val snapshot: DataSnapshot = ref.get().await()
+            snapshot.getValue(Boolean::class.java)
+        } catch (e: Exception) {
+            println("Error retrieving emergency status: $e")
+            null
+        }
+    }
+
+    fun setUserLowBatteryDetected() {
+        val user = auth.currentUser ?: return
+        db.child(user.uid).child("status")
+            .child("isLowBattery").setValue(true)
+    }
+
+    fun removeUserLowBatteryDetected() {
+        val user = auth.currentUser ?: return
+        db.child(user.uid).child("status")
+            .child("isLowBattery").setValue(false)
+    }
+
+    suspend fun getUserLowBatteryDetected() : Boolean? {
+        val user = auth.currentUser ?: return null
+        val ref = db.child(user.uid).child("status")
+            .child("isLowBattery")
+        return try {
+            val snapshot: DataSnapshot = ref.get().await()
+            snapshot.getValue(Boolean::class.java)
+        } catch (e: Exception) {
+            println("Error retrieving emergency status: $e")
+            null
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////
 
     suspend fun setUserOffline() {
         val user = auth.currentUser ?: return
