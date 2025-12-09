@@ -3,92 +3,62 @@ package edu.capstone.navisight.viu.ui.camera
 import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipDescription
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.res.Configuration
-import android.graphics.Bitmap
 import android.media.MediaPlayer
-import android.media.RingtoneManager
-import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import android.util.Log
-import android.util.Size
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.AppCompatImageButton
-import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
-import androidx.lifecycle.lifecycleScope
 import edu.capstone.navisight.R
 import edu.capstone.navisight.databinding.FragmentCameraBinding
 import edu.capstone.navisight.viu.detectors.ObjectDetection
-import edu.capstone.navisight.viu.ui.call.CallActivity
 import edu.capstone.navisight.viu.ui.profile.ProfileFragment
 import edu.capstone.navisight.viu.utils.ObjectDetectorHelper
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.VibrationHelper
-import edu.capstone.navisight.common.webrtc.model.DataModel
-import edu.capstone.navisight.common.webrtc.model.DataModelType
 import edu.capstone.navisight.common.webrtc.repository.MainRepository
 import edu.capstone.navisight.common.webrtc.service.MainService
-import edu.capstone.navisight.common.webrtc.utils.getCameraAndMicPermission
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.viu.ui.profile.ProfileViewModel
-import edu.capstone.navisight.viu.utils.BatteryAlertListener
 import edu.capstone.navisight.viu.utils.BatteryStateReceiver
-import kotlinx.coroutines.flow.collectLatest
-import java.text.SimpleDateFormat
 import java.util.LinkedList
-import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.apply
-import androidx.core.content.edit
-import edu.capstone.navisight.common.Constants.SP_IS_EMERGENCY_MODE_ACTIVE
-import edu.capstone.navisight.common.Constants.SP_IS_USER_WARNED_OF_LOWBAT
-import edu.capstone.navisight.common.DeveloperTools
 import edu.capstone.navisight.viu.ui.braillenote.BrailleNoteFragment
 import edu.capstone.navisight.viu.ui.camera.managers.BatteryHandler
 import edu.capstone.navisight.viu.ui.camera.managers.CameraBindsHandler
 import edu.capstone.navisight.viu.ui.camera.managers.EmergencyManager
+import edu.capstone.navisight.viu.ui.camera.managers.QuickMenuHandler
 import edu.capstone.navisight.viu.ui.camera.managers.ScreensaverHandler
 import edu.capstone.navisight.viu.ui.camera.managers.WebRTCManager
-import edu.capstone.navisight.viu.ui.emergency.EmergencyActivity
 import edu.capstone.navisight.viu.ui.ocr.DocumentReaderFragment
-import java.lang.Thread.sleep
 
 private const val TAG = "CameraFragment"
 private const val QUICK_MENU_TAG = "QuickMenu"
 private const val SHARED_PREFERENCES_NAME = "NaviData"
-
-private var HAS_BATTERY_BEEN_DETECTED_ONCE = false
 private const val EMERGENCY_SYS_TAG = "EmergencySystem"
 
 // TODO: Make this fragment's camera front facing on deployment time
@@ -121,21 +91,12 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private lateinit var emergencyManager : EmergencyManager
     private lateinit var batteryHandler: BatteryHandler
     private lateinit var screensaverHandler : ScreensaverHandler
-    private lateinit var cameraBindsHandler : CameraBindsHandler
+    lateinit var cameraBindsHandler : CameraBindsHandler
+    private lateinit var quickMenuHandler : QuickMenuHandler
     private lateinit var webRTCManager : WebRTCManager
 
     // Init. screensaver vars
-    private var isScreensaverActive = false
-    private var currentBrightness = 0.0F // Default.
-    private val idleTimeout = 10_000L
     private val idleHandler = Handler(Looper.getMainLooper())
-    private val idleRunnable = Runnable {
-        if (!isScreensaverActive) {
-            context?.let { safeContext ->
-                screensaverHandler.toggleScreenSaver()
-            }
-        }
-    }
 
     // Init. clickCount for quadruple tap and screensaver mode
     private var clickCount = 0
@@ -167,13 +128,13 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
 
     //  Init. variables for menu activation (long press)
     private val viuDataSource: ViuDataSource by lazy { ViuDataSource.getInstance() }
-    private val profileViewModel: ProfileViewModel by activityViewModels {
+    val profileViewModel: ProfileViewModel by activityViewModels {
         ProfileViewModel.provideFactory(
             remoteDataSource = viuDataSource
         )
     }
     var caregiverUid: String? = null
-    private var quickMenuFragment: QuickMenuFragment? = null
+    var quickMenuFragment: QuickMenuFragment? = null
     private val longPressDuration = 3_000L
     private val longPressHandler = Handler(Looper.getMainLooper())
     private var initialDownX: Float = 0f
@@ -181,7 +142,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private val longPressRunnable = Runnable {
         context?.let { safeContext ->
             // Show the drag fragment (the drop targets)
-            showQuickMenuFragment()
+            quickMenuHandler.showQuickMenuFragment()
 
             fragmentCameraBinding?.quickMenuContainer?.visibility = View.VISIBLE
 
@@ -248,19 +209,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     // END OF INITIALIZATIONS
     //////////////////////////////////////////////////
 
-    private fun showQuickMenuFragment() {
-        if (quickMenuFragment == null) {
-            quickMenuFragment = QuickMenuFragment().also { fragment ->
-                // Use childFragmentManager to overlay the fragment
-                childFragmentManager.commit {
-                    setReorderingAllowed(true)
-                    // Target the new container ID inside the CameraFragment's view
-                    replace( R.id.quick_menu_container, fragment, "QuickMenu")
-                }
-            }
-        }
-    }
-
     override fun onQuickMenuAction(actionId: Int) {
         when(actionId) {
             R.id.ball_video_call -> {
@@ -272,11 +220,11 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                 Log.d(QUICK_MENU_TAG, "Executed: Audio Calling Primary Caregiver")
             }
             R.id.ball_snap -> {
-                takePicture() // Take a picture
+                quickMenuHandler.takePicture() // Take a picture
                 Log.d(QUICK_MENU_TAG, "Executed: Quick Action #1")
             }
             R.id.ball_flip_camera -> {
-                switchCamera()
+                quickMenuHandler.switchCamera()
                 Log.d(QUICK_MENU_TAG, "Executed: Switch Camera")
             }
             R.id.ball_ocr -> {
@@ -315,65 +263,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         bindTouchListener()
         Log.d(TAG, "Quick Menu Drag ended and fragment removed.")
     }
-
-    private fun observeCaregiverUid() {
-        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
-            profileViewModel.caregiverUid.collectLatest { uid ->
-                // This will automatically update the local variable
-                // whenever the ViewModel's StateFlow changes.
-                caregiverUid = uid
-                Log.d(TAG, "Caregiver UID updated in CameraFragment: $uid")
-            }
-        }
-    }
-
-    private fun takePicture() {
-        val imageCapture = imageCapture ?: run {
-            Log.e(TAG, "ImageCapture use case not bound.")
-            TextToSpeechHelper.speak(requireContext(), "Photo capture failed. Camera is not ready.")
-            return
-        }
-
-        // Create the output file options using MediaStore (Modern Android best practice)
-        val name = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(System.currentTimeMillis())
-        val contentValues = ContentValues().apply {
-            put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, name)
-            put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            put(
-                android.provider.MediaStore.Images.Media.RELATIVE_PATH,
-                Environment.DIRECTORY_PICTURES + "/NaviSight")
-        }
-
-        val outputOptions = ImageCapture.OutputFileOptions
-            .Builder(requireContext().contentResolver,
-                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                contentValues)
-            .build()
-
-        // Set up image capture listener
-        imageCapture.takePicture(
-            outputOptions,
-            ContextCompat.getMainExecutor(requireContext()),
-            object : ImageCapture.OnImageSavedCallback {
-                override fun onError(exc: ImageCaptureException) {
-                    Log.e(QUICK_MENU_TAG, "Photo capture failed: ${exc.message}", exc)
-                    TextToSpeechHelper.speak(requireContext(), "Photo capture failed.")
-                    Toast.makeText(requireContext(), "Photo capture failed.", Toast.LENGTH_SHORT).show()
-                }
-
-                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    val msg = "Photo capture successful. Saved to Gallery."
-                    Log.d(QUICK_MENU_TAG, msg)
-                    TextToSpeechHelper.speak(requireContext(), msg)
-                    VibrationHelper.vibrate(requireContext())
-                }
-            }
-        )
-    }
-
-    ////////////////////////////////////////////////////
-    // END OF QUICK MENU
-    ////////////////////////////////////////////////////
 
 
     // Adjust binds here
@@ -578,6 +467,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
 
         cameraBindsHandler = CameraBindsHandler(this)
         webRTCManager = WebRTCManager(this)
+        quickMenuHandler = QuickMenuHandler(this)
 
         // Link Main Service listener and Main Repository
         webRTCManager.connectMainServiceListener()
@@ -597,13 +487,11 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         // Bind/set extra functionalities here
         screensaverHandler.toggleScreenSaver() // Begin screen saving
         bindTouchListener() // Set and start the binding. Do not remove.
-        observeCaregiverUid() // Set for calling using Quick Menu
+        quickMenuHandler.observeCaregiverUid() // Set for calling using Quick Menu
 
         // Jump to emergency mode if activated on startup
         if (emergencyManager.checkIfEmergencyMode()) emergencyManager.launchEmergencyMode()
     }
-
-
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
@@ -636,29 +524,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     override fun onDestroy() {
         super.onDestroy()
         webRTCManager.releaseMediaPlayer() // Set to release media player
-    }
-
-    fun switchCamera() {
-        if (cameraProvider == null) {
-            Log.e(TAG, "Cannot switch camera: CameraProvider is null.")
-            return
-        }
-
-        // Toggle the camera facing state
-        currentCameraFacing = if (currentCameraFacing == CameraSelector.LENS_FACING_BACK) {
-            CameraSelector.LENS_FACING_FRONT
-        } else {
-            CameraSelector.LENS_FACING_BACK
-        }
-
-        // Announce the switch via TTS
-        context?.let { safeContext ->
-            val cameraName = if (currentCameraFacing == CameraSelector.LENS_FACING_FRONT) "Front" else "Back"
-            TextToSpeechHelper.speak(safeContext, "$cameraName camera activated")
-        }
-
-        // Rebind the camera use cases with the new selector
-        cameraBindsHandler.bindCameraUseCases()
     }
 
     /////////////////////////////////////////////////////////
