@@ -76,8 +76,10 @@ import edu.capstone.navisight.common.Constants.SP_IS_USER_WARNED_OF_LOWBAT
 import edu.capstone.navisight.common.DeveloperTools
 import edu.capstone.navisight.viu.ui.braillenote.BrailleNoteFragment
 import edu.capstone.navisight.viu.ui.camera.managers.BatteryHandler
+import edu.capstone.navisight.viu.ui.camera.managers.CameraBindsHandler
 import edu.capstone.navisight.viu.ui.camera.managers.EmergencyManager
 import edu.capstone.navisight.viu.ui.camera.managers.ScreensaverHandler
+import edu.capstone.navisight.viu.ui.camera.managers.WebRTCManager
 import edu.capstone.navisight.viu.ui.emergency.EmergencyActivity
 import edu.capstone.navisight.viu.ui.ocr.DocumentReaderFragment
 import java.lang.Thread.sleep
@@ -92,7 +94,7 @@ private const val EMERGENCY_SYS_TAG = "EmergencySystem"
 // TODO: Make this fragment's camera front facing on deployment time
 
 class CameraFragment : Fragment(R.layout.fragment_camera),
-    ObjectDetectorHelper.DetectorListener, MainService.Listener, QuickMenuListener {
+    ObjectDetectorHelper.DetectorListener,  QuickMenuListener {
 
     // Init. battery receivers and related
     private lateinit var sharedPreferences: SharedPreferences // TODO: Probably remove this na
@@ -100,27 +102,27 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private var batteryAlert: AlertDialog? = null
 
     // Init. WebRTC and pop-up call and quick menu action vars
-    private lateinit var service: MainService
-    private var callRequestDialog: AlertDialog? = null
-    private lateinit var mainRepository : MainRepository
+    lateinit var service: MainService
+    lateinit var mainRepository : MainRepository
 
     // Init. camera system vars
-    private var imageCapture: ImageCapture? = null
-    private var camera: Camera? = null
+    var imageCapture: ImageCapture? = null
+    var camera: Camera? = null
     private var _fragmentCameraBinding: FragmentCameraBinding? = null
-    private var currentCameraFacing: Int = CameraSelector.LENS_FACING_BACK // Default to back camera
-    private val fragmentCameraBinding get() = _fragmentCameraBinding
-    private val cameraReleaseHandler = Handler(Looper.getMainLooper())
-    private lateinit var cameraExecutor: ExecutorService
-    private lateinit var objectDetectorHelper: ObjectDetectorHelper
-    private lateinit var bitmapBuffer: Bitmap
-    private var preview: Preview? = null
-    private var imageAnalyzer: ImageAnalysis? = null
-    private var cameraProvider: ProcessCameraProvider? = null
+    var currentCameraFacing: Int = CameraSelector.LENS_FACING_BACK // Default to back camera
+    val fragmentCameraBinding get() = _fragmentCameraBinding
+    val cameraReleaseHandler = Handler(Looper.getMainLooper())
+    lateinit var cameraExecutor: ExecutorService
+    lateinit var objectDetectorHelper: ObjectDetectorHelper
+    var preview: Preview? = null
+    var imageAnalyzer: ImageAnalysis? = null
+    var cameraProvider: ProcessCameraProvider? = null
 
     private lateinit var emergencyManager : EmergencyManager
     private lateinit var batteryHandler: BatteryHandler
     private lateinit var screensaverHandler : ScreensaverHandler
+    private lateinit var cameraBindsHandler : CameraBindsHandler
+    private lateinit var webRTCManager : WebRTCManager
 
     // Init. screensaver vars
     private var isScreensaverActive = false
@@ -170,7 +172,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             remoteDataSource = viuDataSource
         )
     }
-    private var caregiverUid: String? = null
+    var caregiverUid: String? = null
     private var quickMenuFragment: QuickMenuFragment? = null
     private val longPressDuration = 3_000L
     private val longPressHandler = Handler(Looper.getMainLooper())
@@ -221,10 +223,10 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     }
 
     // For ringtone
-    private var incomingMediaPlayer: MediaPlayer? = null
+    var incomingMediaPlayer: MediaPlayer? = null
 
     // Prepare activity for re-instantiation after WebRTC
-    private val callActivityLauncher = registerForActivityResult(
+    val callActivityLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         // Execute these when CallActivity finishes
@@ -232,12 +234,12 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             // Check for a specific result code if needed, but RESULT_OK is usually enough
             Log.d(TAG, "CallActivity finished. Re-binding camera use cases.")
             // Reinitialize camera
-            setUpCamera()
+            cameraBindsHandler.setUpCamera()
             screensaverHandler.doAutoScreensaver() // Re-start the screensaver timer
         } else {
             Log.d(TAG, "CallActivity finished with result code ${result.resultCode}. Re-binding camera use cases anyway.")
             // Even on failure/cancellation, the camera needs to be restored
-            setUpCamera()
+            cameraBindsHandler.setUpCamera()
             screensaverHandler.doAutoScreensaver()
         }
     }
@@ -262,11 +264,11 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     override fun onQuickMenuAction(actionId: Int) {
         when(actionId) {
             R.id.ball_video_call -> {
-                handleStartCall(isVideoCall=true) // Start video call
+                webRTCManager.handleStartCall(isVideoCall=true) // Start video call
                 Log.d(QUICK_MENU_TAG, "Executed: Video Calling Primary Caregiver")
             }
             R.id.ball_audio_call -> {
-                handleStartCall(isVideoCall=false) // Start audio call
+                webRTCManager.handleStartCall(isVideoCall=false) // Start audio call
                 Log.d(QUICK_MENU_TAG, "Executed: Audio Calling Primary Caregiver")
             }
             R.id.ball_snap -> {
@@ -503,12 +505,10 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         context?.unregisterReceiver(batteryReceiver) // Release battery receiver
         Log.d("battery", "finished adding battery intents")
 
-        releaseCamera()
+        webRTCManager.releaseCamera()
         // Unregister the listener to prevent the call dialog from showing up
-        if (MainService.listener == this) {
-            MainService.listener = null
-        }
-        releaseMediaPlayer()
+        webRTCManager.disconnectMainServiceListener()
+        webRTCManager.releaseMediaPlayer()
     }
 
     //  Rebind camera once either:
@@ -516,11 +516,11 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     override fun onResume() {
         super.onResume()
         // Re-register as the active listener for incoming calls
-        MainService.listener = this
+        webRTCManager.connectMainServiceListener()
         // TODO: Check if camera is already permitted (very unlikely, as this app should be running na, last TODO)
         context?.let {
             fragmentCameraBinding?.viewFinder?.post {
-                setUpCamera()
+                cameraBindsHandler.setUpCamera()
             }
         }
         batteryReceiver = batteryHandler.getBatteryReceiver()
@@ -539,9 +539,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         _fragmentCameraBinding = null
         super.onDestroyView()
         cameraExecutor.shutdown()
-        if (MainService.listener == this) {
-            MainService.listener = null
-        }
+        webRTCManager.disconnectMainServiceListener()
     }
 
     @SuppressLint("MissingPermission", "ClickableViewAccessibility")
@@ -560,7 +558,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         emergencyManager = EmergencyManager(
             context = requireContext(),
             sharedPreferences = sharedPreferences,
-            releaseCamera = ::releaseCamera, // Pass the reference to the Fragment's private function
+            releaseCamera = { webRTCManager.releaseCamera() }, // Pass the reference to the Fragment's private function
             isAdded = isAdded,
             didEmergencySequenceComplete = false
         )
@@ -578,8 +576,11 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             fragmentCameraBinding = fragmentCameraBinding
         )
 
+        cameraBindsHandler = CameraBindsHandler(this)
+        webRTCManager = WebRTCManager(this)
+
         // Link Main Service listener and Main Repository
-        MainService.listener = this
+        webRTCManager.connectMainServiceListener()
         service = MainService.getInstance()
         mainRepository = MainRepository.getInstance(requireContext())
 
@@ -590,7 +591,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         )
         cameraExecutor = Executors.newSingleThreadExecutor()
         fragmentCameraBinding?.viewFinder?.post {
-            setUpCamera()
+            cameraBindsHandler.setUpCamera()
         }
 
         // Bind/set extra functionalities here
@@ -602,99 +603,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         if (emergencyManager.checkIfEmergencyMode()) emergencyManager.launchEmergencyMode()
     }
 
-    private fun setUpCamera() {
-        val safeContext = context ?: run {
-            Log.w(TAG, "setUpCamera: Context is null. Aborting.")
-            return
-        }
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(safeContext) // Use safeContext
-        cameraProviderFuture.addListener(
-            {
 
-                if (!isAdded) {
-                    Log.w(TAG, "CameraProvider future resolved after fragment detachment. Aborting bind.")
-                    return@addListener
-                }
-
-                cameraProvider = cameraProviderFuture.get()
-                bindCameraUseCases()
-            },
-            ContextCompat.getMainExecutor(safeContext) // Use safeContext here too
-        )
-    }
-
-    @SuppressLint("UnsafeOptInUsageError")
-    private fun bindCameraUseCases() {
-        val binding = fragmentCameraBinding
-        if (context == null || binding == null) {
-            Log.w(TAG, "bindCameraUseCases: Context or View Binding is null. Aborting.")
-            return
-        }
-        val cameraProvider =
-            cameraProvider ?: throw kotlin.IllegalStateException("Camera initialization failed.")
-
-        val cameraSelector =
-            CameraSelector.Builder().requireLensFacing(currentCameraFacing).build()
-
-        preview =
-            Preview.Builder()
-                .setTargetAspectRatio(AspectRatio.RATIO_4_3)
-                .setTargetRotation(fragmentCameraBinding?.viewFinder?.display?.rotation ?: Surface.ROTATION_0)
-                .build()
-
-        imageCapture = ImageCapture.Builder()
-            .setTargetAspectRatio(AspectRatio.RATIO_4_3)
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-            .setTargetRotation(fragmentCameraBinding?.viewFinder?.display?.rotation ?: Surface.ROTATION_0)
-            .build()
-
-        imageAnalyzer =
-            ImageAnalysis.Builder()
-                .setTargetResolution(Size(640, 640))
-                .setTargetRotation(fragmentCameraBinding?.viewFinder?.display?.rotation ?: Surface.ROTATION_0)
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
-                .build()
-                .also {
-                    it.setAnalyzer(cameraExecutor) { image ->
-                        if (!::bitmapBuffer.isInitialized) {
-                            bitmapBuffer = Bitmap.createBitmap(
-                                image.width,
-                                image.height,
-                                Bitmap.Config.ARGB_8888
-                            )
-                        }
-                        detectObjects(image)
-                    }
-                }
-
-        cameraProvider.unbindAll()
-
-        try {
-            camera = cameraProvider.bindToLifecycle(this, cameraSelector,
-                preview, imageAnalyzer, imageCapture)
-            preview?.setSurfaceProvider(fragmentCameraBinding?.viewFinder?.surfaceProvider)
-        } catch (exc: Exception) {
-            Log.e(TAG, "Use case binding failed", exc)
-            Toast.makeText(
-                requireContext(),
-                "Error: Cannot switch camera. Device may lack the selected camera.",
-                Toast.LENGTH_LONG).show()
-        }
-    }
-
-    private fun detectObjects(image: ImageProxy) {
-        val plane = image.planes[0].buffer
-        if (plane.remaining() >= bitmapBuffer.byteCount) {
-            image.use {
-                bitmapBuffer.copyPixelsFromBuffer(plane)
-            }
-            val imageRotation = image.imageInfo.rotationDegrees
-            objectDetectorHelper.detect(bitmapBuffer, imageRotation)
-        } else {
-            image.close()
-        }
-    }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
@@ -726,7 +635,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
 
     override fun onDestroy() {
         super.onDestroy()
-        releaseMediaPlayer() // Set to release media player
+        webRTCManager.releaseMediaPlayer() // Set to release media player
     }
 
     fun switchCamera() {
@@ -749,230 +658,10 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         }
 
         // Rebind the camera use cases with the new selector
-        bindCameraUseCases()
+        cameraBindsHandler.bindCameraUseCases()
     }
 
     /////////////////////////////////////////////////////////
     // END OF MAIN APP FLOW AND CAMERA SYSTEM
     /////////////////////////////////////////////////////////
-
-    private fun handleStartCall(isVideoCall: Boolean) {
-        val targetUid = caregiverUid // Get the UID from the observed StateFlow
-
-        if (targetUid.isNullOrEmpty()) {
-            Toast.makeText(requireContext(), "Caregiver not found. Cannot start call.", Toast.LENGTH_LONG).show()
-            Log.e("CallSignal", "Caregiver UID is null or empty.")
-            return
-        }
-
-        (requireActivity() as AppCompatActivity).getCameraAndMicPermission {
-            mainRepository.sendConnectionRequest(targetUid, isVideoCall) { success ->
-                if (success) {
-                    service.startCallTimeoutTimer()
-                    val intent = Intent(requireActivity(), CallActivity::class.java).apply {
-                        putExtra("target", targetUid)
-                        putExtra("isVideoCall", isVideoCall)
-                        putExtra("isCaller", true)
-                    }
-                    callActivityLauncher.launch(intent)
-                } else {
-                    Log.e("CallSignal", "Failed to send call request.")
-                    Toast.makeText(requireContext(), "Failed to send call request.", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-    }
-
-    override fun onCallReceived(model: DataModel) {
-        // Ensure switch to the Main thread to handle UI
-        activity?.runOnUiThread {
-            beginCall(model)
-        }
-    }
-
-    override fun onCallAborted() {
-        activity?.runOnUiThread {
-            Log.d("abortcall", "onCallAborted launching")
-
-            // Check if the dialog is currently showing and dismiss it
-            if (callRequestDialog?.isShowing == true) {
-                callRequestDialog?.dismiss()
-
-                // Show a toast message to the user
-                Toast.makeText(
-                    context,
-                    "Caregiver aborted their call.",
-                    Toast.LENGTH_LONG
-                ).show()
-
-                // Stop the ringing
-                releaseMediaPlayer()
-                Log.d(TAG, "Incoming call aborted, dialog dismissed and ringing stopped.")
-            } else {
-                Log.d(TAG, "Call aborted, but no dialog was active.")
-            }
-        }
-    }
-
-    override fun onCallMissed(senderId: String) {
-        activity?.runOnUiThread {
-            // Check if the dialog is currently showing and dismiss it
-            if (callRequestDialog?.isShowing == true) {
-                callRequestDialog?.dismiss()
-
-                // Show a toast message to the user
-                Toast.makeText(
-                    context,
-                    "You've missed your caregiver's call!",
-                    Toast.LENGTH_LONG
-                ).show()
-
-                // Stop the ringing
-                releaseMediaPlayer()
-                Log.d(TAG, "Incoming call missed, dialog dismissed and ringing stopped.")
-            } else {
-                Log.d(TAG, "Call missed, but no dialog was active.")
-            }
-        }
-    }
-
-
-    fun beginCall(model: DataModel) {
-        Log.d(TAG, "DETECTED AN INCOMING CALL: ${model.sender}")
-
-        val isVideoCall = model.type == DataModelType.StartVideoCall
-        val callMessage = "Your caregiver is requesting a call. Accept?"
-
-        // Non-repeating
-        if (callRequestDialog?.isShowing == true) {
-            Log.w(TAG, "Call received but dialog is already visible. Ignoring.")
-            return
-        }
-
-        try {
-            // For ringtone
-            incomingMediaPlayer?.stop()
-            incomingMediaPlayer?.release()
-            incomingMediaPlayer = null
-            val notificationUri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-            incomingMediaPlayer = MediaPlayer.create(requireActivity().applicationContext, notificationUri)?.apply {
-                isLooping = true
-                start()
-            }
-
-
-            // Inflate the custom layout
-            val inflater = requireActivity().layoutInflater
-            val customLayout = inflater.inflate(R.layout.popup_call_request, null)
-
-            // Find and set the dynamic content on the custom views
-            val messageTitle = customLayout.findViewById<TextView>(R.id.messageTitle)
-            val btnAccept = customLayout.findViewById<AppCompatImageButton>(R.id.btnAccept)
-            val btnDecline = customLayout.findViewById<AppCompatImageButton>(R.id.btnDecline)
-            messageTitle.text = if (isVideoCall) "Incoming Video Call" else "Incoming Audio Call"
-
-            // Create the custom AlertDialog, injecting the view
-            callRequestDialog = AlertDialog.Builder(requireActivity())
-                .setView(customLayout)
-                .setCancelable(false) // Force user to choose
-                .create()
-
-            callRequestDialog?.window?.setBackgroundDrawableResource(R.drawable.bg_popup_rounded)
-
-            // Stop and release when the dialog is dismissed for any reason
-            callRequestDialog?.setOnDismissListener { // Use safe call
-                releaseMediaPlayer()
-                callRequestDialog = null // Clear the reference when dismissed
-            }
-
-
-            // Set up the ACCEPT button click listener
-            btnAccept.setOnClickListener {
-                releaseMediaPlayer() // Stop ringtone upon user action
-
-                // Stop timer on end/miss call timeout
-                service.stopCallTimeoutTimer()
-
-                Log.w(TAG, "Getting reference for CallActivity...")
-                val activity = requireActivity() as? AppCompatActivity
-                Log.w(TAG, "Reference for CallActivity retrieved.")
-
-                Log.w(TAG, "Requesting permissions for camera and mic...")
-                (requireActivity() as AppCompatActivity).getCameraAndMicPermission {
-                    // This code runs AFTER permissions are granted.
-                    Log.w(TAG, "Mic and Camera permissions retrieved. Proceeding to starting activity.")
-                    Log.w(TAG, "Mic and Camera permissions retrieved. Releasing camera...")
-                    releaseCamera {
-                        // Launch CallActivity using the launcher instead of startActivity
-                        val intent = Intent(requireActivity(), CallActivity::class.java).apply {
-                            putExtra("target", model.sender)
-                            putExtra("isVideoCall", isVideoCall)
-                            putExtra("isCaller", false)
-                            putExtra("sender_id", model.sender)
-                        }
-                        callActivityLauncher.launch(intent) // <--- IMPORTANT CHANGE HERE
-                        Log.w(TAG, "Call activity started via launcher.")
-                    }
-                } ?: run {
-                    // Handle the case where the Activity is not an AppCompatActivity (shouldn't happen)
-                    Log.e(TAG, "Failed requesting camera and mic permissions for CallActivity.")
-                    Toast.makeText(context, "Cannot request permissions. Activity is missing.", Toast.LENGTH_LONG).show()
-                }
-
-                callRequestDialog?.dismiss()
-            }
-
-            // Set DECLINE button click listener
-            btnDecline.setOnClickListener {
-                releaseMediaPlayer() // Stop ringtone upon user action
-                callRequestDialog?.dismiss()
-                Log.d(TAG, "Call declined by user.")
-                MainService.getMainRepository()?.sendDeniedCall(model.sender)
-            }
-
-            // Show the custom dialog
-            callRequestDialog?.show()
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to show custom AlertDialog or play ringtone. Error: ${e.message}")
-            Toast.makeText(context, "Error showing call prompt.", Toast.LENGTH_LONG).show()
-            releaseMediaPlayer() // Cleanup even if an error occurs
-        }
-    }
-
-
-    // Release media player if needed
-    private fun releaseMediaPlayer() {
-        incomingMediaPlayer?.stop()
-        incomingMediaPlayer?.release()
-        incomingMediaPlayer = null
-    }
-
-    private fun releaseCamera(onReleased: (() -> Unit)? = null) {
-        try {
-            cameraProvider?.unbindAll()
-            camera = null
-            preview = null
-            imageAnalyzer = null
-            Log.d(TAG, "Camera released successfully.")
-
-            // Wait a bit for CameraX to release hardware resources
-            cameraReleaseHandler.postDelayed({
-                Log.d(TAG, "Camera release delay complete. Proceeding.")
-                if (isAdded) {
-                    onReleased?.invoke()
-                } else {
-                    Log.w(TAG, "Fragment detached before camera release callback completed. Aborting onReleased.")
-                }
-            }, 500) // 0.5 second delay (tweakable)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error releasing camera: ${e.message}", e)
-            onReleased?.invoke()
-        }
-    }
-
-
-    //////////////////////////////////////////////////
-    //  END OF WEBRTC AND POP-UP CALLING
-    //////////////////////////////////////////////////
 }
