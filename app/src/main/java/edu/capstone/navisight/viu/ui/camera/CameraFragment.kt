@@ -75,6 +75,9 @@ import edu.capstone.navisight.common.Constants.SP_IS_EMERGENCY_MODE_ACTIVE
 import edu.capstone.navisight.common.Constants.SP_IS_USER_WARNED_OF_LOWBAT
 import edu.capstone.navisight.common.DeveloperTools
 import edu.capstone.navisight.viu.ui.braillenote.BrailleNoteFragment
+import edu.capstone.navisight.viu.ui.camera.managers.BatteryHandler
+import edu.capstone.navisight.viu.ui.camera.managers.EmergencyManager
+import edu.capstone.navisight.viu.ui.camera.managers.ScreensaverHandler
 import edu.capstone.navisight.viu.ui.emergency.EmergencyActivity
 import edu.capstone.navisight.viu.ui.ocr.DocumentReaderFragment
 import java.lang.Thread.sleep
@@ -89,8 +92,7 @@ private const val EMERGENCY_SYS_TAG = "EmergencySystem"
 // TODO: Make this fragment's camera front facing on deployment time
 
 class CameraFragment : Fragment(R.layout.fragment_camera),
-    ObjectDetectorHelper.DetectorListener, MainService.Listener, QuickMenuListener,
-    BatteryAlertListener {
+    ObjectDetectorHelper.DetectorListener, MainService.Listener, QuickMenuListener {
 
     // Init. battery receivers and related
     private lateinit var sharedPreferences: SharedPreferences // TODO: Probably remove this na
@@ -116,6 +118,10 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private var imageAnalyzer: ImageAnalysis? = null
     private var cameraProvider: ProcessCameraProvider? = null
 
+    private lateinit var emergencyManager : EmergencyManager
+    private lateinit var batteryHandler: BatteryHandler
+    private lateinit var screensaverHandler : ScreensaverHandler
+
     // Init. screensaver vars
     private var isScreensaverActive = false
     private var currentBrightness = 0.0F // Default.
@@ -124,7 +130,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private val idleRunnable = Runnable {
         if (!isScreensaverActive) {
             context?.let { safeContext ->
-                toggleScreenSaver(safeContext)
+                screensaverHandler.toggleScreenSaver()
             }
         }
     }
@@ -151,7 +157,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private var isVolumeKeyPressed: Boolean = false
     private val emergencyHoldRunnable = Runnable {
         if (isAdded) {
-            initiateEmergencyModeSequence() // Trigger
+            emergencyManager.initiateEmergencyModeSequence() // Trigger
         }
         isVolumeKeyPressed = false // Safety reset
         volumeKeyResetHandler.removeCallbacks(volumeKeyResetRunnable) // Stop any pending reset
@@ -227,12 +233,12 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             Log.d(TAG, "CallActivity finished. Re-binding camera use cases.")
             // Reinitialize camera
             setUpCamera()
-            doAutoScreensaver() // Re-start the screensaver timer
+            screensaverHandler.doAutoScreensaver() // Re-start the screensaver timer
         } else {
             Log.d(TAG, "CallActivity finished with result code ${result.resultCode}. Re-binding camera use cases anyway.")
             // Even on failure/cancellation, the camera needs to be restored
             setUpCamera()
-            doAutoScreensaver()
+            screensaverHandler.doAutoScreensaver()
         }
     }
 
@@ -241,7 +247,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     //////////////////////////////////////////////////
 
     private fun showQuickMenuFragment() {
-         if (quickMenuFragment == null) {
+        if (quickMenuFragment == null) {
             quickMenuFragment = QuickMenuFragment().also { fragment ->
                 // Use childFragmentManager to overlay the fragment
                 childFragmentManager.commit {
@@ -400,8 +406,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         }
 
         fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
-            doAutoScreensaver()
-            doAutoScreensaver() // Start screensaver by default
+            screensaverHandler.doAutoScreensaver() // Start screensaver by default
             val action = event.actionMasked
 
             when (action) {
@@ -451,7 +456,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                         clickCount = 0
                     }
                     if (clickCount >= 3 && clickCount < 4) {
-                        context?.let { safeContext -> toggleScreenSaver(safeContext) }
+                        context?.let { safeContext -> screensaverHandler.toggleScreenSaver() }
                     }
                     if (clickCount > 0 && clickCount < 4) {
                         quadrupleTapHandler.postDelayed(
@@ -518,7 +523,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
                 setUpCamera()
             }
         }
-        batteryReceiver = BatteryStateReceiver(this)
+        batteryReceiver = batteryHandler.getBatteryReceiver()
         val intentFilter = IntentFilter().apply {
             addAction(Intent.ACTION_BATTERY_LOW)
             addAction(Intent.ACTION_BATTERY_OKAY)
@@ -527,7 +532,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         Log.d("battery", "finished adding battery intents")
 
         // Check initially for battery here
-        checkInitialBatteryStatus()
+        batteryHandler.checkInitialBatteryStatus()
     }
 
     override fun onDestroyView() {
@@ -548,13 +553,37 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
             SHARED_PREFERENCES_NAME,
             Context.MODE_PRIVATE)
 
+        // Bind to make WebRTC and screensaver work_fragmentCameraBinding = FragmentCameraBinding.bind(view
+        _fragmentCameraBinding = FragmentCameraBinding.bind(view)
+
+        // Init. managers and handlers.
+        emergencyManager = EmergencyManager(
+            context = requireContext(),
+            sharedPreferences = sharedPreferences,
+            releaseCamera = ::releaseCamera, // Pass the reference to the Fragment's private function
+            isAdded = isAdded,
+            didEmergencySequenceComplete = false
+        )
+
+        batteryHandler = BatteryHandler(
+            sharedPreferences=sharedPreferences,
+            context=requireContext(),
+            activity=requireActivity(),
+            isAdded=isAdded
+        )
+
+        screensaverHandler = ScreensaverHandler(
+            context=requireContext(),
+            activity = requireActivity(),
+            fragmentCameraBinding = fragmentCameraBinding
+        )
+
         // Link Main Service listener and Main Repository
         MainService.listener = this
         service = MainService.getInstance()
         mainRepository = MainRepository.getInstance(requireContext())
 
         // Start camera bind with object detector
-        _fragmentCameraBinding = FragmentCameraBinding.bind(view)
         objectDetectorHelper = ObjectDetectorHelper(
             context = requireContext(),
             objectDetectorListener = this
@@ -565,12 +594,12 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         }
 
         // Bind/set extra functionalities here
-        toggleScreenSaver(requireContext()) // Begin screen saving
+        screensaverHandler.toggleScreenSaver() // Begin screen saving
         bindTouchListener() // Set and start the binding. Do not remove.
         observeCaregiverUid() // Set for calling using Quick Menu
 
         // Jump to emergency mode if activated on startup
-        if (checkIfEmergencyMode()) launchEmergencyMode()
+        if (emergencyManager.checkIfEmergencyMode()) emergencyManager.launchEmergencyMode()
     }
 
     private fun setUpCamera() {
@@ -726,47 +755,6 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     /////////////////////////////////////////////////////////
     // END OF MAIN APP FLOW AND CAMERA SYSTEM
     /////////////////////////////////////////////////////////
-
-    private fun doAutoScreensaver() {
-        idleHandler.removeCallbacks(idleRunnable)
-        idleHandler.postDelayed(idleRunnable, idleTimeout)
-    }
-
-    private fun toggleScreenSaver(context: Context) {
-        fragmentCameraBinding?.let { binding ->
-            if (!isScreensaverActive) {
-                isScreensaverActive = true
-                currentBrightness = Settings.System.getInt(
-                    context.contentResolver, Settings.System.SCREEN_BRIGHTNESS
-                ) / 255f
-                binding.screensaverEye.setVisibility(View.VISIBLE)
-                changeScreenBrightness(0.0F)
-                binding.previewModeOverlay.setBackgroundColor(resources.getColor(R.color.screensaver_color))
-                binding.tooltipTitle.setText(R.string.screensaver_mode_tooltip_title)
-                binding.tooltipDescription1.setText(R.string.screensaver_mode_tooltip_1)
-                binding.tooltipDescription2.setText(R.string.screensaver_mode_tooltip_2)
-            } else {
-                isScreensaverActive = false
-                binding.screensaverEye.setVisibility(View.INVISIBLE)
-                changeScreenBrightness(currentBrightness)
-                binding.previewModeOverlay.setBackgroundColor(0)
-                binding.tooltipTitle.setText(R.string.preview_mode_tooltip_title)
-                binding.tooltipDescription1.setText(R.string.preview_mode_tooltip_1)
-                binding.tooltipDescription2.setText(R.string.preview_mode_tooltip_2)
-            }
-        }
-    }
-
-    fun changeScreenBrightness(screenBrightnessValue: Float) {
-        val window = requireActivity().window
-        val layoutParams = window.attributes
-        layoutParams.screenBrightness = screenBrightnessValue
-        window.attributes = layoutParams
-    }
-
-    ///////////////////////////////////////////////////
-    //  END OF SCREEN SAVER FLOW
-    //////////////////////////////////////////////////
 
     private fun handleStartCall(isVideoCall: Boolean) {
         val targetUid = caregiverUid // Get the UID from the observed StateFlow
@@ -987,150 +975,4 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     //////////////////////////////////////////////////
     //  END OF WEBRTC AND POP-UP CALLING
     //////////////////////////////////////////////////
-
-    override fun onBatteryLow() {
-        if (sharedPreferences.getBoolean(
-                SP_IS_USER_WARNED_OF_LOWBAT,
-                false) || !HAS_BATTERY_BEEN_DETECTED_ONCE) {
-            activity?.runOnUiThread {
-                showLowBatteryAlert()
-                saveBatteryWarnFlag()
-                HAS_BATTERY_BEEN_DETECTED_ONCE = true
-            }
-        }
-    }
-
-    override fun onBatteryOkay() {
-        activity?.runOnUiThread {
-            if (batteryAlert?.isShowing == true) {
-                batteryAlert?.dismiss()
-                batteryAlert = null
-                removeBatteryWarnFlag()
-            }
-        }
-    }
-
-    private fun showLowBatteryAlert() {
-        if (batteryAlert?.isShowing == true || !isAdded) {
-            Log.w(TAG, "Battery alert already visible or fragment is not added. Ignoring.")
-            return
-        }
-
-        TextToSpeechHelper.speak(requireContext(), "Warning! Battery is low. Please charge your device.")
-
-        try {
-            val inflater = requireActivity().layoutInflater
-            val customLayout = inflater.inflate(R.layout.dialog_battery_alert, null)
-            val btnAccept = customLayout.findViewById<Button>(R.id.ok)
-            batteryAlert = AlertDialog.Builder(requireActivity())
-                .setView(customLayout)
-                .setCancelable(true)
-                .create()
-
-            // Dismiss the dialog when the user taps any part of the custom layout's background
-            customLayout.setOnClickListener {
-                batteryAlert?.dismiss()
-            }
-            batteryAlert?.setCanceledOnTouchOutside(true)
-            batteryAlert?.window?.setBackgroundDrawableResource(R.drawable.bg_popup_rounded)
-
-            // Dismiss action for both buttons
-            val dismissAction: () -> Unit = {
-                batteryAlert?.dismiss()
-                batteryAlert = null
-            }
-            btnAccept.setOnClickListener { dismissAction() }
-            batteryAlert?.show()
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error showing battery alert: ${e.message}", e)
-            Toast.makeText(context, "Error showing battery alert.", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    private fun checkInitialBatteryStatus() {
-        val context = context ?: return
-
-        // Get the sticky Intent that holds the current battery state
-        val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let {
-            filter -> context.registerReceiver(null, filter)
-        }
-
-        // Extract the percent and the scale (max level, always 100)
-        val level: Int = batteryStatus?.getIntExtra(
-            android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
-        val scale: Int = batteryStatus?.getIntExtra(
-            android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
-
-        // Calculate the percentage
-        val batteryPct: Float = if (level != -1 && scale != -1 && scale != 0) {
-            level / scale.toFloat() * 100
-        } else {
-            0f
-        }
-
-        // Define the low battery threshold (default is 15)
-        // TODO: Unify thresholds in a combined file?
-        val lowThreshold = 15
-
-        // Check if the battery percentage is below the threshold
-        if (batteryPct <= lowThreshold) {
-            Log.w(TAG, "Initial battery check found battery at $batteryPct%. Triggering alert.")
-            activity?.runOnUiThread {
-                onBatteryLow()
-            }
-        } else {
-            Log.d(TAG, "Initial battery check found battery at $batteryPct%. Status is OK.")
-            activity?.runOnUiThread {
-                if (batteryAlert?.isShowing == true) {
-                    onBatteryOkay()
-                }
-            }
-        }
-    }
-
-    private fun saveBatteryWarnFlag() {
-        sharedPreferences.edit { putBoolean(SP_IS_USER_WARNED_OF_LOWBAT, true) }
-    }
-
-    private fun removeBatteryWarnFlag() {
-        sharedPreferences.edit { putBoolean(SP_IS_USER_WARNED_OF_LOWBAT, false) }
-    }
-
-    //////////////////////////
-    // END OF BATTERY ALERT
-    /////////////////////////
-
-    private fun initiateEmergencyModeSequence() {
-        // Todo: FIX TIMING, PERHAPS MAKE DEDICATED queueSpeakEmergency (then combine with vibration)
-        VibrationHelper.vibrate(requireContext())
-        TextToSpeechHelper.queueSpeak(requireContext(), "Emergency mode initiating now." +
-                "Please hold for 3 seconds to continue.")
-        didEmergencySequenceComplete = true // Set flag TODO: DO NOT FORGET TO ADD FALSE ONCE EMERGENCY IS COMPLETE
-        setEmergencyModeFlag()
-        releaseCamera(onReleased = {
-            if (isAdded) {
-                launchEmergencyMode()
-            }
-        })
-    }
-
-    private fun setEmergencyModeFlag() {
-        sharedPreferences.edit { putBoolean(SP_IS_EMERGENCY_MODE_ACTIVE, true) }
-    }
-
-    private fun checkIfEmergencyMode() : Boolean{
-        return sharedPreferences.getBoolean(SP_IS_EMERGENCY_MODE_ACTIVE, false)
-    }
-
-    private fun launchEmergencyMode() {
-        val intent = Intent(requireContext(), EmergencyActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        startActivity(intent)
-    }
-
-    /////////////////////////////////////
-    // END OF EMERGENCY MODE INITIATION
-    /////////////////////////////////////
 }
