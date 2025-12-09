@@ -93,6 +93,41 @@ class ViuDataSource(
         awaitClose { firestoreListener.remove() }
     }
 
+    fun getConnectedViuUids(): Flow<List<String>> = callbackFlow {
+        val caregiverUid = auth.currentUser?.uid
+            ?: run {
+                // If the user is not logged in, send an empty list and close
+                trySend(emptyList())
+                awaitClose { /* No-op */ }
+                return@callbackFlow
+            }
+
+        val relationshipsQuery = relationshipsCollection
+            .whereEqualTo("caregiverUid", caregiverUid)
+
+        // Use addSnapshotListener to get real-time updates
+        val listener = relationshipsQuery.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                trySend(emptyList())
+                Log.e(TAG, "Error fetching connected VIU UIDs: ${error.message}")
+                return@addSnapshotListener
+            }
+
+            if (snapshot == null) {
+                trySend(emptyList())
+                return@addSnapshotListener
+            }
+
+            // Map the documents to a list of viuUid strings
+            // Assumes the relationship document has a field named "viuUid"
+            val viuUids = snapshot.documents.mapNotNull { it.getString("viuUid") }
+            trySend(viuUids)
+        }
+
+        // Remove the listener when the flow collection is cancelled
+        awaitClose { listener.remove() }
+    }
+
     private fun getViuRealtimeData(uid: String): Flow<Pair<ViuLocation?, ViuStatus?>?> = callbackFlow {
 
         val rtdbRef = rtdb.getReference(VIU_LOCATION_REF).child(uid)

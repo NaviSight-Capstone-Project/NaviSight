@@ -16,6 +16,10 @@ class ViuRepository (
         return viuDataSource.getViuDetails(viuUid)
     }
 
+    fun getConnectedViuUids(): Flow<List<String>?> {
+        return viuDataSource.getConnectedViuUids()
+    }
+
     suspend fun updateViu(viu: Viu): Result<Unit> {
         return viuDataSource.updateViuDetails(viu)
     }

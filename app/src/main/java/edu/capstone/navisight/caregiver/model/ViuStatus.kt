@@ -2,7 +2,10 @@ package edu.capstone.navisight.caregiver.model
 
 data class ViuStatus(
     val state: String = "offline",
-    val lowBattery: Boolean = false,
-    val emergencyActivated: Boolean = false,
-    val last_seen: Long = 0
+    val last_seen: Long = 0,
+
+    @JvmField
+    val isLowBattery: Boolean = false,
+    @JvmField
+    val emergencyActivated: Boolean = false
 )

@@ -9,8 +9,11 @@ Please do not delete necessary comments or TODOs unless finished or unneeded.
 
  */
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
@@ -22,6 +25,7 @@ import edu.capstone.navisight.auth.AuthActivity
 import edu.capstone.navisight.auth.data.remote.CloudinaryDataSource
 import edu.capstone.navisight.auth.domain.GetUserCollectionUseCase
 import edu.capstone.navisight.caregiver.CaregiverHomeFragment
+import edu.capstone.navisight.caregiver.service.ViuMonitorService
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.disclaimer.DisclaimerFragment
 import edu.capstone.navisight.viu.ViuHomeFragment
@@ -73,6 +77,38 @@ class MainActivity : AppCompatActivity() {
         beginAppFlow()
     }
 
+    fun startMonitoringService() {
+        val serviceIntent = Intent(this, ViuMonitorService::class.java)
+
+        // Create the Notification Channel first (essential for Android O+)
+        createNotificationChannel()
+
+        // Android O (API 26) and higher require startForegroundService()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
+    }
+
+    // Helper function to create the channel before starting the service
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "VIU Monitoring"
+            val descriptionText =
+                "Continuous monitoring for emergency and low battery status of connected VIUs."
+            val importance = NotificationManager.IMPORTANCE_LOW // Low priority for notification
+            val channel = NotificationChannel(
+                ViuMonitorService.CHANNEL_ID,
+                name, importance).apply {
+                description = descriptionText
+            }
+            val notificationManager: NotificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
     fun startAppWithRegisteredUser(){
         currentUser = auth.currentUser!!
         mainRepository.setEmail(currentUser.email.toString())
@@ -92,6 +128,7 @@ class MainActivity : AppCompatActivity() {
                 navigateToAuth()
             }
         }
+        startMonitoringService()
     }
 
     fun beginAppFlow() {

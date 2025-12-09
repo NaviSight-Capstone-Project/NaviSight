@@ -42,7 +42,7 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
 
     // Observers
     val combinedFeed by viewModel.combinedFeed.collectAsState()
-    val readAlerts by viewModel.readAlerts.collectAsState()
+    val unreadAlerts by viewModel.unreadAlerts.collectAsState()
 
     val secondaryRequests by viewModel.pendingRequests.collectAsState()
     val transferRequests by viewModel.transferRequests.collectAsState()
@@ -54,7 +54,7 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
     }
 
     val onAlertTapped: (AlertNotification) -> Unit = { alert ->
-        viewModel.markAlertAsRead(alert.id)
+        viewModel.dismissAlert(alert.id)
 
         println("Alert tapped! ID: ${alert.id}, VIU: ${alert.viu.firstName}")
 
@@ -101,8 +101,8 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
         ) {
             TabButton("Activity", selectedTab == "Activity", { selectedTab = "Activity" }, Modifier.weight(1f))
             TabButton("Request", selectedTab == "Request", { selectedTab = "Request" }, Modifier.weight(1f))
-            TabButton("Read", selectedTab == "Read",
-                { selectedTab = "Read" }, Modifier.weight(1f))
+//            TabButton("Read", selectedTab == "Read",
+//                { selectedTab = "Read" }, Modifier.weight(1f))
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -168,32 +168,32 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
                     }
                 }
             }
-            "Read" -> {
-                if (readAlerts.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No read alerts", color = Color.Gray)
-                    }
-                } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp)
-                    ) {
-                        items(readAlerts) { alert ->
-                            AlertRow(
-                                alert = alert,
-                                onDelete = { viewModel.deleteFeedItem(
-                                    alert.id,
-                                    isAlert = true,
-                                    isRead = true) }, // Pass isRead = true for deletion
-                                onClick = {
-                                    // Optionally show details again, but don't mark as read
-                                    println("Read Alert :D! ID: ${alert.id}")
-                                }
-                            )
-                        }
-                    }
-                }
-            }
+//            "Read" -> {
+//                if (readAlerts.isEmpty()) {
+//                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+//                        Text("No read alerts", color = Color.Gray)
+//                    }
+//                } else {
+//                    LazyColumn(
+//                        verticalArrangement = Arrangement.spacedBy(8.dp),
+//                        contentPadding = PaddingValues(bottom = 16.dp)
+//                    ) {
+//                        items(readAlerts) { alert ->
+//                            AlertRow(
+//                                alert = alert,
+//                                onDelete = { viewModel.deleteFeedItem(
+//                                    alert.id,
+//                                    isAlert = true,
+//                                    isRead = true) }, // Pass isRead = true for deletion
+//                                onClick = {
+//                                    // Optionally show details again, but don't mark as read
+//                                    println("Read Alert :D! ID: ${alert.id}")
+//                                }
+//                            )
+//                        }
+//                    }
+//                }
+//            }
         }
     }
 }
