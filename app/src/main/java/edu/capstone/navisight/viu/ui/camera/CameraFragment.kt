@@ -449,7 +449,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         _fragmentCameraBinding = FragmentCameraBinding.bind(view)
 
         // Init. managers and handlers.
-        batteryHandler = BatteryHandler(this)
+        batteryHandler = BatteryHandler(this, realTimeViewModel)
         screensaverHandler = ScreensaverHandler(this)
         cameraBindsHandler = CameraBindsHandler(this)
         webRTCManager = WebRTCManager(this)

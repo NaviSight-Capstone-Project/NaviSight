@@ -10,6 +10,7 @@ import androidx.core.content.edit
 import edu.capstone.navisight.R
 import edu.capstone.navisight.common.Constants.SP_IS_USER_WARNED_OF_LOWBAT
 import edu.capstone.navisight.common.TextToSpeechHelper
+import edu.capstone.navisight.viu.ViuHomeViewModel
 import edu.capstone.navisight.viu.ui.camera.CameraFragment
 import edu.capstone.navisight.viu.utils.BatteryAlertListener
 import edu.capstone.navisight.viu.utils.BatteryStateReceiver
@@ -18,7 +19,8 @@ private const val BATTERY_HANDLER_TAG = "BatteryHandler"
 private var HAS_BATTERY_BEEN_DETECTED_ONCE = false
 
 class BatteryHandler (
-    private val cameraFragment: CameraFragment
+    private val cameraFragment: CameraFragment,
+    private val realTimeViewModel : ViuHomeViewModel
 ) : BatteryAlertListener {
     private val batteryReceiver: BatteryStateReceiver = BatteryStateReceiver(this)
 
@@ -27,15 +29,8 @@ class BatteryHandler (
     }
 
     override fun onBatteryLow() {
-        if (cameraFragment.sharedPreferences.getBoolean(
-                SP_IS_USER_WARNED_OF_LOWBAT,
-                false) || !HAS_BATTERY_BEEN_DETECTED_ONCE) {
-            cameraFragment.activity?.runOnUiThread {
-                showLowBatteryAlert()
-                saveBatteryWarnFlag()
-                HAS_BATTERY_BEEN_DETECTED_ONCE = true
-            }
-        }
+        showLowBatteryAlert()
+        saveBatteryWarnFlag()
     }
 
     override fun onBatteryOkay() {
@@ -43,9 +38,9 @@ class BatteryHandler (
             if (cameraFragment.batteryAlert?.isShowing == true) {
                 cameraFragment.batteryAlert?.dismiss()
                 cameraFragment.batteryAlert = null
-                removeBatteryWarnFlag()
             }
         }
+        removeBatteryWarnFlag()
     }
 
      fun showLowBatteryAlert() {
@@ -129,9 +124,11 @@ class BatteryHandler (
 
      fun saveBatteryWarnFlag() {
          cameraFragment.sharedPreferences.edit { putBoolean(SP_IS_USER_WARNED_OF_LOWBAT, true) }
+         realTimeViewModel.setUserLowBatteryDetected()
     }
 
      fun removeBatteryWarnFlag() {
          cameraFragment.sharedPreferences.edit { putBoolean(SP_IS_USER_WARNED_OF_LOWBAT, false) }
+         realTimeViewModel.removeUserLowBatteryDetected()
     }
 }
