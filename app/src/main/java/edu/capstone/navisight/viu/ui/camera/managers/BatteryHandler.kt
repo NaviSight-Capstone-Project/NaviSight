@@ -1,10 +1,7 @@
 package edu.capstone.navisight.viu.ui.camera.managers
 
-import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.SharedPreferences
 import android.util.Log
 import android.widget.Button
 import android.widget.Toast
@@ -13,6 +10,7 @@ import androidx.core.content.edit
 import edu.capstone.navisight.R
 import edu.capstone.navisight.common.Constants.SP_IS_USER_WARNED_OF_LOWBAT
 import edu.capstone.navisight.common.TextToSpeechHelper
+import edu.capstone.navisight.viu.ui.camera.CameraFragment
 import edu.capstone.navisight.viu.utils.BatteryAlertListener
 import edu.capstone.navisight.viu.utils.BatteryStateReceiver
 
@@ -20,11 +18,7 @@ private const val BATTERY_HANDLER_TAG = "BatteryHandler"
 private var HAS_BATTERY_BEEN_DETECTED_ONCE = false
 
 class BatteryHandler (
-    private val sharedPreferences: SharedPreferences,
-    private val context : Context,
-    private val activity : Activity,
-    private val isAdded : Boolean,
-    private var batteryAlert: AlertDialog? = null
+    private val cameraFragment: CameraFragment
 ) : BatteryAlertListener {
     private val batteryReceiver: BatteryStateReceiver = BatteryStateReceiver(this)
 
@@ -33,10 +27,10 @@ class BatteryHandler (
     }
 
     override fun onBatteryLow() {
-        if (sharedPreferences.getBoolean(
+        if (cameraFragment.sharedPreferences.getBoolean(
                 SP_IS_USER_WARNED_OF_LOWBAT,
                 false) || !HAS_BATTERY_BEEN_DETECTED_ONCE) {
-            activity?.runOnUiThread {
+            cameraFragment.activity?.runOnUiThread {
                 showLowBatteryAlert()
                 saveBatteryWarnFlag()
                 HAS_BATTERY_BEEN_DETECTED_ONCE = true
@@ -45,55 +39,55 @@ class BatteryHandler (
     }
 
     override fun onBatteryOkay() {
-        activity?.runOnUiThread {
-            if (batteryAlert?.isShowing == true) {
-                batteryAlert?.dismiss()
-                batteryAlert = null
+        cameraFragment.activity?.runOnUiThread {
+            if (cameraFragment.batteryAlert?.isShowing == true) {
+                cameraFragment.batteryAlert?.dismiss()
+                cameraFragment.batteryAlert = null
                 removeBatteryWarnFlag()
             }
         }
     }
 
      fun showLowBatteryAlert() {
-        if (batteryAlert?.isShowing == true || !isAdded) {
+        if (cameraFragment.batteryAlert?.isShowing == true || !cameraFragment.isAdded) {
             Log.w(BATTERY_HANDLER_TAG, "Battery alert already visible or fragment is not added. Ignoring.")
             return
         }
 
-        TextToSpeechHelper.speak(context, "Warning! Battery is low. Please charge your device.")
+        TextToSpeechHelper.speak(cameraFragment.requireContext(), "Warning! Battery is low. Please charge your device.")
 
         try {
-            val inflater = activity.layoutInflater
+            val inflater = cameraFragment.requireActivity().layoutInflater
             val customLayout = inflater.inflate(R.layout.dialog_battery_alert, null)
             val btnAccept = customLayout.findViewById<Button>(R.id.ok)
-            batteryAlert = AlertDialog.Builder(activity)
+            cameraFragment.batteryAlert = AlertDialog.Builder(cameraFragment.requireContext())
                 .setView(customLayout)
                 .setCancelable(true)
                 .create()
 
             // Dismiss the dialog when the user taps any part of the custom layout's background
             customLayout.setOnClickListener {
-                batteryAlert?.dismiss()
+                cameraFragment.batteryAlert?.dismiss()
             }
-            batteryAlert?.setCanceledOnTouchOutside(true)
-            batteryAlert?.window?.setBackgroundDrawableResource(R.drawable.bg_popup_rounded)
+            cameraFragment.batteryAlert?.setCanceledOnTouchOutside(true)
+            cameraFragment.batteryAlert?.window?.setBackgroundDrawableResource(R.drawable.bg_popup_rounded)
 
             // Dismiss action for both buttons
             val dismissAction: () -> Unit = {
-                batteryAlert?.dismiss()
-                batteryAlert = null
+                cameraFragment.batteryAlert?.dismiss()
+                cameraFragment.batteryAlert = null
             }
             btnAccept.setOnClickListener { dismissAction() }
-            batteryAlert?.show()
+            cameraFragment.batteryAlert?.show()
 
         } catch (e: Exception) {
             Log.e(BATTERY_HANDLER_TAG, "Error showing battery alert: ${e.message}", e)
-            Toast.makeText(context, "Error showing battery alert.", Toast.LENGTH_LONG).show()
+            Toast.makeText(cameraFragment.context, "Error showing battery alert.", Toast.LENGTH_LONG).show()
         }
     }
 
      fun checkInitialBatteryStatus() {
-        val context = context ?: return
+        val context = cameraFragment.context ?: return
 
         // Get the sticky Intent that holds the current battery state
         val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let {
@@ -120,13 +114,13 @@ class BatteryHandler (
         // Check if the battery percentage is below the threshold
         if (batteryPct <= lowThreshold) {
             Log.w(BATTERY_HANDLER_TAG, "Initial battery check found battery at $batteryPct%. Triggering alert.")
-            activity?.runOnUiThread {
+            cameraFragment.activity?.runOnUiThread {
                 onBatteryLow()
             }
         } else {
             Log.d(BATTERY_HANDLER_TAG, "Initial battery check found battery at $batteryPct%. Status is OK.")
-            activity?.runOnUiThread {
-                if (batteryAlert?.isShowing == true) {
+            cameraFragment.activity?.runOnUiThread {
+                if (cameraFragment.batteryAlert?.isShowing == true) {
                     onBatteryOkay()
                 }
             }
@@ -134,10 +128,10 @@ class BatteryHandler (
     }
 
      fun saveBatteryWarnFlag() {
-        sharedPreferences.edit { putBoolean(SP_IS_USER_WARNED_OF_LOWBAT, true) }
+         cameraFragment.sharedPreferences.edit { putBoolean(SP_IS_USER_WARNED_OF_LOWBAT, true) }
     }
 
      fun removeBatteryWarnFlag() {
-        sharedPreferences.edit { putBoolean(SP_IS_USER_WARNED_OF_LOWBAT, false) }
+         cameraFragment.sharedPreferences.edit { putBoolean(SP_IS_USER_WARNED_OF_LOWBAT, false) }
     }
 }

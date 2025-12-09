@@ -1,21 +1,15 @@
 package edu.capstone.navisight.viu.ui.camera.managers
 
-import android.app.Activity
-import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.view.View
 import androidx.core.content.ContextCompat
 import edu.capstone.navisight.R
-import edu.capstone.navisight.databinding.FragmentCameraBinding
+import edu.capstone.navisight.viu.ui.camera.CameraFragment
 
 class ScreensaverHandler (
-    private val context: Context,
-    private val activity: Activity,
-    private val fragmentCameraBinding : FragmentCameraBinding?
-
-
+    private val cameraFragment : CameraFragment
 ) {
 
     // Init. screensaver vars
@@ -25,7 +19,7 @@ class ScreensaverHandler (
     private val idleHandler = Handler(Looper.getMainLooper())
     private val idleRunnable = Runnable {
         if (!isScreensaverActive) {
-            context?.let { safeContext ->
+            cameraFragment.context?.let { safeContext ->
                 toggleScreenSaver()
             }
         }
@@ -38,17 +32,17 @@ class ScreensaverHandler (
 
     fun toggleScreenSaver() {
         println("TOGGLED SCREENSAVER is screen saver on state: $isScreensaverActive")
-        fragmentCameraBinding?.let { binding ->
+        cameraFragment.fragmentCameraBinding?.let { binding ->
             if (!isScreensaverActive) {
                 isScreensaverActive = true
                 currentBrightness = Settings.System.getInt(
-                    context.contentResolver, Settings.System.SCREEN_BRIGHTNESS
+                    cameraFragment.requireContext().contentResolver, Settings.System.SCREEN_BRIGHTNESS
                 ) / 255f
                 binding.screensaverEye.setVisibility(View.VISIBLE)
                 changeScreenBrightness(0.0F)
                 binding.previewModeOverlay.setBackgroundColor(
                     ContextCompat.getColor(
-                        context,
+                        cameraFragment.context,
                         R.color.screensaver_color
                     ))
                 binding.tooltipTitle.setText(R.string.screensaver_mode_tooltip_title)
@@ -67,7 +61,7 @@ class ScreensaverHandler (
     }
 
     private fun changeScreenBrightness(screenBrightnessValue: Float) {
-        val window = activity.window
+        val window = cameraFragment.requireActivity().window
         val layoutParams = window.attributes
         layoutParams.screenBrightness = screenBrightnessValue
         window.attributes = layoutParams

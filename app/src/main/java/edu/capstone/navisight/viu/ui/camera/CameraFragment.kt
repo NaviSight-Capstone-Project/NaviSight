@@ -67,9 +67,9 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     ObjectDetectorHelper.DetectorListener,  QuickMenuListener {
 
     // Init. battery receivers and related
-    private lateinit var sharedPreferences: SharedPreferences // TODO: Probably remove this na
+    lateinit var sharedPreferences: SharedPreferences // TODO: Probably remove this na
     private lateinit var batteryReceiver: BatteryStateReceiver
-    private var batteryAlert: AlertDialog? = null
+    var batteryAlert: AlertDialog? = null
 
     // Init. WebRTC and pop-up call and quick menu action vars
     lateinit var service: MainService
@@ -114,7 +114,7 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
     private val volumeKeyResetRunnable = Runnable {
         isVolumeKeyPressed = false // Only truly reset the flag after the delay
     }
-    private var didEmergencySequenceComplete = false
+    var didEmergencySequenceComplete = false
     private val emergencyHoldDuration = 1500L
     private val emergencyHoldHandler = Handler(Looper.getMainLooper())
     private var isVolumeKeyPressed: Boolean = false
@@ -444,29 +444,11 @@ class CameraFragment : Fragment(R.layout.fragment_camera),
         _fragmentCameraBinding = FragmentCameraBinding.bind(view)
 
         // Init. managers and handlers.
-        emergencyManager = EmergencyManager(
-            context = requireContext(),
-            sharedPreferences = sharedPreferences,
-            releaseCamera = { webRTCManager.releaseCamera() }, // Pass the reference to the Fragment's private function
-            isAdded = isAdded,
-            didEmergencySequenceComplete = false
-        )
-
-        batteryHandler = BatteryHandler(
-            sharedPreferences=sharedPreferences,
-            context=requireContext(),
-            activity=requireActivity(),
-            isAdded=isAdded
-        )
-
-        screensaverHandler = ScreensaverHandler(
-            context=requireContext(),
-            activity = requireActivity(),
-            fragmentCameraBinding = fragmentCameraBinding
-        )
-
+        batteryHandler = BatteryHandler(this)
+        screensaverHandler = ScreensaverHandler(this)
         cameraBindsHandler = CameraBindsHandler(this)
         webRTCManager = WebRTCManager(this)
+        emergencyManager = EmergencyManager(this, webRTCManager)
         quickMenuHandler = QuickMenuHandler(this)
 
         // Link Main Service listener and Main Repository
