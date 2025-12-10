@@ -2,7 +2,6 @@ package edu.capstone.navisight.caregiver
 
 import edu.capstone.navisight.caregiver.ui.emergency.GreenResponse
 import edu.capstone.navisight.caregiver.ui.emergency.RedAlert
-import edu.capstone.navisight.caregiver.ui.emergency.YellowResponse
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -33,10 +32,12 @@ import edu.capstone.navisight.R
 import edu.capstone.navisight.caregiver.data.remote.ViuDataSource
 import edu.capstone.navisight.caregiver.service.ACTION_EMERGENCY_ALERT
 import edu.capstone.navisight.caregiver.service.EXTRA_LOCATION
+import edu.capstone.navisight.caregiver.service.EXTRA_TIMESTAMP
 import edu.capstone.navisight.caregiver.service.EXTRA_VIU_ID
 import edu.capstone.navisight.caregiver.service.EXTRA_VIU_NAME
 import edu.capstone.navisight.caregiver.service.ViuMonitorService
 import edu.capstone.navisight.caregiver.ui.call.CaregiverCallActivity
+import edu.capstone.navisight.caregiver.ui.emergency.*
 import edu.capstone.navisight.caregiver.ui.emergency.EmergencyAlertDialog
 import edu.capstone.navisight.caregiver.ui.emergency.EmergencySignal
 import edu.capstone.navisight.caregiver.ui.emergency.EmergencyViewModel
@@ -93,7 +94,8 @@ class CaregiverHomeFragment : Fragment(),
                 val viuId = intent.getStringExtra(EXTRA_VIU_ID) ?: return
                 val viuName = intent.getStringExtra(EXTRA_VIU_NAME) ?: "VIU"
                 val location = intent.getStringExtra(EXTRA_LOCATION) ?: "Unknown Location"
-                val signal = EmergencySignal(viuId, viuName, location)
+                val timestamp = intent.getLongExtra(EXTRA_TIMESTAMP, System.currentTimeMillis())
+                val signal = EmergencySignal(viuId, viuName, location, timestamp)
                 Log.d("EmergencyReceiver", "Broadcast received: PUSH for new alert from $viuName.")
                 Toast.makeText(requireContext(), "EMERGENCY RECEIVED (PUSH)!", Toast.LENGTH_SHORT).show()
                 emergencyViewModel.activateEmergency(signal)
@@ -164,13 +166,16 @@ class CaregiverHomeFragment : Fragment(),
                 signal?.let { emergencySignal ->
                     // TODO: REMOVE ME ONCE YOU ARE NO LONGER TRAUMATIZED
                     Log.d("EmergencyDialog", "Emergency signal received. Rendering dialog for ${emergencySignal.viuName}")
-                    val message = "${emergencySignal.viuName} has activated an emergency signal!\n" +
+                    val message = "${emergencySignal.viuName} has activated an emergency signal! " +
                             "Last known location: ${emergencySignal.lastLocation}"
                     val responses = remember {
                         listOf(
-                            Pair("Call Emergency Contact", GreenResponse),
-                            Pair("Acknowledge", YellowResponse),
-                            Pair("Dismiss Alert", RedAlert)
+                            Pair(EMERGENCY_OPTION_VIDEO_CALL_VIU, GreenResponse),
+                            Pair(EMERGENCY_OPTION_AUDIO_CALL_VIU, GreenResponse),
+                            Pair(EMERGENCY_OPTION_TURN_OFF_VCV, OrangeResponse),
+                            Pair(EMERGENCY_OPTION_TURN_OFF_ACV, OrangeResponse),
+                            Pair(EMERGENCY_OPTION_TURN_OFF, RedAlert),
+                            Pair(EMERGENCY_OPTION_DISMISS, RedAlert)
                         )
                     }
 
@@ -181,8 +186,11 @@ class CaregiverHomeFragment : Fragment(),
                         message = message,
                         responses = responses,
                         onResponseSelected = { response ->
-                            Log.d("EmergencyAlert", "Response selected: $response for ${emergencySignal.viuName}")
-                        }
+                            // This is where the button's functionality is added:
+                            emergencyViewModel.handleEmergencyResponse(response, emergencySignal)
+                        },
+                        timestamp = emergencySignal.timestamp,
+                        lastLocation = emergencySignal.lastLocation
                     )
                 }
             }

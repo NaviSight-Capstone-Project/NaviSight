@@ -23,6 +23,7 @@ const val ACTION_EMERGENCY_ALERT = "edu.capstone.navisight.EMERGENCY_ALERT"
 const val EXTRA_VIU_ID = "viu_id"
 const val EXTRA_VIU_NAME = "viu_name"
 const val EXTRA_LOCATION = "last_location"
+const val EXTRA_TIMESTAMP = "timestamp"
 
 class ViuMonitorService : Service() {
 
@@ -129,6 +130,8 @@ class ViuMonitorService : Service() {
                 if (status.emergencyActivated && !lastEmergencyStatus) {
                     // trigger sys alert
 
+                    val alertTimestamp = System.currentTimeMillis()
+
                     val emergencyAlert = AlertNotification(
                         id = UUID.randomUUID().toString(), // Generates a unique document ID
                         title = "Emergency Mode Activated",
@@ -138,14 +141,16 @@ class ViuMonitorService : Service() {
                     )
                     lastEmergencySignal = EmergencySignal(
                         viuId = currentViu.uid,
-                        viuName = currentViu.firstName,
-                        lastLocation = lastLocation
+                        viuName = "${currentViu.firstName} ${currentViu.lastName}",
+                        lastLocation = lastLocation,
+                        timestamp = alertTimestamp
                     )
                     notificationService.showEmergencyAlert(currentViu, lastLocation)
                     val intent = Intent(ACTION_EMERGENCY_ALERT).apply {
                         putExtra(EXTRA_VIU_ID, currentViu.uid)
                         putExtra(EXTRA_VIU_NAME, currentViu.firstName)
                         putExtra(EXTRA_LOCATION, lastLocation)
+                        putExtra(EXTRA_TIMESTAMP, alertTimestamp)
                     }
 
                     LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)

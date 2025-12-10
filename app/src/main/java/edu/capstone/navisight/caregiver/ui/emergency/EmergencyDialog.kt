@@ -15,7 +15,9 @@ fun EmergencyAlertDialog(
     onDismissRequest: () -> Unit,
     message: String,
     responses: List<Pair<String, androidx.compose.ui.graphics.Color>>,
-    onResponseSelected: (String) -> Unit
+    onResponseSelected: (String) -> Unit,
+    timestamp: Long,
+    lastLocation: String
 ) {
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -31,15 +33,15 @@ fun EmergencyAlertDialog(
                 .padding(horizontal = 16.dp),
             shape = RoundedCornerShape(16.dp),
         ) {
-            // Re-use the content structure from the original EmergencyScreen/AlertMessageScreen
             EmergencyDialogContent(
-                title = "Alert Message",
+                title = "Emergency Alert",
                 message = message,
                 responses = responses,
                 onResponseSelected = { response ->
                     onResponseSelected(response)
                     onDismissRequest() // Close dialog after selecting a response
-                }
+                },
+                timestamp = timestamp
             )
         }
     }
@@ -50,12 +52,14 @@ private fun EmergencyDialogContent(
     title: String,
     message: String,
     responses: List<Pair<String, androidx.compose.ui.graphics.Color>>,
-    onResponseSelected: (String) -> Unit
+    onResponseSelected: (String) -> Unit,
+    timestamp : Long
 ) {
     EmergencyScreen(
         title = title,
         message = message,
         responses = responses,
-        onResponseSelected = onResponseSelected
+        onResponseSelected = onResponseSelected,
+        timestamp = timestamp
     )
 }
