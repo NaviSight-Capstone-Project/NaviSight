@@ -41,8 +41,6 @@ class NotificationViewModel(
             initialValue = emptyList()
         )
 
-    // ... (existing init block or methods) ...
-
     // Requests (pending)
     private val _pendingRequests = MutableStateFlow<List<SecondaryPairingRequest>>(emptyList())
     val pendingRequests = _pendingRequests.asStateFlow()

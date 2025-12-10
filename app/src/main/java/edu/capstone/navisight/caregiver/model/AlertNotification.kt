@@ -10,14 +10,15 @@ If you have new ideas on how to structure new notifications, tapon lang dito.
 import java.util.Date
 
 data class AlertNotification(
-    val id: String,
-    val title: String, // e.g., "Emergency Mode Activated"
-    val message: String, // e.g., "VIU Juan has triggered an emergency alert."
-    val type: AlertType, // e.g., AlertType.EMERGENCY
-    val isViewed: Boolean = false,
-    val viu: Viu = Viu(),
-    val timestamp: Date? = Date(),
-    val extraDetails: Map<String, Any?> = emptyMap()
+    // Change to var and provide default values
+    var id: String = "",
+    var title: String = "",
+    var message: String = "",
+    var type: AlertType = AlertType.EMERGENCY, // Provide a default AlertType
+    var isViewed: Boolean = false,
+    var viu: Viu = Viu(),
+    var timestamp: Date? = Date(), // Can be nullable or have a default value
+    var extraDetails: Map<String, Any?> = emptyMap()
 )
 
 enum class AlertType {
