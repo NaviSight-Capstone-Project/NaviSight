@@ -39,10 +39,10 @@ import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.fragment.app.Fragment
 import edu.capstone.navisight.R
 import edu.capstone.navisight.auth.AuthActivity
-import edu.capstone.navisight.databinding.FragmentCameraBinding
 import edu.capstone.navisight.viu.detectors.ObjectDetection
 import edu.capstone.navisight.viu.utils.ObjectDetectorHelper
 import edu.capstone.navisight.common.TextToSpeechHelper
+import edu.capstone.navisight.databinding.FragmentGuestBinding
 import java.util.LinkedList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -50,12 +50,12 @@ import kotlin.math.abs
 
 // TODO: Make this fragment's camera front facing on deployment time
 
-class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.DetectorListener {
+class GuestFragment : Fragment(R.layout.fragment_guest), ObjectDetectorHelper.DetectorListener {
 
     private val TAG = "ObjectDetection"
 
-    private var _fragmentCameraBinding: FragmentCameraBinding? = null
-    private val fragmentCameraBinding get() = _fragmentCameraBinding
+    private var fragmentGuestBinding: FragmentGuestBinding? = null
+    private val fragmentCameraBinding get() = fragmentGuestBinding
 
     private lateinit var objectDetectorHelper: ObjectDetectorHelper
     private lateinit var bitmapBuffer: Bitmap
@@ -85,7 +85,7 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
 
     override fun onDestroyView() {
         idleHandler.removeCallbacks(idleRunnable)
-        _fragmentCameraBinding = null
+        fragmentGuestBinding = null
         super.onDestroyView()
         cameraExecutor.shutdown()
     }
@@ -99,7 +99,7 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        _fragmentCameraBinding = FragmentCameraBinding.bind(view)
+        fragmentGuestBinding = FragmentGuestBinding.bind(view)
 
         objectDetectorHelper = ObjectDetectorHelper(
             context = requireContext(),
