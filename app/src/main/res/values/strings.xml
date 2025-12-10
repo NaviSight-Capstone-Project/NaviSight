@@ -22,12 +22,14 @@
 
     <!--    Tooltips -->
     <string name="preview_mode_tooltip_title">Preview Mode</string>
-    <string name="preview_mode_tooltip_1">Tap me 3 times to instantly enter screensaver mode.</string>
+    <string name="preview_mode_tooltip_1">Tap me to instantly enter screensaver mode.</string>
     <string name="preview_mode_tooltip_2">If there are no interactions within 10 seconds, the app will enter screensaver mode.</string>
     <string name="screensaver_mode_tooltip_title">NaviSight is active</string>
     <string name="screensaver_mode_tooltip_1">NaviSight is currently on screensaver mode to save power.</string>
-    <string name="screensaver_mode_tooltip_2">If you wish to interact with the menu, please tap the screen 3 times!</string>
-    <string name="screensaver_mode_tooltip_3">For live preview mode, please tap the screen 3 times.</string>
+    <string name="screensaver_mode_tooltip_2">Swipe to Left to interact with the menu!</string>
+    <string name="screensaver_mode_tooltip_3">For live preview mode, please tap the screen.</string>
+
+    <string name="guest_mode_tooltip_1">Swipe to Left to Login!</string>
 
     <string name="alt_bottom_sheet_max_results_button_minus">Decreasing maximum detected results
         button</string>

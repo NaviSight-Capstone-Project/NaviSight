@@ -21,6 +21,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.util.Size
+import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.View
@@ -33,6 +34,8 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.fragment.app.Fragment
 import edu.capstone.navisight.R
 import edu.capstone.navisight.auth.AuthActivity
@@ -43,6 +46,7 @@ import edu.capstone.navisight.common.TextToSpeechHelper
 import java.util.LinkedList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.math.abs
 
 // TODO: Make this fragment's camera front facing on deployment time
 
@@ -60,9 +64,12 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
     private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
 
-    private var clickCount = 0
     private var isScreensaverActive = false
     private var currentBrightness = 0.0F
+
+    // --- Crash Prevention: Timer to stop TTS from spamming ---
+    private var lastAnnouncementTime = 0L
+    private val announcementDelay = 2000L // 2 seconds
 
     private val idleTimeout = 10_000L
     private val idleHandler = Handler(Looper.getMainLooper())
@@ -74,18 +81,10 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
         }
     }
 
-    private val QUADRUPLE_TAP_TIMEOUT = 500L
-    private val quadrupleTapHandler = Handler(Looper.getMainLooper())
-    private val quadrupleTapRunnable = Runnable {
-        clickCount = 0
-    }
-
     private lateinit var cameraExecutor: ExecutorService
 
     override fun onDestroyView() {
         idleHandler.removeCallbacks(idleRunnable)
-        quadrupleTapHandler.removeCallbacks(quadrupleTapRunnable)
-
         _fragmentCameraBinding = null
         super.onDestroyView()
         cameraExecutor.shutdown()
@@ -94,7 +93,6 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
     override fun onStop() {
         super.onStop()
         idleHandler.removeCallbacks(idleRunnable)
-        quadrupleTapHandler.removeCallbacks(quadrupleTapRunnable)
     }
 
     @SuppressLint("MissingPermission", "ClickableViewAccessibility")
@@ -116,39 +114,58 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
 
         toggleScreenSaver(requireContext())
 
+        //  Accessibility Action
+        fragmentCameraBinding?.previewModeHitbox?.let { viewHitbox ->
+            ViewCompat.setAccessibilityDelegate(viewHitbox, object : androidx.core.view.AccessibilityDelegateCompat() {
+                override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
+                    super.onInitializeAccessibilityNodeInfo(host, info)
+                    // Login to the TalkBack actions menu
+                    val action = AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                        AccessibilityNodeInfoCompat.ACTION_CLICK + 1, "Login"
+                    )
+                    info.addAction(action)
+                }
+
+                override fun performAccessibilityAction(host: View, action: Int, args: Bundle?): Boolean {
+                    if (action == AccessibilityNodeInfoCompat.ACTION_CLICK + 1) {
+                        navigateToLogin()
+                        return true
+                    }
+                    return super.performAccessibilityAction(host, action, args)
+                }
+            })
+        }
+
+        // Gesture Detector
+        val gestureDetector = GestureDetector(requireContext(), object : GestureDetector.SimpleOnGestureListener() {
+            override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+                if (e1 != null && e1.x - e2.x > 100 && abs(velocityX) > 100) {
+                    navigateToLogin()
+                    return true
+                }
+                return false
+            }
+        })
+
+        // Click Listener
+        fragmentCameraBinding?.previewModeHitbox?.setOnClickListener {
+            context?.let { safeContext -> toggleScreenSaver(safeContext) }
+        }
+
+        //Touch Listener
         fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
             doAutoScreensaver()
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
+            gestureDetector.onTouchEvent(event)
+        }
+    }
 
-                    quadrupleTapHandler.removeCallbacks(quadrupleTapRunnable)
-                    clickCount++
-
-                    if (clickCount == 4) {
-                        context?.let { safeContext ->
-                            TextToSpeechHelper.speak(safeContext, "Navigating to Login Page")
-                            if (isAdded) {
-                                // Start activity to Login.
-                                val intent = Intent(
-                                    requireContext(),
-                                    AuthActivity::class.java
-                                )
-                                startActivity(intent)
-                            }
-                        }
-                        clickCount = 0
-                    }
-
-                    if (clickCount >= 3 && clickCount < 4) {
-                        context?.let { safeContext -> toggleScreenSaver(safeContext) }
-                    }
-
-                    if (clickCount > 0 && clickCount < 4) {
-                        quadrupleTapHandler.postDelayed(quadrupleTapRunnable, QUADRUPLE_TAP_TIMEOUT)
-                    }
-                }
+    private fun navigateToLogin() {
+        context?.let { safeContext ->
+            TextToSpeechHelper.speak(safeContext, "Navigating to Login Page")
+            if (isAdded) {
+                val intent = Intent(requireContext(), AuthActivity::class.java)
+                startActivity(intent)
             }
-            true
         }
     }
 
@@ -239,6 +256,15 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
                 imageWidth
             )
             fragmentCameraBinding?.overlay?.invalidate()
+
+
+            if (!isScreensaverActive && results.isNotEmpty()) {
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastAnnouncementTime > announcementDelay) {
+
+                    lastAnnouncementTime = currentTime
+                }
+            }
         }
     }
 
@@ -256,24 +282,43 @@ class GuestFragment : Fragment(R.layout.fragment_camera), ObjectDetectorHelper.D
     private fun toggleScreenSaver(context: Context) {
         fragmentCameraBinding?.let { binding ->
             if (!isScreensaverActive) {
+                // --- SCREENSAVER MODE ---
                 isScreensaverActive = true
                 currentBrightness = Settings.System.getInt(
                     context.contentResolver, Settings.System.SCREEN_BRIGHTNESS
                 ) / 255f
                 changeScreenBrightness( 0.0F)
                 binding.previewModeOverlay.setBackgroundColor(resources.getColor(R.color.screensaver_color))
+
                 binding.tooltipTitle.setText(R.string.screensaver_mode_tooltip_title)
-                binding.tooltipDescription1.setText(R.string.screensaver_mode_tooltip_1)
-                binding.tooltipDescription2.setText(R.string.screensaver_mode_tooltip_2)
+                binding.tooltipDescription1.text = getString(R.string.screensaver_mode_tooltip_1) + "\n" + getString(R.string.screensaver_mode_tooltip_3) + "\n"
+                binding.tooltipDescription2.setText(R.string.guest_mode_tooltip_1)
                 binding.screensaverEye.setVisibility(View.VISIBLE)
+
+                // TalkBack Description (Fixes "Unlabeled")
+                val desc = getString(R.string.screensaver_mode_tooltip_title) + ". " +
+                        getString(R.string.screensaver_mode_tooltip_1) + ". " +
+                        getString(R.string.guest_mode_tooltip_1) + ". Double tap to open preview."
+                binding.previewModeHitbox.contentDescription = desc
+
             } else {
+                // --- PREVIEW MODE ---
                 isScreensaverActive = false
                 binding.screensaverEye.setVisibility(View.INVISIBLE)
                 changeScreenBrightness(currentBrightness)
                 binding.previewModeOverlay.setBackgroundColor(0)
+
                 binding.tooltipTitle.setText(R.string.preview_mode_tooltip_title)
-                binding.tooltipDescription1.setText(R.string.preview_mode_tooltip_1)
-                binding.tooltipDescription2.setText(R.string.preview_mode_tooltip_2)
+                binding.tooltipDescription1.text = getString(R.string.preview_mode_tooltip_1) + "\n" + getString(R.string.preview_mode_tooltip_2)
+                binding.tooltipDescription2.setText(R.string.guest_mode_tooltip_1)
+
+                // TalkBack Description (Fixes "Unlabeled")
+                val desc = getString(R.string.preview_mode_tooltip_title) + ". " +
+                        getString(R.string.preview_mode_tooltip_1) + ". " +
+                        getString(R.string.guest_mode_tooltip_1) + ". Double tap to close preview. Two finger swipe left to login."
+                binding.previewModeHitbox.contentDescription = desc
+
+                TextToSpeechHelper.speak(context, "Preview active")
             }
         }
     }
