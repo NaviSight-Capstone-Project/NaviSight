@@ -1,6 +1,12 @@
 package edu.capstone.navisight.caregiver
 
+import edu.capstone.navisight.caregiver.ui.emergency.GreenResponse
+import edu.capstone.navisight.caregiver.ui.emergency.RedAlert
+import edu.capstone.navisight.caregiver.ui.emergency.YellowResponse
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
@@ -11,17 +17,29 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import edu.capstone.navisight.R
 import edu.capstone.navisight.caregiver.data.remote.ViuDataSource
+import edu.capstone.navisight.caregiver.service.ACTION_EMERGENCY_ALERT
+import edu.capstone.navisight.caregiver.service.EXTRA_LOCATION
+import edu.capstone.navisight.caregiver.service.EXTRA_VIU_ID
+import edu.capstone.navisight.caregiver.service.EXTRA_VIU_NAME
+import edu.capstone.navisight.caregiver.service.ViuMonitorService
 import edu.capstone.navisight.caregiver.ui.call.CaregiverCallActivity
+import edu.capstone.navisight.caregiver.ui.emergency.EmergencyAlertDialog
+import edu.capstone.navisight.caregiver.ui.emergency.EmergencySignal
+import edu.capstone.navisight.caregiver.ui.emergency.EmergencyViewModel
 import edu.capstone.navisight.caregiver.ui.feature_viu_profile.ViuProfileFragment
 import edu.capstone.navisight.caregiver.ui.feature_map.MapFragment
 import edu.capstone.navisight.caregiver.ui.feature_notification.NotificationFragment
@@ -39,6 +57,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.collections.listOf
 
 class CaregiverHomeFragment : Fragment(),
     RecordsFragment.OnViuClickedListener,
@@ -46,6 +65,7 @@ class CaregiverHomeFragment : Fragment(),
     MainService.Listener {
 
     private val viewModel: CaregiverHomeViewModel by viewModels()
+    private val emergencyViewModel: EmergencyViewModel by activityViewModels()
 
     private val mapFragment = MapFragment()
     private val recordsFragment = RecordsFragment()
@@ -67,6 +87,33 @@ class CaregiverHomeFragment : Fragment(),
         var pendingDeniedCallMessage: String? = null
     }
 
+    private val emergencyReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == ACTION_EMERGENCY_ALERT) {
+                val viuId = intent.getStringExtra(EXTRA_VIU_ID) ?: return
+                val viuName = intent.getStringExtra(EXTRA_VIU_NAME) ?: "VIU"
+                val location = intent.getStringExtra(EXTRA_LOCATION) ?: "Unknown Location"
+                val signal = EmergencySignal(viuId, viuName, location)
+                Log.d("EmergencyReceiver", "Broadcast received: PUSH for new alert from $viuName.")
+                Toast.makeText(requireContext(), "EMERGENCY RECEIVED (PUSH)!", Toast.LENGTH_SHORT).show()
+                emergencyViewModel.activateEmergency(signal)
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val filter = IntentFilter(ACTION_EMERGENCY_ALERT)
+        LocalBroadcastManager.getInstance(requireContext()).registerReceiver(emergencyReceiver, filter)
+        Log.d("EmergencyReceiver", "Receiver registered for: $ACTION_EMERGENCY_ALERT")
+    }
+
+    override fun onStop() {
+        super.onStop()
+        LocalBroadcastManager.getInstance(requireContext()).unregisterReceiver(emergencyReceiver)
+        Log.d("EmergencyReceiver", "Receiver unregistered.")
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -77,13 +124,86 @@ class CaregiverHomeFragment : Fragment(),
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         mainRepository = MainRepository.getInstance(requireContext())
         MainService.listener = this
         service = MainService.getInstance()
 
         setupBottomNavigation(view)
         observeNavigation()
+        setupEmergencyDialogComposables(view)
+        observeEmergencySignalVisibility(view)
+        checkExistingEmergencyAlertFromService()
+    }
+
+    private fun checkExistingEmergencyAlertFromService() {
+        ViuMonitorService.INSTANCE?.getCurrentEmergencySignal()?.let { signal ->
+            emergencyViewModel.activateEmergency(signal)
+        } ?: run {
+            Log.d("EmergencyReceiver", "The quick brown fox jumps over the lazy dawg")
+        }
+    }
+
+    private fun setupEmergencyDialogComposables(view: View) {
+        val emergencyHostView = view.findViewById<ViewGroup>(R.id.emergency_dialog_host)
+
+        val composeOverlayView = ComposeView(requireContext()).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            id = View.generateViewId()
+        }
+        emergencyHostView?.addView(composeOverlayView)
+
+        composeOverlayView.setContent {
+            // For some reason gumagana ito hahahaahahahahahahahahha
+            MaterialTheme {
+                val signal by emergencyViewModel.emergencySignal.collectAsState()
+
+                signal?.let { emergencySignal ->
+                    // TODO: REMOVE ME ONCE YOU ARE NO LONGER TRAUMATIZED
+                    Log.d("EmergencyDialog", "Emergency signal received. Rendering dialog for ${emergencySignal.viuName}")
+                    val message = "${emergencySignal.viuName} has activated an emergency signal!\n" +
+                            "Last known location: ${emergencySignal.lastLocation}"
+                    val responses = remember {
+                        listOf(
+                            Pair("Call Emergency Contact", GreenResponse),
+                            Pair("Acknowledge", YellowResponse),
+                            Pair("Dismiss Alert", RedAlert)
+                        )
+                    }
+
+                    EmergencyAlertDialog(
+                        onDismissRequest = {
+                            emergencyViewModel.clearEmergency()
+                        },
+                        message = message,
+                        responses = responses,
+                        onResponseSelected = { response ->
+                            Log.d("EmergencyAlert", "Response selected: $response for ${emergencySignal.viuName}")
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    private fun observeEmergencySignalVisibility(view: View) {
+        val emergencyHostView = view.findViewById<ViewGroup>(R.id.emergency_dialog_host)
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            emergencyViewModel.emergencySignal.collect { signalState ->
+                if (signalState != null) {
+                    emergencyHostView?.visibility = View.VISIBLE
+                    Toast.makeText(requireContext(),
+                        "EMERGENCY TRIGGERED: ${signalState.viuName}",
+                        Toast.LENGTH_LONG).show()
+                } else {
+                    emergencyHostView?.visibility = View.GONE
+                }
+            }
+        }
     }
 
     private fun setupBottomNavigation(view: View) {

@@ -2,7 +2,7 @@ package edu.capstone.navisight.viu.ui.emergency
 
 /*
 
-EmergencyActivity.kt
+EmergencyDialog.kt
 
 This activity triggers only if the VIU has fully completed the emergency sequence.
 The app will lock down to only this activity unless any of the following is done:
@@ -44,11 +44,6 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
         // Init.
         TextToSpeechHelper.speak(applicationContext, "Emergency mode is active. ")
         sayEmergencyModeDescription()
-
-        // Retrieve coordinates
-
-
-        // Text using SMS
 
 
         serviceRepository = MainServiceRepository.getInstance(applicationContext)

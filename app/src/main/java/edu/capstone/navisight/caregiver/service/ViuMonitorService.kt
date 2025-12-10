@@ -3,16 +3,26 @@ package edu.capstone.navisight.caregiver.service
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import edu.capstone.navisight.R
 import edu.capstone.navisight.caregiver.domain.notificationUseCase.SaveAlertUseCase
 import edu.capstone.navisight.caregiver.domain.viuUseCase.GetConnectedViuUidsUseCase
 import edu.capstone.navisight.caregiver.domain.viuUseCase.GetViuByUidUseCase
 import edu.capstone.navisight.caregiver.model.AlertNotification
 import edu.capstone.navisight.caregiver.model.AlertType
+import edu.capstone.navisight.caregiver.ui.emergency.EmergencySignal
+import edu.capstone.navisight.caregiver.ui.emergency.EmergencyViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import java.util.UUID
+
+
+const val ACTION_EMERGENCY_ALERT = "edu.capstone.navisight.EMERGENCY_ALERT"
+const val EXTRA_VIU_ID = "viu_id"
+const val EXTRA_VIU_NAME = "viu_name"
+const val EXTRA_LOCATION = "last_location"
 
 class ViuMonitorService : Service() {
 
@@ -25,15 +35,29 @@ class ViuMonitorService : Service() {
     private lateinit var notificationService: SystemNotificationService // Will be initialized later
     private val saveAlertUseCase = SaveAlertUseCase()
 
+    // Make it similar to MainService
+    private var lastEmergencySignal: EmergencySignal? = null
+
     companion object {
         const val NOTIFICATION_ID = 101
         const val CHANNEL_ID = "viu_monitor_channel"
+        var INSTANCE: ViuMonitorService? = null
     }
 
     override fun onCreate() {
         super.onCreate()
-        // Initialize the SystemNotificationService with the service context
+        INSTANCE = this
         notificationService = SystemNotificationService(applicationContext)
+    }
+
+    fun getCurrentEmergencySignal(): EmergencySignal? {
+        return lastEmergencySignal
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        INSTANCE = null // Clear the static instance when the service is destroyed
+        serviceJob.cancel() // Cancel all running coroutines when the service is destroyed
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -47,10 +71,6 @@ class ViuMonitorService : Service() {
         return START_STICKY
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        serviceJob.cancel() // Cancel all running coroutines when the service is destroyed
-    }
 
     override fun onBind(intent: Intent?): IBinder? {
         // Not using binding for this type of service
@@ -108,7 +128,7 @@ class ViuMonitorService : Service() {
 
                 if (status.emergencyActivated && !lastEmergencyStatus) {
                     // trigger sys alert
-                    notificationService.showEmergencyAlert(currentViu, lastLocation)
+
                     val emergencyAlert = AlertNotification(
                         id = UUID.randomUUID().toString(), // Generates a unique document ID
                         title = "Emergency Mode Activated",
@@ -116,9 +136,23 @@ class ViuMonitorService : Service() {
                         type = AlertType.EMERGENCY,
                         viu = currentViu // Pass the full Viu object
                     )
+                    lastEmergencySignal = EmergencySignal(
+                        viuId = currentViu.uid,
+                        viuName = currentViu.firstName,
+                        lastLocation = lastLocation
+                    )
+                    notificationService.showEmergencyAlert(currentViu, lastLocation)
+                    val intent = Intent(ACTION_EMERGENCY_ALERT).apply {
+                        putExtra(EXTRA_VIU_ID, currentViu.uid)
+                        putExtra(EXTRA_VIU_NAME, currentViu.firstName)
+                        putExtra(EXTRA_LOCATION, lastLocation)
+                    }
+
+                    LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
                     serviceScope.launch {
                         saveAlertUseCase(emergencyAlert)
                     }
+                    Log.d("Broadcast", "Broadcast emergency detected and alerts have been fired ($ACTION_EMERGENCY_ALERT)!!!!!!!!!!!")
                 }
 
                 // low bat
