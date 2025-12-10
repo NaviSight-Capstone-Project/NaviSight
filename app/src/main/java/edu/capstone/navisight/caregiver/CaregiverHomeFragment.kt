@@ -97,7 +97,6 @@ class CaregiverHomeFragment : Fragment(),
                 val timestamp = intent.getLongExtra(EXTRA_TIMESTAMP, System.currentTimeMillis())
                 val signal = EmergencySignal(viuId, viuName, location, timestamp)
                 Log.d("EmergencyReceiver", "Broadcast received: PUSH for new alert from $viuName.")
-                Toast.makeText(requireContext(), "EMERGENCY RECEIVED (PUSH)!", Toast.LENGTH_SHORT).show()
                 emergencyViewModel.activateEmergency(signal)
             }
         }
@@ -134,7 +133,20 @@ class CaregiverHomeFragment : Fragment(),
         observeNavigation()
         setupEmergencyDialogComposables(view)
         observeEmergencySignalVisibility(view)
+        observeEmergencyCallRequests()
         checkExistingEmergencyAlertFromService()
+    }
+
+    private fun observeEmergencyCallRequests() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            emergencyViewModel.callRequest.collect { (viuUid, isVideoCall) ->
+                if (isVideoCall) {
+                    onVideoCallClickedFromFragment(viuUid)
+                } else {
+                    onAudioCallClickedFromFragment(viuUid)
+                }
+            }
+        }
     }
 
     private fun checkExistingEmergencyAlertFromService() {
@@ -170,11 +182,9 @@ class CaregiverHomeFragment : Fragment(),
                             "Last known location: ${emergencySignal.lastLocation}"
                     val responses = remember {
                         listOf(
-                            Pair(EMERGENCY_OPTION_VIDEO_CALL_VIU, GreenResponse),
-                            Pair(EMERGENCY_OPTION_AUDIO_CALL_VIU, GreenResponse),
-                            Pair(EMERGENCY_OPTION_TURN_OFF_VCV, OrangeResponse),
-                            Pair(EMERGENCY_OPTION_TURN_OFF_ACV, OrangeResponse),
-                            Pair(EMERGENCY_OPTION_TURN_OFF, RedAlert),
+                            Pair(EMERGENCY_OPTION_TURN_OFF_VCV, GreenResponse),
+                            Pair(EMERGENCY_OPTION_TURN_OFF_ACV, GreenResponse),
+                            Pair(EMERGENCY_OPTION_TURN_OFF, OrangeResponse),
                             Pair(EMERGENCY_OPTION_DISMISS, RedAlert)
                         )
                     }
@@ -204,9 +214,6 @@ class CaregiverHomeFragment : Fragment(),
             emergencyViewModel.emergencySignal.collect { signalState ->
                 if (signalState != null) {
                     emergencyHostView?.visibility = View.VISIBLE
-                    Toast.makeText(requireContext(),
-                        "EMERGENCY TRIGGERED: ${signalState.viuName}",
-                        Toast.LENGTH_LONG).show()
                 } else {
                     emergencyHostView?.visibility = View.GONE
                 }
@@ -275,9 +282,7 @@ class CaregiverHomeFragment : Fragment(),
 
     override fun onResume() {
         super.onResume()
-        Log.d("deniedcall", "this is working")
         pendingDeniedCallMessage?.let { message ->
-            Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
             pendingDeniedCallMessage = null
         }
     }
