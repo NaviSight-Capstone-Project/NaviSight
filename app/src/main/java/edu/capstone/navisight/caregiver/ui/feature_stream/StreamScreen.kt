@@ -19,8 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -37,7 +35,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -55,7 +52,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import edu.capstone.navisight.R
-import edu.capstone.navisight.caregiver.model.Viu
 import edu.capstone.navisight.common.webrtc.adapter.UserListView
 import com.google.firebase.auth.FirebaseAuth
 import edu.capstone.navisight.common.webrtc.FirebaseClient
@@ -64,12 +60,12 @@ import kotlinx.coroutines.launch
 @Composable
 fun StreamScreen(
     viewModel: StreamViewModel,
-    // Init. callbacks for MainActivity
      onVideoCall: (username: String) -> Unit,
      onAudioCall: (username: String) -> Unit){
-    val usersList = remember { mutableStateListOf<Triple<Viu, String, String>>() }
     val firebaseClient = FirebaseClient.getInstance()
     val viuList by viewModel.viuList.collectAsState()
+    val filteredUsers by viewModel.filteredViuTriples.collectAsState()
+    val listState = rememberLazyListState()
 
     // Init. search query stuff
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -97,29 +93,14 @@ fun StreamScreen(
 
         // Only run if the UIDs have been fetched (i.e., not null)
         if (viusToObserve != null) {
-            firebaseClient.observeAssociatedUsersStatus(viusToObserve) { result: List<Pair<Viu?, String>> ->
-
-                val processedUsers = result
-                    // The filter for 'viu != null' is still important here
-                    // in case credentials fetching failed.
-                    .filter { (viu, _) -> viu != null }
-                    .mapNotNull { (viu, status) ->
-                        val uid = viu?.uid ?: return@mapNotNull null
-                        Triple(viu, uid, status)
-                    }
-
-                usersList.clear()
-                usersList.addAll(processedUsers)
+            if (viusToObserve.isNotEmpty()) {
+                viewModel.observeViuStatuses(viusToObserve, firebaseClient)
+            } else {
+                viewModel.observeViuStatuses(emptyList(), firebaseClient)
             }
         }
     }
 
-    val listState = rememberLazyListState()
-    LazyColumn(state = listState) {
-        items(viuList) { item ->
-            Text(item.firstName) // Or your custom item composable
-        }
-    }
     val scope = rememberCoroutineScope()
     val alphabet = ('A'..'Z').toList()
 
@@ -139,169 +120,197 @@ fun StreamScreen(
             horizontalArrangement = Arrangement.SpaceBetween // Pushes the two main children apart
         ) {
             // Set header with main content (this is compartmentalized for alphabet scrollbar)
-            Column (
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
             ) {
                 // Set header
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .fillMaxSize(),
+
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_stream),
-                        contentDescription = "Stream Icon",
-                        tint = Color(0xFF6041EC),
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Live Video and Audio Call",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF202833),
-                        style = TextStyle(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(Color(0xFFB644F1), Color(0xFF6041EC))
+                    // Set header with main content (list, search, header)
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(start = 12.dp, end = 4.dp)
+                    ) {
+                        // Set header
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_stream),
+                                contentDescription = "Stream Icon",
+                                tint = Color(0xFF6041EC),
+                                modifier = Modifier.size(28.dp)
                             )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "Live Video and Audio Call",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF202833),
+                                style = TextStyle(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(Color(0xFFB644F1), Color(0xFF6041EC))
+                                    )
+                                )
+                            )
+                        }
+
+                        // Set search bar.
+                        SearchBar(
+                            query = searchQuery,
+                            onQueryChange = { viewModel.onSearchQueryChanged(it) }
                         )
-                    )
-                }
-
-                // Set search bar.
-                Box (modifier=Modifier.padding(horizontal=12.dp)){
-                    SearchBar (
-                        query = searchQuery,
-                        onQueryChange = { viewModel.onSearchQueryChanged(it) }
-                    )
-                }
 
 
-                Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                // Set main content with controls
-                if (associatedViuUids == null) {
-                    // Show when waiting
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            CircularProgressIndicator()
-                            Spacer(modifier = Modifier.height(25.dp))
-                            Text(
-                                textAlign = TextAlign.Center,
-                                text = "Fetching the status of your VIUs.\nPlease wait!",
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color.Gray
-                                )
-                            )
-                        }
-                    }
-
-                } else if (usersList.isEmpty() && associatedViuUids?.isNotEmpty() == true) {
-                    // Show a message if relationships exist, but no one is online
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_no_internet),
-                                contentDescription = "Icon",
-                                modifier = Modifier.size(120.dp),
-                                colorFilter = ColorFilter.tint(Color.Gray)
-                            )
-                            Spacer(modifier = Modifier.height(25.dp))
-                            Text(
-                                textAlign = TextAlign.Center,
-                                text = "Can't fetch your VIUs at the moment.\nTry again later?",
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color.Gray
-                                )
-                            )
-                        }
-                    }
-
-                } else if (usersList.isEmpty() && associatedViuUids?.isEmpty() == true) {
-                    // Show on empty
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_no_viu_stream),
-                                contentDescription = "Icon",
-                                modifier = Modifier.size(120.dp),
-                                colorFilter = ColorFilter.tint(Color.Gray)
-                            )
-                            Spacer(modifier = Modifier.height(25.dp))
-                            Text(
-                                textAlign = TextAlign.Center,
-                                text = "No VIU currently registered.\nTry registering?",
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color.Gray
-                                )
-                            )
-                        }
-                    }
-//                } else if (viuList.isEmpty()) {
-//                    Text(
-//                        text = if (searchQuery.isNotEmpty()) "No matching VIUs found" else "No VIU records found",
-//                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-//                        color = Color.Gray
-//                        )
-                } else {
-                    Box (modifier=Modifier
-                        .padding(horizontal=12.dp)) {
-                        // Show if all is good
-                        UserListView(
-                            users = usersList,
-                            onVideoCallClicked = { username ->
-                                Log.d("StreamCheck", "Video call clicked for $username")
-                                onVideoCall(username)
-                            },
-                            onAudioCallClicked = { username ->
-                                Log.d("StreamCheck", "Audio call clicked for $username")
-                                onAudioCall(username)
-                            }
-                        )
-                    }
-                }
-            }
-
-            // Set alphabet scrollbar
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier
-                    .fillMaxHeight()
-            ) {
-                alphabet.forEach { letter ->
-                    Text(
-                        text = letter.toString(),
-                        modifier = Modifier.clickable {
-                            scope.launch {
-                                // TODO: Fix connection
-                                val targetIndex = viuList.indexOfFirst {
-                                    it.firstName.startsWith(letter.toString(), ignoreCase = true)
-                                }
-                                if (targetIndex != -1) {
-                                    // Scroll to the item
-                                    listState.animateScrollToItem(targetIndex)
+                        // Set main content with controls
+                        if (associatedViuUids == null) {
+                            // loooooaaaaddddinnngggg
+                            Box(
+                                modifier = Modifier.weight(1f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    CircularProgressIndicator()
+                                    Spacer(modifier = Modifier.height(25.dp))
+                                    Text(
+                                        textAlign = TextAlign.Center,
+                                        text = "Fetching the status of your VIUs.\nPlease wait!",
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color.Gray
+                                        )
+                                    )
                                 }
                             }
+
+                        } else if (filteredUsers.isEmpty() && associatedViuUids?.isNotEmpty() == true) {
+                            // viu state no changes
+                            Box(
+                                modifier = Modifier.weight(1f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    if (searchQuery.isNotEmpty()) {
+                                        Text(
+                                            textAlign = TextAlign.Center,
+                                            text = "No matching VIUs found for \"$searchQuery\"",
+                                            style = MaterialTheme.typography.bodyLarge.copy(
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color.Gray
+                                            )
+                                        )
+                                    } else {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.ic_no_internet),
+                                            contentDescription = "Icon",
+                                            modifier = Modifier.size(120.dp),
+                                            colorFilter = ColorFilter.tint(Color.Gray)
+                                        )
+                                        Spacer(modifier = Modifier.height(25.dp))
+                                        Text(
+                                            textAlign = TextAlign.Center,
+                                            text = "No VIUs are currently online or matching your search.\nTry again later?",
+                                            style = MaterialTheme.typography.bodyLarge.copy(
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color.Gray
+                                            )
+                                        )
+                                    }
+                                }
+
+                            }
+
+                        } else if (associatedViuUids?.isEmpty() == true) {
+                            //  empty viu
+                            Box(
+                                modifier = Modifier.weight(1f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_no_viu_stream),
+                                        contentDescription = "Icon",
+                                        modifier = Modifier.size(120.dp),
+                                        colorFilter = ColorFilter.tint(Color.Gray)
+                                    )
+                                    Spacer(modifier = Modifier.height(25.dp))
+                                    Text(
+                                        textAlign = TextAlign.Center,
+                                        text = "No VIU currently registered.\nTry registering?",
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color.Gray
+                                        )
+                                    )
+                                }
+                            }
+                        } else {
+                            Box(modifier = Modifier.weight(1f)) {
+                                UserListView(
+                                    users = filteredUsers,
+                                    listState = listState,
+                                    onVideoCallClicked = { uid ->
+                                        Log.d("StreamCheck", "Video call clicked for $uid")
+                                        onVideoCall(uid)
+                                    },
+                                    onAudioCallClicked = { uid ->
+                                        Log.d("StreamCheck", "Audio call clicked for $uid")
+                                        onAudioCall(uid)
+                                    }
+                                )
+                            }
                         }
-                    )
+                    }
+
+                    // Set alphabet scrollbar
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .padding(start=6.dp, end = 0.dp)
+                    ) {
+                        alphabet.forEach { letter ->
+                            Text(
+                                text = letter.toString(),
+                                modifier = Modifier.clickable {
+                                    scope.launch {
+                                        val targetIndex = viuList.indexOfFirst {
+                                            it.firstName.startsWith(
+                                                letter.toString(),
+                                                ignoreCase = true
+                                            )
+                                        }
+                                        if (targetIndex != -1) {
+                                            listState.animateScrollToItem(targetIndex)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
-
 
 @Composable
 fun SearchBar(
@@ -346,7 +355,6 @@ fun SearchBar(
             focusedBorderColor = Color(0xFF6041EC),
             unfocusedBorderColor = Color.Transparent,
             cursorColor = Color(0xFF6041EC)
-        ),
-        singleLine = true
+        )
     )
 }

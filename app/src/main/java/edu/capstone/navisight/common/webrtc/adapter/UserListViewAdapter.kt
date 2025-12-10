@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,11 +45,12 @@ import edu.capstone.navisight.caregiver.model.Viu
 
 @Composable
 fun UserListView (
-    users: SnapshotStateList<Triple<Viu, String, String>>,
+    users: List<Triple<Viu, String, String>>,
+    listState: LazyListState,
     onVideoCallClicked: (String) -> Unit,
     onAudioCallClicked: (String) -> Unit
 ) {
-    LazyColumn {
+    LazyColumn (state=listState){
         items(users) { user ->
             UserListItem(
                 viu = user.first,
