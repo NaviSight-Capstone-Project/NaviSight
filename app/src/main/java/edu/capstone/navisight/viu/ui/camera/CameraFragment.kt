@@ -13,6 +13,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.GestureDetector
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.Surface
@@ -28,6 +29,7 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.view.GestureDetectorCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
@@ -59,20 +61,19 @@ import edu.capstone.navisight.viu.ui.camera.managers.ScreensaverHandler
 import edu.capstone.navisight.viu.ui.camera.managers.WebRTCManager
 import edu.capstone.navisight.viu.ui.ocr.DocumentReaderFragment
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 private const val TAG = "CameraFragment"
 private const val QUICK_MENU_TAG = "QuickMenu"
 private const val SHARED_PREFERENCES_NAME = "NaviData"
 private const val EMERGENCY_SYS_TAG = "EmergencySystem"
 
-// TODO: Make this fragment's camera front facing on deployment time
-
 class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     Fragment(R.layout.fragment_camera),
     ObjectDetectorHelper.DetectorListener,  QuickMenuListener {
 
     // Init. battery receivers and related
-    lateinit var sharedPreferences: SharedPreferences // TODO: Probably remove this na
+    lateinit var sharedPreferences: SharedPreferences
     private lateinit var batteryReceiver: BatteryStateReceiver
     var batteryAlert: AlertDialog? = null
 
@@ -84,7 +85,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     var imageCapture: ImageCapture? = null
     var camera: Camera? = null
     private var _fragmentCameraBinding: FragmentCameraBinding? = null
-    var currentCameraFacing: Int = CameraSelector.LENS_FACING_BACK // Default to back camera
+    var currentCameraFacing: Int = CameraSelector.LENS_FACING_BACK
     val fragmentCameraBinding get() = _fragmentCameraBinding
     val cameraReleaseHandler = Handler(Looper.getMainLooper())
     lateinit var cameraExecutor: ExecutorService
@@ -103,21 +104,14 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     // Init. screensaver vars
     private val idleHandler = Handler(Looper.getMainLooper())
 
-    // Init. clickCount for quadruple tap and screensaver mode
-    private var clickCount = 0
-
-    // Init. quadruple tap to profile page
-    private val QUADRUPLE_TAP_TIMEOUT = 500L
-    private val quadrupleTapHandler = Handler(Looper.getMainLooper())
-    private val quadrupleTapRunnable = Runnable {
-        clickCount = 0
-    }
+    // --- NEW GESTURE HANDLER ---
+    private lateinit var gestureDetector: GestureDetectorCompat
 
     // Init. emergency mode vars
     private val volumeKeyResetHandler = Handler(Looper.getMainLooper())
-    private val volumeKeyResetDelay = 500L // Time the flag remains true after ACTION_UP
+    private val volumeKeyResetDelay = 500L
     private val volumeKeyResetRunnable = Runnable {
-        isVolumeKeyPressed = false // Only truly reset the flag after the delay
+        isVolumeKeyPressed = false
     }
     var didEmergencySequenceComplete = false
     private val emergencyHoldDuration = 1500L
@@ -125,13 +119,13 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     private var isVolumeKeyPressed: Boolean = false
     private val emergencyHoldRunnable = Runnable {
         if (isAdded) {
-            emergencyManager.initiateEmergencyModeSequence() // Trigger
+            emergencyManager.initiateEmergencyModeSequence()
         }
-        isVolumeKeyPressed = false // Safety reset
-        volumeKeyResetHandler.removeCallbacks(volumeKeyResetRunnable) // Stop any pending reset
+        isVolumeKeyPressed = false
+        volumeKeyResetHandler.removeCallbacks(volumeKeyResetRunnable)
     }
 
-    //  Init. variables for menu activation (long press)
+    //  Init. variables for menu activation
     private val viuDataSource: ViuDataSource by lazy { ViuDataSource.getInstance() }
     val profileViewModel: ProfileViewModel by activityViewModels {
         ProfileViewModel.provideFactory(
@@ -140,53 +134,6 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     }
     var caregiverUid: String? = null
     var quickMenuFragment: QuickMenuFragment? = null
-    private val longPressDuration = 3_000L
-    private val longPressHandler = Handler(Looper.getMainLooper())
-    private var initialDownX: Float = 0f
-    private var initialDownY: Float = 0f
-    private val longPressRunnable = Runnable {
-        context?.let { safeContext ->
-            // Show the drag fragment (the drop targets)
-            quickMenuHandler.showQuickMenuFragment()
-
-            fragmentCameraBinding?.quickMenuContainer?.visibility = View.VISIBLE
-
-            // Prepare the View for the Drag Shadow
-            val shadowView = View(safeContext).apply {
-                // Set drag shadow size dito
-                layoutParams = ViewGroup.LayoutParams(50, 50)
-                setBackgroundResource(R.drawable.quick_menu_drag_shadow)
-            }
-
-            // Force the view to measure and layout to set positive dimensions
-            val widthSpec = View.MeasureSpec.makeMeasureSpec(50, View.MeasureSpec.EXACTLY)
-            val heightSpec = View.MeasureSpec.makeMeasureSpec(50, View.MeasureSpec.EXACTLY)
-            shadowView.measure(widthSpec, heightSpec)
-            shadowView.layout(0, 0, shadowView.measuredWidth, shadowView.measuredHeight)
-
-            // Initiate the Drag and Drop operation
-            val clipItem = ClipData.Item("Quick Menu Drag")
-            val dragData = ClipData(
-                "Quick Menu Drag",
-                arrayOf(ClipDescription.MIMETYPE_TEXT_PLAIN),
-                clipItem
-            )
-
-            // Pass view to the DragShadowBuilder
-            val shadowBuilder = View.DragShadowBuilder(shadowView)
-
-            // Nullify the listener *before* starting drag to drop touch ownership
-            fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener(null)
-
-            // Start the drag operation
-            fragmentCameraBinding?.previewModeHitbox?.startDragAndDrop(
-                dragData,
-                shadowBuilder,
-                null,
-                0
-            )
-        }
-    }
 
     // For ringtone
     var incomingMediaPlayer: MediaPlayer? = null
@@ -195,16 +142,12 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     val callActivityLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        // Execute these when CallActivity finishes
         if (result.resultCode == AppCompatActivity.RESULT_OK) {
-            // Check for a specific result code if needed, but RESULT_OK is usually enough
             Log.d(TAG, "CallActivity finished. Re-binding camera use cases.")
-            // Reinitialize camera
             cameraBindsHandler.setUpCamera()
-            screensaverHandler.doAutoScreensaver() // Re-start the screensaver timer
+            screensaverHandler.doAutoScreensaver()
         } else {
             Log.d(TAG, "CallActivity finished with result code ${result.resultCode}. Re-binding camera use cases anyway.")
-            // Even on failure/cancellation, the camera needs to be restored
             cameraBindsHandler.setUpCamera()
             screensaverHandler.doAutoScreensaver()
         }
@@ -217,15 +160,15 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     override fun onQuickMenuAction(actionId: Int) {
         when(actionId) {
             R.id.ball_video_call -> {
-                webRTCManager.handleStartCall(isVideoCall=true) // Start video call
+                webRTCManager.handleStartCall(isVideoCall=true)
                 Log.d(QUICK_MENU_TAG, "Executed: Video Calling Primary Caregiver")
             }
             R.id.ball_audio_call -> {
-                webRTCManager.handleStartCall(isVideoCall=false) // Start audio call
+                webRTCManager.handleStartCall(isVideoCall=false)
                 Log.d(QUICK_MENU_TAG, "Executed: Audio Calling Primary Caregiver")
             }
             R.id.ball_snap -> {
-                quickMenuHandler.takePicture() // Take a picture
+                quickMenuHandler.takePicture()
                 Log.d(QUICK_MENU_TAG, "Executed: Quick Action #1")
             }
             R.id.ball_flip_camera -> {
@@ -254,134 +197,174 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     }
 
     override fun onQuickMenuDismissed() {
-        // Find and remove the fragment when the drag operation ends
         if (isAdded) {
             childFragmentManager.commit {
                 quickMenuFragment?.let { remove(it) }
             }
         }
         quickMenuFragment = null
-
         fragmentCameraBinding?.quickMenuContainer?.visibility = View.GONE
 
-        // Re-enable the touch listener to allow long press detection again
-        bindTouchListener()
+        // Ensure input is still listening
+        setupInputListeners()
         Log.d(TAG, "Quick Menu Drag ended and fragment removed.")
     }
 
-
-    // Adjust binds here
     @SuppressLint("ClickableViewAccessibility")
-    private fun bindTouchListener() {
-        fragmentCameraBinding?.previewModeHitbox?.apply {
-            // Make the view focusable to receive key events
+    private fun setupInputListeners() {
+        val touchInterceptor = fragmentCameraBinding?.touchInterceptorView ?: return
+
+        // 1. Initialize Gesture Detector for Swipes (Profile Navigation)
+        gestureDetector = GestureDetectorCompat(requireContext(), object : GestureDetector.SimpleOnGestureListener() {
+            private val SWIPE_THRESHOLD = 100
+            private val SWIPE_VELOCITY_THRESHOLD = 100
+
+            override fun onDown(e: MotionEvent): Boolean {
+                // Return false so we don't consume the click, allowing onClickListener to fire
+                return false
+            }
+
+            override fun onFling(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                velocityX: Float,
+                velocityY: Float
+            ): Boolean {
+                // Check for Slide Left
+                if (e1 != null && e1.x - e2.x > SWIPE_THRESHOLD && abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
+                    navigateToProfile()
+                    return true
+                }
+                return false
+            }
+        })
+
+        touchInterceptor.apply {
             isFocusableInTouchMode = true
             requestFocus()
 
+            // Set Accessibility Delegate for "TalkBack Slide" (Optional: Adds "Navigate Profile" to menu)
+            // But relies on GestureDetector for 2-finger swipe in TalkBack
+
+            // KEY LISTENER: Volume Buttons for Emergency
             setOnKeyListener { _, keyCode, event ->
                 if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
                     when (event.action) {
                         KeyEvent.ACTION_DOWN -> {
-                            // Stop any pending reset delay
                             volumeKeyResetHandler.removeCallbacks(volumeKeyResetRunnable)
                             if (!isVolumeKeyPressed) {
                                 isVolumeKeyPressed = true
+                                // If holding volume, we might be starting emergency
+                                checkEmergencyStart()
                             }
-                            return@setOnKeyListener true // Consume the key event
+                            return@setOnKeyListener true
                         }
                         KeyEvent.ACTION_UP -> {
-                            // USE STICKY KEYS ARGH.
                             volumeKeyResetHandler.postDelayed(
                                 volumeKeyResetRunnable, volumeKeyResetDelay)
-                            return@setOnKeyListener true // Consume the key event
+
+                            // If released, cancel emergency if not yet complete
+                            if (!didEmergencySequenceComplete) {
+                                emergencyHoldHandler.removeCallbacks(emergencyHoldRunnable)
+                            }
+                            return@setOnKeyListener true
                         }
                     }
                 }
                 false
             }
-        }
 
-        fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
-            screensaverHandler.doAutoScreensaver() // Start screensaver by default
-            val action = event.actionMasked
+            // CLICK LISTENER: Screensaver Toggle
+            // Standard: 1 Tap | TalkBack: Double Tap
+            setOnClickListener {
+                screensaverHandler.toggleScreenSaver()
+                screensaverHandler.doAutoScreensaver()
+            }
 
-            when (action) {
-                MotionEvent.ACTION_DOWN -> {
-                    quadrupleTapHandler.removeCallbacks(quadrupleTapRunnable)
-                    clickCount++
+            // LONG CLICK LISTENER: Quick Menu
+            // Standard: Hold | TalkBack: Double Tap & Hold
+            setOnLongClickListener {
+                // If Volume Key is held, do NOT open menu (Priority to Emergency)
+                if (isVolumeKeyPressed) return@setOnLongClickListener true
 
-                    initialDownX = event.x
-                    initialDownY = event.y
-                    longPressHandler.postDelayed(
-                        longPressRunnable,
-                        longPressDuration)
+                startQuickMenuDrag(it)
+                return@setOnLongClickListener true // Consumed
+            }
 
+            //  TOUCH LISTENER: Feeds the Gesture Detector
+            setOnTouchListener { _, event ->
+                screensaverHandler.doAutoScreensaver() // Reset screensaver timer on any interaction
 
-                    // Start emergency timer, else go to quick menu if volume keys not pressed
-                    // whilst long pressing screen.
-                    Log.d(EMERGENCY_SYS_TAG, "setOnTouchListener isVolumeKeyPressed: ${isVolumeKeyPressed}")
-
-                    if (isVolumeKeyPressed) {
-                        longPressHandler.removeCallbacks(longPressRunnable)
-                        volumeKeyResetHandler.removeCallbacks(volumeKeyResetRunnable)
-                        // Begin emergency process
-                        emergencyHoldHandler.postDelayed(
-                            emergencyHoldRunnable,
-                            emergencyHoldDuration
-                        )
-                    } else {
-                        longPressHandler.postDelayed(
-                            longPressRunnable,
-                            longPressDuration)
-                    }
-                    if (clickCount == 4) {
-                        context?.let { safeContext ->
-                            if (isAdded) {
-                                TextToSpeechHelper.speak(safeContext, "Navigating to Profile Page")
-                                if (isAdded) {
-                                    requireActivity().supportFragmentManager.commit {
-                                        setReorderingAllowed(true)
-                                        replace(
-                                            R.id.fragment_container,
-                                            ProfileFragment(realTimeViewModel))
-                                        addToBackStack(null)
-                                    }
-                                }
-                            }
-                        }
-                        clickCount = 0
-                    }
-                    if (clickCount >= 3 && clickCount < 4) {
-                        context?.let { safeContext -> screensaverHandler.toggleScreenSaver() }
-                    }
-                    if (clickCount > 0 && clickCount < 4) {
-                        quadrupleTapHandler.postDelayed(
-                            quadrupleTapRunnable, QUADRUPLE_TAP_TIMEOUT)
-                    }
-                    return@setOnTouchListener true // Claim touch stream
+                // Pass event to GestureDetector (Handles Slide Left)
+                if (gestureDetector.onTouchEvent(event)) {
+                    return@setOnTouchListener true // Consumed by Swipe
                 }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    // Cancel the long press if the finger is released early
-                    longPressHandler.removeCallbacks(longPressRunnable)
 
-                    // If the screen is lifted while a Volume key is held (but before 1.5s) then
-                    // cancel the timer not unless the emergency has already been triggered
-                    if (isVolumeKeyPressed && !didEmergencySequenceComplete) {
-                        emergencyHoldHandler.removeCallbacks(emergencyHoldRunnable)
-                        context?.let { safeContext ->
-                            VibrationHelper.vibrate(safeContext)
-                            TextToSpeechHelper.speak(safeContext, "Emergency activation cancelled.")
-                        }
-                    }
-                    volumeKeyResetHandler.removeCallbacks(volumeKeyResetRunnable) // HUWAG KALIMUTAN
+                // Let the event bubble up to trigger onClick or onLongClick if not a swipe
+                return@setOnTouchListener false
+            }
+        }
+    }
 
-                    // Force reset the volume key flag immediately when screen is released
-                    // (the sequence is over)
-                    isVolumeKeyPressed = false
+    private fun checkEmergencyStart() {
+        // If volume key is pressed, start emergency timer immediately
+        // Note: Logic simplified from original to rely on KeyDown events
+        emergencyHoldHandler.removeCallbacks(emergencyHoldRunnable)
+        emergencyHoldHandler.postDelayed(emergencyHoldRunnable, emergencyHoldDuration)
+    }
+
+    private fun navigateToProfile() {
+        context?.let { safeContext ->
+            if (isAdded) {
+                TextToSpeechHelper.speak(safeContext, "Navigating to Profile Page")
+                requireActivity().supportFragmentManager.commit {
+                    setReorderingAllowed(true)
+                    replace(
+                        R.id.fragment_container,
+                        ProfileFragment(realTimeViewModel))
+                    addToBackStack(null)
                 }
             }
-            // Maintain touch stream ownership
-            return@setOnTouchListener true
+        }
+    }
+
+    private fun startQuickMenuDrag(view: View) {
+        context?.let { safeContext ->
+            // Show the drag fragment (the drop targets)
+            quickMenuHandler.showQuickMenuFragment()
+
+            fragmentCameraBinding?.quickMenuContainer?.visibility = View.VISIBLE
+
+            // Prepare the View for the Drag Shadow
+            val shadowView = View(safeContext).apply {
+                layoutParams = ViewGroup.LayoutParams(50, 50)
+                setBackgroundResource(R.drawable.quick_menu_drag_shadow)
+            }
+
+            val widthSpec = View.MeasureSpec.makeMeasureSpec(50, View.MeasureSpec.EXACTLY)
+            val heightSpec = View.MeasureSpec.makeMeasureSpec(50, View.MeasureSpec.EXACTLY)
+            shadowView.measure(widthSpec, heightSpec)
+            shadowView.layout(0, 0, shadowView.measuredWidth, shadowView.measuredHeight)
+
+            val clipItem = ClipData.Item("Quick Menu Drag")
+            val dragData = ClipData(
+                "Quick Menu Drag",
+                arrayOf(ClipDescription.MIMETYPE_TEXT_PLAIN),
+                clipItem
+            )
+
+            val shadowBuilder = View.DragShadowBuilder(shadowView)
+
+            // Temporarily remove listener to prevent conflicts during drag
+            fragmentCameraBinding?.touchInterceptorView?.setOnTouchListener(null)
+
+            // Start the drag operation
+            view.startDragAndDrop(
+                dragData,
+                shadowBuilder,
+                null,
+                0
+            )
         }
     }
 
@@ -389,29 +372,22 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     // END OF BIND/TOUCH LISTENER
     //////////////////////////////////////////////
 
-    // Setup onPause/onResume for WebRTC
     override fun onPause() {
         super.onPause()
         cameraReleaseHandler.removeCallbacksAndMessages(null)
         idleHandler.removeCallbacksAndMessages(null)
-        longPressHandler.removeCallbacksAndMessages(null)
-        quadrupleTapHandler.removeCallbacksAndMessages(null)
-        context?.unregisterReceiver(batteryReceiver) // Release battery receiver
+        // Removed old handlers cleanup
+        context?.unregisterReceiver(batteryReceiver)
         Log.d("battery", "finished adding battery intents")
 
         webRTCManager.releaseCamera()
-        // Unregister the listener to prevent the call dialog from showing up
         webRTCManager.disconnectMainServiceListener()
         webRTCManager.releaseMediaPlayer()
     }
 
-    //  Rebind camera once either:
-    //      No calls incoming or not about to call
     override fun onResume() {
         super.onResume()
-        // Re-register as the active listener for incoming calls
         webRTCManager.connectMainServiceListener()
-        // TODO: Check if camera is already permitted (very unlikely, as this app should be running na, last TODO)
         context?.let {
             fragmentCameraBinding?.viewFinder?.post {
                 cameraBindsHandler.setUpCamera()
@@ -423,10 +399,11 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
             addAction(Intent.ACTION_BATTERY_OKAY)
         }
         context?.registerReceiver(batteryReceiver, intentFilter)
-        Log.d("battery", "finished adding battery intents")
 
-        // Check initially for battery here
         batteryHandler.checkInitialBatteryStatus()
+
+        // Ensure touch interceptor has focus for Volume Keys
+        fragmentCameraBinding?.touchInterceptorView?.requestFocus()
     }
 
     override fun onDestroyView() {
@@ -440,15 +417,12 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize fully sharedPreferences for battery
         sharedPreferences = requireContext().getSharedPreferences(
             SHARED_PREFERENCES_NAME,
             Context.MODE_PRIVATE)
 
-        // Bind to make WebRTC and screensaver work_fragmentCameraBinding = FragmentCameraBinding.bind(view
         _fragmentCameraBinding = FragmentCameraBinding.bind(view)
 
-        // Init. managers and handlers.
         batteryHandler = BatteryHandler(this, realTimeViewModel)
         screensaverHandler = ScreensaverHandler(this)
         cameraBindsHandler = CameraBindsHandler(this)
@@ -456,12 +430,10 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         emergencyManager = EmergencyManager(this, webRTCManager, realTimeViewModel)
         quickMenuHandler = QuickMenuHandler(this)
 
-        // Link Main Service listener and Main Repository
         webRTCManager.connectMainServiceListener()
         service = MainService.getInstance()
         mainRepository = MainRepository.getInstance(requireContext())
 
-        // Start camera bind with object detector
         objectDetectorHelper = ObjectDetectorHelper(
             context = requireContext(),
             objectDetectorListener = this
@@ -471,12 +443,10 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
             cameraBindsHandler.setUpCamera()
         }
 
-        // Bind/set extra functionalities here
-        screensaverHandler.toggleScreenSaver() // Begin screen saving
-        bindTouchListener() // Set and start the binding. Do not remove.
-        quickMenuHandler.observeCaregiverUid() // Set for calling using Quick Menu
+        screensaverHandler.toggleScreenSaver()
+        setupInputListeners() // NEW SETUP FUNCTION
+        quickMenuHandler.observeCaregiverUid()
 
-        // Jump to emergency mode if activated on startup
         viewLifecycleOwner.lifecycleScope.launch {
             if (emergencyManager.checkIfEmergencyMode()) {
                 emergencyManager.launchEmergencyMode()
@@ -514,10 +484,6 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
 
     override fun onDestroy() {
         super.onDestroy()
-        webRTCManager.releaseMediaPlayer() // Set to release media player
+        webRTCManager.releaseMediaPlayer()
     }
-
-    /////////////////////////////////////////////////////////
-    // END OF MAIN APP FLOW AND CAMERA SYSTEM
-    /////////////////////////////////////////////////////////
 }

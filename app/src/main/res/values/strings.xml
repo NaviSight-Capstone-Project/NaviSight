@@ -31,6 +31,10 @@
 
     <string name="guest_mode_tooltip_1">Swipe to Left to Login!</string>
 
+
+    <string name="camera_accessibility_hint">Camera View. Double tap to toggle screensaver. Double tap and hold for menu. Swipe left for profile.</string>
+
+
     <string name="alt_bottom_sheet_max_results_button_minus">Decreasing maximum detected results
         button</string>
     <string name="alt_bottom_sheet_max_results_button_plus">Increasing maximum detected results
