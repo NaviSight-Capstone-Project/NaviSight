@@ -1,7 +1,10 @@
 package edu.capstone.navisight.auth.ui.login
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
+import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
@@ -17,11 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +37,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import edu.capstone.navisight.R
-import edu.capstone.navisight.auth.util.VoiceHandler // Import the new Handler
+import edu.capstone.navisight.auth.util.VoiceHandler
 
 enum class InputStage { EMAIL, PASSWORD, DONE }
 
@@ -59,15 +59,26 @@ fun LoginScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
 
-    // INIT VOICE HANDLER
-    // We use remember to keep the instance alive, and DisposableEffect to clean it up
-    val voiceHandler = remember { VoiceHandler(context) }
-
-    DisposableEffect(Unit) {
-        onDispose { voiceHandler.shutdown() }
+    // ACCESSBILITY MANAGER
+    // We use this to manually announce events to TalkBack
+    val accessibilityManager = remember {
+        context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
     }
 
-    // Observe listening state for UI animations
+    fun announceForAccessibility(message: String) {
+        // Check if accessibility is actually on before sending events
+        if (accessibilityManager?.isEnabled == true) {
+            val event = AccessibilityEvent.obtain(AccessibilityEvent.TYPE_ANNOUNCEMENT)
+            event.text.add(message)
+            accessibilityManager.sendAccessibilityEvent(event)
+        }
+    }
+
+
+    // INIT VOICE HANDLER
+    val voiceHandler = remember { VoiceHandler(context) }
+    DisposableEffect(Unit) { onDispose { voiceHandler.shutdown() } }
+
     val isListening by voiceHandler.isListening.collectAsState()
 
     // DATA STATE
@@ -75,7 +86,6 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // Determine Input Stage
     val currentInputStage = remember(email, password) {
         if (email.isEmpty()) InputStage.EMAIL
         else if (password.isEmpty()) InputStage.PASSWORD
@@ -87,8 +97,13 @@ fun LoginScreen(
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (isGranted) voiceHandler.speak("Permission granted. Hold the bottom button.")
-        else voiceHandler.speak("Microphone permission is needed.")
+        if (isGranted) {
+            val msg = "Permission granted. Double tap and hold the bottom button to speak."
+            voiceHandler.speak(msg)
+            announceForAccessibility(msg)
+        } else {
+            voiceHandler.speak("Microphone permission is needed.")
+        }
     }
 
     // VOICE ACTION FUNCTIONS
@@ -99,8 +114,8 @@ fun LoginScreen(
         }
 
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        announceForAccessibility("Listening")
 
-        // Decide logic based on stage
         val inputType = if (activeInputStage == InputStage.PASSWORD) "password" else "email"
 
         voiceHandler.startListening(
@@ -108,26 +123,33 @@ fun LoginScreen(
             onResult = { result ->
                 if (inputType == "email") {
                     email = result
-                    voiceHandler.speak("Email set. Hold again for password.")
+                    val msg = "Email set. Hold again for password."
+                    voiceHandler.speak(msg)
+                    announceForAccessibility(msg)
                 } else {
                     password = result
-                    voiceHandler.speak("Password entered. Press Login.")
+                    val msg = "Password entered. Press Login button."
+                    voiceHandler.speak(msg)
+                    announceForAccessibility(msg)
                 }
             },
             onError = { errorMsg ->
                 voiceHandler.speak(errorMsg)
+                announceForAccessibility(errorMsg)
             }
         )
     }
 
     // Auto-Speak on Entry
     LaunchedEffect(Unit) {
-        // Small delay to ensure TTS engine is bound
         kotlinx.coroutines.delay(500)
-        voiceHandler.speak("Welcome to Navi Sight. Hold the bottom button to speak your email.")
+        // Ensure we don't conflict if TalkBack is already reading the screen
+        if (accessibilityManager?.isTouchExplorationEnabled == false) {
+            voiceHandler.speak("Welcome to Navi Sight. Double tap and hold the bottom button to speak.")
+        }
     }
 
-    // UI SETUP (Animations & Layout)
+    // UI SETUP
     var emailFocused by remember { mutableStateOf(false) }
     var passwordFocused by remember { mutableStateOf(false) }
     val anyFieldFocused = emailFocused || passwordFocused
@@ -170,36 +192,35 @@ fun LoginScreen(
     ) {
         Box(modifier = Modifier.fillMaxSize().scale(scaleFactor).blur(blurRadius).background(gradientTeal).background(gradientPurple))
 
-        // TOP ACTION BUTTONS
-        // Reset Button (Top Left)
+        // --- TOP ACTION BUTTONS ---
         FloatingActionButton(
             onClick = {
                 email = ""
                 password = ""
                 voiceHandler.speak("Fields cleared.")
+                announceForAccessibility("Fields cleared")
             },
             containerColor = Color(0xFFE0E0E0), contentColor = Color(0xFF4A4A4A),
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier.align(Alignment.TopStart).padding(top = 48.dp, start = 24.dp).size(56.dp).shadow(8.dp, RoundedCornerShape(16.dp))
-        ) { Icon(Icons.Filled.Refresh, "Reset", Modifier.size(28.dp)) }
+        ) { Icon(Icons.Filled.Refresh, "Reset Fields", Modifier.size(28.dp)) }
 
-        // Replay Button (Top Right)
         FloatingActionButton(
             onClick = { voiceHandler.speak("Please enter your email and password.") },
             containerColor = Color(0xFF6041EC), contentColor = Color.White,
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 24.dp).size(56.dp).shadow(8.dp, RoundedCornerShape(16.dp))
-        ) { Icon(Icons.Filled.VolumeUp, "Replay", Modifier.size(28.dp)) }
+        ) { Icon(Icons.Filled.VolumeUp, "Replay Instructions", Modifier.size(28.dp)) }
 
-        // Main Column
+        // --- MAIN FORM ---
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Image(painterResource(R.drawable.ic_logo), "Logo", Modifier.size(280.dp, 128.dp).padding(bottom = 48.dp))
+            Image(painterResource(R.drawable.ic_logo), "Navi Sight Logo", Modifier.size(280.dp, 128.dp).padding(bottom = 48.dp))
             Spacer(Modifier.height(48.dp))
 
-            // Email
+            // Email Field
             OutlinedTextField(
                 value = email, onValueChange = { email = it },
                 placeholder = { Text("Email", color = Color.Gray) },
@@ -210,17 +231,19 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth().onFocusChanged { emailFocused = it.isFocused }
                     .background(Color.White, RoundedCornerShape(16.dp))
                     .border(1.5.dp, if (emailFocused || activeInputStage == InputStage.EMAIL) Color(0xFF6041EC) else Color(0xFFE0E0E0), RoundedCornerShape(16.dp))
+                    .semantics { contentDescription = "Email Input Field. Current value: ${if(email.isEmpty()) "Empty" else email}" }
             )
             Spacer(Modifier.height(20.dp))
 
-            // Password
+            // Password Field
             OutlinedTextField(
                 value = password, onValueChange = { password = it },
                 placeholder = { Text("Password", color = Color.Gray) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_pass), null) },
                 trailingIcon = {
                     IconButton({ passwordVisible = !passwordVisible }) {
-                        Icon(if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, "Toggle")
+                        Icon(if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                            contentDescription = if (passwordVisible) "Hide Password" else "Show Password")
                     }
                 },
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -246,7 +269,10 @@ fun LoginScreen(
 
             errorState?.let { msg ->
                 if (msg.isNotEmpty()) {
-                    LaunchedEffect(msg) { voiceHandler.speak(msg) }
+                    LaunchedEffect(msg) {
+                        voiceHandler.speak(msg)
+                        announceForAccessibility("Error: $msg")
+                    }
                     Text(msg, color = Color.Red, fontSize = 14.sp, modifier = Modifier.padding(top = 16.dp))
                 }
             }
@@ -263,7 +289,7 @@ fun LoginScreen(
                             viewModel.resetPassword(email)
                         } else {
                             val msg = "Please enter your email first."
-                            voiceHandler.speak("Please enter your email first.")
+                            voiceHandler.speak(msg)
                             viewModel.setError(msg)
                         }
                     }
@@ -275,43 +301,99 @@ fun LoginScreen(
             }
         }
 
-        // BOTTOM MIC BUTTON
-        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp), contentAlignment = Alignment.Center) {
+        // --- BOTTOM MIC BUTTON  ---
+        // Check if TalkBack  is currently enabled
+        val isTalkBackEnabled = remember {
+            accessibilityManager?.isTouchExplorationEnabled == true
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp)
+                .semantics(mergeDescendants = true) {
+                    role = Role.Button
+                    // Update description based on mode
+                    contentDescription = if (isTalkBackEnabled) {
+                        // TalkBack instruction
+                        if (isListening) "Listening. Double tap to stop."
+                        else "Voice Input. Double tap to start."
+                    } else {
+                        // Standard instruction
+                        "Voice Input. Double tap and hold to speak."
+                    }
+                    stateDescription = if (isListening) "Listening" else "Idle"
+                },
+            contentAlignment = Alignment.Center
+        ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = when(activeInputStage) {
-                        InputStage.EMAIL -> "Hold for Email"
-                        InputStage.PASSWORD -> "Hold for Password"
-                        InputStage.DONE -> "Ready"
-                    },
-                    color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp)
+                    // Update Visual Label text
+                    text = if (isListening) "Listening..." else if (isTalkBackEnabled) "Double Tap to Speak" else "Hold to Speak",
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(72.dp).scale(micScale).shadow(8.dp, CircleShape)
+                    modifier = Modifier
+                        .size(72.dp)
+                        .scale(micScale)
+                        .shadow(8.dp, CircleShape)
                         .background(if (isListening) Color.Red else Color(0xFF6041EC), CircleShape)
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onPress = {
-                                    startVoiceInput()
-                                    tryAwaitRelease()
-                                    voiceHandler.stopListening()
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                }
-                            )
+                        // ADAPTIVE GESTURE LOGIC
+                        .pointerInput(isTalkBackEnabled) {
+                            if (isTalkBackEnabled) {
+                                // --- TALKBACK MODE: TOGGLE (Click to Start / Click to Stop) ---
+                                detectTapGestures(
+                                    onTap = {
+                                        if (isListening) {
+                                            voiceHandler.stopListening()
+                                            haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                            announceForAccessibility("Stopped listening")
+                                        } else {
+                                            startVoiceInput()
+                                        }
+                                    }
+                                )
+                            } else {
+                                // --- STANDARD MODE: PUSH-TO-TALK (Hold to Speak) ---
+                                detectTapGestures(
+                                    onPress = {
+                                        startVoiceInput()
+                                        tryAwaitRelease() // Waits for user to lift finger
+                                        voiceHandler.stopListening()
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        announceForAccessibility("Processing")
+                                    },
+                                    onTap = {
+                                        val helpMsg = "Please hold the button to speak."
+                                        voiceHandler.speak(helpMsg)
+                                    }
+                                )
+                            }
                         }
                 ) {
-                    Icon(Icons.Filled.Mic, "Speak", tint = Color.White, modifier = Modifier.size(32.dp))
+                    Icon(
+                        imageVector = Icons.Filled.Mic,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
                 }
             }
         }
 
-        // CAPTCHA
+        //CAPTCHA DIALOG
         if (showCaptchaDialog) {
             Dialog(onDismissRequest = { viewModel.dismissCaptchaDialog() }) {
                 Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                     Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        LaunchedEffect(Unit) { voiceHandler.speak("Verification required.") }
+                        LaunchedEffect(Unit) {
+                            val msg = "Verification required. Please solve the captcha."
+                            voiceHandler.speak(msg)
+                            announceForAccessibility(msg)
+                        }
                         CaptchaBox(captchaState, { viewModel.generateNewCaptcha() }, { viewModel.submitCaptcha(it) }, {})
                         Spacer(Modifier.height(16.dp))
                         Button(onClick = { showCaptchaDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)) { Text("Cancel", color = Color.White) }
