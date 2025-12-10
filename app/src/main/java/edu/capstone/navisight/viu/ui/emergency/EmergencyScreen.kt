@@ -223,13 +223,6 @@ fun EmergencyScreen(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
-
-//                Text(
-//                    text = emergencyModeDescription3,
-//                    color = Color.Red,
-//                    fontSize = 24.sp,
-//                    textAlign = TextAlign.Center
-//                )
             }
         }
 

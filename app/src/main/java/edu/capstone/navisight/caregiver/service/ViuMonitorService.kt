@@ -24,6 +24,7 @@ const val EXTRA_VIU_ID = "viu_id"
 const val EXTRA_VIU_NAME = "viu_name"
 const val EXTRA_LOCATION = "last_location"
 const val EXTRA_TIMESTAMP = "timestamp"
+const val EXTRA_VIU_ITSELF = "hi_my_name_is_viu"
 
 class ViuMonitorService : Service() {
 

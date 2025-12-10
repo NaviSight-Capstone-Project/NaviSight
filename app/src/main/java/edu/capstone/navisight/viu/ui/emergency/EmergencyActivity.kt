@@ -17,14 +17,11 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.core.content.edit
 import edu.capstone.navisight.common.Constants.SHARED_PREFERENCES_NAME
-import edu.capstone.navisight.common.Constants.SP_IS_EMERGENCY_MODE_ACTIVE
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
 import edu.capstone.navisight.viu.ViuHomeViewModel
-import edu.capstone.navisight.viu.data.remote.RealtimeDataSource
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
 
 private const val EMERGENCY_MODE_ACTIVATED_TAG = "isEmergencyModeActive"
@@ -37,6 +34,7 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
     private var viuRemoteDataSource = ViuDataSource()
     private val viuHomeViewModel: ViuHomeViewModel? = ViuHomeViewModel.getInstance()
     private lateinit var sharedPreferences: SharedPreferences
+    private lateinit var emergencyStatusListener: EmergencyStatusListener
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,7 +42,6 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
         // Init.
         TextToSpeechHelper.speak(applicationContext, "Emergency mode is active. ")
         sayEmergencyModeDescription()
-
 
         serviceRepository = MainServiceRepository.getInstance(applicationContext)
 
@@ -59,6 +56,12 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
         target = intent.getStringExtra("target")
         isVideoCall = intent.getBooleanExtra("isVideoCall", true)
         isCaller = intent.getBooleanExtra("isCaller", true)
+
+        emergencyStatusListener = EmergencyStatusListener {
+            // This is the callback when the flag is set to false remotely
+            handleRemoteEmergencyDeactivation()
+        }
+        emergencyStatusListener.startListening()
 
         setContent {
             EmergencyScreen(
@@ -88,25 +91,34 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
         })
     }
 
-    override fun onCallEnded() {
+    private fun handleRemoteEmergencyDeactivation() {
+        emergencyStatusListener.stopListening()
+        serviceRepository.sendEndOrAbortCall()
+        viuHomeViewModel?.removeUserEmergencyActivated()
+        TextToSpeechHelper.queueSpeak(
+            applicationContext,"Emergency mode deactivated by caregiver.")
         finish()
     }
 
-
+    override fun onCallEnded() {
+        emergencyStatusListener.stopListening()
+        finish()
+    }
 
     private fun sayEmergencyModeDescription(){
         TextToSpeechHelper.speak(applicationContext,
             emergencyModeDescription +
                     emergencyModeDescription2 )
-//                    emergencyModeDescription3
     }
 
     override fun onCallDenied() {
+        emergencyStatusListener.stopListening()
         finish()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        emergencyStatusListener.stopListening()
         if (MainService.endAndDeniedCallListener == this) {
             MainService.endAndDeniedCallListener = null
         }

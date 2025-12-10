@@ -2,7 +2,7 @@ package edu.capstone.navisight.viu.data.remote
 
 /*
 
-RealtimeDataSource.kt
+ViuEmergencyDataSource.kt
 
 Formerly ViuLocationDataSource.
 Renamed to this as it now handles MULTIPLE realtime events such as location, emergency and battery

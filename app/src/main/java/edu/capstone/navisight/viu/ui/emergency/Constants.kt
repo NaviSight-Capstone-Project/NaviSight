@@ -5,5 +5,3 @@ const val emergencyModeDescription = "You have activated emergency mode. To disa
 
 const val emergencyModeDescription2 = "Otherwise, please wait for assistance as NaviSight will " +
         "try to call your caregiver."
-
-const val emergencyModeDescription3 = "This message will repeat."
