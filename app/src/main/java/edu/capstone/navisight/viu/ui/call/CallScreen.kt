@@ -130,7 +130,7 @@ fun CallScreen(
         }
 
         if (!isConnected) {
-            // Video call calling...
+            // Calling...
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -142,6 +142,13 @@ fun CallScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
+                    Text(
+                        text = "Calling Caregiver",
+                        color = Color.White,
+                        style = MaterialTheme.typography.headlineLarge,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.size(12.dp))
                     AsyncImage(
                         model = imageUrl ?: R.drawable.default_profile,
                         contentDescription = "Caregiver Profile Image",
@@ -151,28 +158,18 @@ fun CallScreen(
                         contentScale = ContentScale.Crop
                     )
                     Spacer(modifier = Modifier.size(12.dp))
-                    Text(
-                        text = "Calling Caregiver",
-                        color = Color.White,
-                        style = TextStyle(
-                            fontSize = 24.sp,
+                    caregiverRecord?.let { record ->
+                        Text(
+                            text = "${record.firstName} ${record.lastName}",
                             color = Color.White,
-                        ),
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "${(caregiverRecord?.firstName) ?: ""} ${(caregiverRecord?.lastName) ?: ""}",
-                        color = Color.White,
-                        style = TextStyle(
-                            fontSize = 32.sp,
-                            color = Color.White,
-                        ),
-                        textAlign = TextAlign.Center
-                    )
+                            style = MaterialTheme.typography.headlineLarge,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         } else if (!isVideoCall){
-            // Audio call calling...
+            // Audio call
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -185,6 +182,13 @@ fun CallScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
+                    Text(
+                        text = "Audio Call",
+                        color = Color.White,
+                        style = MaterialTheme.typography.headlineSmall,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.size(12.dp))
                     AsyncImage(
                         model = imageUrl ?: R.drawable.default_profile,
                         contentDescription = "Caregiver Profile Image",
@@ -196,7 +200,7 @@ fun CallScreen(
                     Spacer(modifier = Modifier.size(12.dp))
                     // Caregiver Label
                     Text(
-                        text = "Caregiver Audio Call",
+                        text = "Caregiver",
                         color = Color.White,
                         style = TextStyle(
                             fontSize = 24.sp,

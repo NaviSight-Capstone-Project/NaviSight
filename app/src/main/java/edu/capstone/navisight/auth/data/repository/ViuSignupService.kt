@@ -17,6 +17,7 @@ class ViuSignupRepository {
         firstName: String,
         lastName: String,
         middleName: String,
+        birthday: String,
         phone: String,
         address: String,
         category: String,
@@ -25,7 +26,7 @@ class ViuSignupRepository {
         sex: String
     ): Result<Pair<Viu, String>> {
         return remoteDataSource.signupViu(
-            context, email, password, firstName, lastName, middleName,
+            context, email, password, firstName, lastName, middleName, birthday,
             phone, address, category, imageUri, caregiverEmail, sex
         )
     }

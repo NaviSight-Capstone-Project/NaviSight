@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -49,6 +50,23 @@ import java.util.*
 
 private enum class ViuSignupStep { PERSONAL, AVATAR, LEGAL, ACCOUNT }
 
+fun isAgeValid(birthMillis: Long): Boolean {
+    val birthDate = Calendar.getInstance().apply { timeInMillis = birthMillis }
+    val today = Calendar.getInstance()
+
+    var age = today.get(Calendar.YEAR) - birthDate.get(Calendar.YEAR)
+
+    if (today.get(Calendar.DAY_OF_YEAR) < birthDate.get(Calendar.DAY_OF_YEAR)) {
+        age--
+    }
+    return age in 18..60
+}
+
+fun convertMillisToDate(millis: Long): String {
+    val formatter = java.text.SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
+    return formatter.format(Date(millis))
+}
+
 @Composable
 fun ViuSignupScreen(
     viewModel: ViuSignupViewModel,
@@ -65,6 +83,7 @@ fun ViuSignupScreen(
     var firstName by remember { mutableStateOf("") }
     var middleName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
+    var birthday by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var detailedAddress by remember { mutableStateOf("") }
     var sex by remember { mutableStateOf("") }
@@ -137,8 +156,8 @@ fun ViuSignupScreen(
                 ) { step ->
                     when (step) {
                         ViuSignupStep.PERSONAL -> StepViuPersonal(
-                            fName = firstName, mName = middleName, lName = lastName, phone = phone, address = detailedAddress, sex = sex, category = category,
-                            onUpdate = { f, m, l, p, a, s, c -> firstName = f; middleName = m; lastName = l; phone = p; detailedAddress = a; sex = s; category = c },
+                            fName = firstName, mName = middleName, lName = lastName, birthday = birthday, phone = phone, address = detailedAddress, sex = sex, category = category,
+                            onUpdate = { f, m, l, b, p, a, s, c -> firstName = f; middleName = m; lastName = l; birthday = b; phone = p; detailedAddress = a; sex = s; category = c },
                             onNext = { currentStep = ViuSignupStep.AVATAR }
                         )
                         ViuSignupStep.AVATAR -> StepViuAvatar(
@@ -166,6 +185,7 @@ fun ViuSignupScreen(
                                     firstName = firstName.trim(),
                                     lastName = lastName.trim(),
                                     middleName = middleName.trim(),
+                                    birthday = birthday,
                                     phone = phone,
                                     address = fullAddress,
                                     sex = sex,
@@ -186,8 +206,8 @@ fun ViuSignupScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StepViuPersonal(
-    fName: String, mName: String, lName: String, phone: String, address: String, sex: String, category: String,
-    onUpdate: (String, String, String, String, String, String, String) -> Unit,
+    fName: String, mName: String, lName: String, birthday: String, phone: String, address: String, sex: String, category: String,
+    onUpdate: (String, String, String, String, String, String, String, String) -> Unit,
     onNext: () -> Unit
 ) {
     var isCategoryExpanded by remember { mutableStateOf(false) }
@@ -196,12 +216,46 @@ fun StepViuPersonal(
     var isSexExpanded by remember { mutableStateOf(false) }
     val sexOptions = listOf("Male", "Female", "Rather not say")
 
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState()
+    var isAgeInvalid by remember { mutableStateOf(false) }
+
     val isFirstNameError = fName.isEmpty()
     val isLastNameError = lName.isEmpty()
     val isPhoneError = phone.isEmpty() || !phone.startsWith("09") || phone.length != 11
     val isAddressError = address.isEmpty()
     val isCategoryError = category.isEmpty()
     val isSexError = sex.isEmpty()
+    val isBirthdayError = birthday.isEmpty() || isAgeInvalid
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        // Validate Age 18-60
+                        if (isAgeValid(millis)) {
+                            isAgeInvalid = false
+                            val formattedDate = convertMillisToDate(millis)
+                            onUpdate(fName, mName, lName, formattedDate, phone, address, sex, category)
+                        } else {
+                            isAgeInvalid = true
+                            // Still update the text, but the error flag blocks "Next"
+                            val formattedDate = convertMillisToDate(millis)
+                            onUpdate(fName, mName, lName, formattedDate, phone, address, sex, category)
+                        }
+                    }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 
     Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
         Text("Step 1: Personal Details", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6641EC))
@@ -209,7 +263,7 @@ fun StepViuPersonal(
 
         OutlinedTextField(
             value = fName,
-            onValueChange = { if (it.all { c -> c.isLetter() || c.isWhitespace() }) onUpdate(it, mName, lName, phone, address, sex, category) },
+            onValueChange = { if (it.all { c -> c.isLetter() || c.isWhitespace() }) onUpdate(it, mName, lName, birthday, phone, address, sex, category) },
             label = { Text("First Name *") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -220,7 +274,7 @@ fun StepViuPersonal(
 
         OutlinedTextField(
             value = mName,
-            onValueChange = { if (it.all { c -> c.isLetter() || c.isWhitespace() }) onUpdate(fName, it, lName, phone, address, sex, category) },
+            onValueChange = { if (it.all { c -> c.isLetter() || c.isWhitespace() }) onUpdate(fName, it, lName, birthday, phone, address, sex, category) },
             label = { Text("Middle Name") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -230,7 +284,7 @@ fun StepViuPersonal(
 
         OutlinedTextField(
             value = lName,
-            onValueChange = { if (it.all { c -> c.isLetter() || c.isWhitespace() }) onUpdate(fName, mName, it, phone, address, sex, category) },
+            onValueChange = { if (it.all { c -> c.isLetter() || c.isWhitespace() }) onUpdate(fName, mName, it, birthday, phone, address, sex, category) },
             label = { Text("Last Name *") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -239,9 +293,42 @@ fun StepViuPersonal(
         )
         Spacer(Modifier.height(8.dp))
 
+        Box(modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true }) {
+            OutlinedTextField(
+                value = birthday,
+                onValueChange = {},
+                readOnly = true,
+                enabled = true,
+                label = { Text("Birthday (MM/dd/yyyy) *") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                trailingIcon = {
+                    IconButton(onClick = { showDatePicker = true }) {
+                        Icon(Icons.Default.DateRange,
+                            contentDescription = "Date",
+                            tint = if (showDatePicker) Color(0xFF6641EC) else Color.Gray)
+                    }
+                },
+                isError = isBirthdayError && birthday.isNotEmpty(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledBorderColor = if(isBirthdayError && birthday.isNotEmpty()) Color.Red else Color.Gray,
+                    disabledLabelColor = if(isBirthdayError && birthday.isNotEmpty()) Color.Red else Color.Gray,
+                    disabledTrailingIconColor = Color.Gray ,
+                    unfocusedBorderColor = if (showDatePicker) Color(0xFF6641EC) else MaterialTheme.colorScheme.outline,
+                    unfocusedLabelColor = if (showDatePicker) Color(0xFF6641EC) else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+            // Invisible box to capture click over disabled text field
+            Box(Modifier.matchParentSize().clickable { showDatePicker = true })
+        }
+        if (isAgeInvalid && birthday.isNotEmpty()) {
+            Text("Age must be between 18 and 60 years old.", color = Color.Red, fontSize = 10.sp, modifier = Modifier.padding(start = 8.dp))
+        }
+        Spacer(Modifier.height(8.dp))
+
         OutlinedTextField(
             value = phone,
-            onValueChange = { if (it.length <= 11 && it.all { c -> c.isDigit() }) onUpdate(fName, mName, lName, it, address, sex, category) },
+            onValueChange = { if (it.length <= 11 && it.all { c -> c.isDigit() }) onUpdate(fName, mName, lName, birthday, it, address, sex, category) },
             label = { Text("Phone (09XXXXXXXXX) *") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -267,7 +354,7 @@ fun StepViuPersonal(
             )
             ExposedDropdownMenu(isSexExpanded, { isSexExpanded = false }) {
                 sexOptions.forEach { op ->
-                    DropdownMenuItem(text = { Text(op) }, onClick = { onUpdate(fName, mName, lName, phone, address, op, category); isSexExpanded = false })
+                    DropdownMenuItem(text = { Text(op) }, onClick = { onUpdate(fName, mName, lName, birthday, phone, address, op, category); isSexExpanded = false })
                 }
             }
         }
@@ -293,7 +380,7 @@ fun StepViuPersonal(
         // Detailed Address
         OutlinedTextField(
             value = address,
-            onValueChange = { onUpdate(fName, mName, lName, phone, it, sex, category) },
+            onValueChange = { onUpdate(fName, mName, lName, birthday, phone, it, sex, category) },
             label = { Text("Detailed Address *") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -315,13 +402,13 @@ fun StepViuPersonal(
             )
             ExposedDropdownMenu(isCategoryExpanded, { isCategoryExpanded = false }) {
                 categoryOptions.forEach { op ->
-                    DropdownMenuItem(text = { Text(op) }, onClick = { onUpdate(fName, mName, lName, phone, address, sex, op); isCategoryExpanded = false })
+                    DropdownMenuItem(text = { Text(op) }, onClick = { onUpdate(fName, mName, lName, birthday ,phone, address, sex, op); isCategoryExpanded = false })
                 }
             }
         }
         Spacer(Modifier.height(16.dp))
 
-        val isValid = !isFirstNameError && !isLastNameError && !isPhoneError && !isAddressError && !isSexError && !isCategoryError
+        val isValid = !isFirstNameError && !isLastNameError && !isBirthdayError && !isPhoneError && !isAddressError && !isSexError && !isCategoryError
         GradientButton(text = "Next", onClick = onNext, enabled = isValid)
     }
 }

@@ -36,6 +36,7 @@ class ViuSignupDataSource(
         firstName: String,
         lastName: String,
         middleName: String,
+        birthday: String,
         phone: String,
         address: String,
         category: String,
@@ -61,6 +62,7 @@ class ViuSignupDataSource(
             val viu = Viu(
                 uid = viuUid,
                 firstName = firstName, middleName = middleName, lastName = lastName,
+                birthday = birthday,
                 email = email, phone = phone, address = address, category = category,
                 profileImageUrl = imageUrl,
                 isEmailVerified = false,

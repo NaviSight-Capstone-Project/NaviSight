@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import edu.capstone.navisight.caregiver.data.remote.ViuDataSource
@@ -131,17 +133,25 @@ fun CallScreen(
         }
 
         if (!isConnected) {
+            // Calling
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color(0xC0000000))
-                    .padding(bottom=50.dp),
+                    .padding(bottom=if (isVideoCall) 50.dp else 300.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
+                    Text(
+                        text = "Calling VIU",
+                        color = Color.White,
+                        style = MaterialTheme.typography.headlineSmall,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.size(12.dp))
                     AsyncImage(
                         model = imageUrl ?: R.drawable.default_profile,
                         contentDescription = "VIU Profile Image",
@@ -152,25 +162,41 @@ fun CallScreen(
                     )
                     Spacer(modifier = Modifier.size(12.dp))
                     Text(
-                        text = "Calling VIU\n${(viuRecord?.firstName) ?: ""} ${(viuRecord?.lastName) ?: ""}",
+                        text = "VIU",
                         color = Color.White,
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineSmall,
                         textAlign = TextAlign.Center
                     )
+                    viuRecord?.let { record ->
+                        Text(
+                            text = "${record.firstName} ${record.lastName}",
+                            color = Color.White,
+                            style = MaterialTheme.typography.headlineMedium,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         } else if (!isVideoCall){
+            // Audio call omsim.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color(0xC0000000))
-                    .padding(bottom=50.dp),
+                    .padding(bottom=300.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
+                    Text(
+                        text = "Audio Call",
+                        color = Color.White,
+                        style = MaterialTheme.typography.headlineSmall,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.size(12.dp))
                     AsyncImage(
                         model = imageUrl ?: R.drawable.default_profile,
                         contentDescription = "VIU Profile Image",
@@ -181,7 +207,7 @@ fun CallScreen(
                     )
                     Spacer(modifier = Modifier.size(12.dp))
                     Text(
-                        text = "VIU Audio Call",
+                        text = "VIU",
                         color = Color.White,
                         style = MaterialTheme.typography.headlineSmall,
                         textAlign = TextAlign.Center
@@ -195,7 +221,10 @@ fun CallScreen(
                     Text(
                         text = callTime,
                         color = Color.White,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = TextStyle(
+                            fontSize = 24.sp,
+                            color = Color.White,
+                        ),
                         modifier = Modifier.padding(horizontal = 10.dp)
                     )
                 }
@@ -214,13 +243,13 @@ fun CallScreen(
                 Text(
                     text = callTime,
                     color = Color.White,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.padding(horizontal = 10.dp)
                 )
                 Text(
                     text = "In call with ${viuRecord?.firstName ?: "your VIU"}",
                     color = Color.White,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.headlineSmall,
                     textAlign = TextAlign.Center
                 )
             }
@@ -232,8 +261,8 @@ fun CallScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp)
-                .background(Color(0xAA000000))
+                .height(if (isVideoCall) 100.dp else 400.dp)
+                .background(if (isVideoCall) (Color(0xAA000000)) else Color.Transparent)
                 .padding(bottom = 32.dp)
                 .align(Alignment.BottomCenter),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -253,6 +282,7 @@ fun CallScreen(
                         if (isMicrophoneMuted) R.drawable.ic_mic_on else R.drawable.ic_mic_off
                     ),
                     contentDescription = "Mic Toggle",
+                    modifier=if(!isVideoCall) Modifier.size(32.dp) else Modifier,
                     tint = Color.White
                 )
             }
@@ -303,6 +333,7 @@ fun CallScreen(
                     painter = rememberAsyncImagePainter(
                         if (isSpeakerMode) R.drawable.ic_speaker else R.drawable.ic_ear
                     ),
+                    modifier=if(!isVideoCall) Modifier.size(32.dp) else Modifier,
                     contentDescription = "Audio Device",
                     tint = Color.White
                 )
@@ -349,6 +380,7 @@ fun CallScreen(
                 Icon(
                     painter = rememberAsyncImagePainter(R.drawable.ic_end_call),
                     contentDescription = "End Call",
+                    modifier=if(!isVideoCall) Modifier.size(32.dp) else Modifier,
                     tint = Color.Red
                 )
             }

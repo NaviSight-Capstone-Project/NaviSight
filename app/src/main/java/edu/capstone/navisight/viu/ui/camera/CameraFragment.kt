@@ -160,10 +160,12 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     override fun onQuickMenuAction(actionId: Int) {
         when(actionId) {
             R.id.ball_video_call -> {
+                TextToSpeechHelper.speak(requireContext(), "Video calling your caregiver")
                 webRTCManager.handleStartCall(isVideoCall=true)
                 Log.d(QUICK_MENU_TAG, "Executed: Video Calling Primary Caregiver")
             }
             R.id.ball_audio_call -> {
+                TextToSpeechHelper.speak(requireContext(), "Audio calling your caregiver")
                 webRTCManager.handleStartCall(isVideoCall=false)
                 Log.d(QUICK_MENU_TAG, "Executed: Audio Calling Primary Caregiver")
             }
