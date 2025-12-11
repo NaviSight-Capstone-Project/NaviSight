@@ -10,6 +10,7 @@ import edu.capstone.navisight.auth.util.CaptchaHandler
 import edu.capstone.navisight.auth.util.CaptchaState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 private const val LOGIN_LOCKOUT_DURATION_MS = 5 * 60 * 1000L // 5 minutes
@@ -26,7 +27,7 @@ class LoginViewModel(
     val userCollection: StateFlow<String?> = _userCollection
 
     private val _showCaptchaDialog = MutableStateFlow(false)
-    val showCaptchaDialog: StateFlow<Boolean> = _showCaptchaDialog
+    val showCaptchaDialog: StateFlow<Boolean> = _showCaptchaDialog.asStateFlow()
 
     private val captchaHandler = CaptchaHandler()
     val captchaState: StateFlow<CaptchaState> = captchaHandler.captchaState
@@ -63,7 +64,8 @@ class LoginViewModel(
                 is LoginResult.Success -> {
                     _userCollection.value = result.collection
                     loginFailedAttempts = 0
-                    captchaHandler.resetCaptcha()
+                    captchaHandler.resetCaptcha(keepRefreshCount = false)
+                    dismissCaptchaDialog()
                 }
 
                 is LoginResult.Error -> {
@@ -92,9 +94,8 @@ class LoginViewModel(
             return false
         }
         val captchaIsRequired = loginFailedAttempts >= 1
-        val captchaIsSolved = captchaState.value.solved
-        if (captchaIsRequired && !captchaIsSolved) {
-            _error.value = "Please solve the CAPTCHA to continue."
+        if (captchaIsRequired && !captchaState.value.solved) {
+            _error.value = "Please complete security verification."
             _showCaptchaDialog.value = true
             return false
         }
