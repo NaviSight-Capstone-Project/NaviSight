@@ -158,10 +158,9 @@ fun LoginScreen(
     val captchaState by viewModel.captchaState.collectAsState()
     val showCaptcha by viewModel.showCaptchaDialog.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    var showCaptchaDialog by remember { mutableStateOf(false) }
+    val showCaptchaDialog by viewModel.showCaptchaDialog.collectAsState()
 
-    LaunchedEffect(showCaptcha) { showCaptchaDialog = showCaptcha }
-    LaunchedEffect(captchaState) {
+    LaunchedEffect(captchaState.solved) {
         if (captchaState.solved && showCaptchaDialog) {
             viewModel.dismissCaptchaDialog()
             viewModel.login(email, password)
@@ -248,7 +247,7 @@ fun LoginScreen(
                 },
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { if (captchaState.solved) viewModel.login(email, password) else showCaptchaDialog = true }),
+                keyboardActions = KeyboardActions(onDone = { viewModel.login(email, password) }),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color.Transparent, unfocusedBorderColor = Color.Transparent),
                 modifier = Modifier.fillMaxWidth().onFocusChanged { passwordFocused = it.isFocused }
@@ -344,7 +343,7 @@ fun LoginScreen(
                         // ADAPTIVE GESTURE LOGIC
                         .pointerInput(isTalkBackEnabled) {
                             if (isTalkBackEnabled) {
-                                // --- TALKBACK MODE: TOGGLE (Click to Start / Click to Stop) ---
+                                // TALKBACK MODE: TOGGLE (Click to Start / Click to Stop)
                                 detectTapGestures(
                                     onTap = {
                                         if (isListening) {
@@ -357,7 +356,7 @@ fun LoginScreen(
                                     }
                                 )
                             } else {
-                                // --- STANDARD MODE: PUSH-TO-TALK (Hold to Speak) ---
+                                //  STANDARD MODE: PUSH-TO-TALK (Hold to Speak)
                                 detectTapGestures(
                                     onPress = {
                                         startVoiceInput()
@@ -394,9 +393,25 @@ fun LoginScreen(
                             voiceHandler.speak(msg)
                             announceForAccessibility(msg)
                         }
-                        CaptchaBox(captchaState, { viewModel.generateNewCaptcha() }, { viewModel.submitCaptcha(it) }, {})
+                        CaptchaBox(
+                            state = captchaState,
+                            onRefresh = { viewModel.generateNewCaptcha() },
+                            onSubmit = { viewModel.submitCaptcha(it) },
+                            onPlayAudio = {
+                                val rawText = captchaState.text
+                                // Adding commas forces the TTS engine to pause slightly between characters.
+                                val spacedText = rawText.toCharArray().joinToString(", ")
+                                val message = "The security code is: $spacedText"
+                                voiceHandler.speak(message)
+                            }
+                        )
                         Spacer(Modifier.height(16.dp))
-                        Button(onClick = { showCaptchaDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)) { Text("Cancel", color = Color.White) }
+                        Button(
+                            onClick = { viewModel.dismissCaptchaDialog() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+                        ) {
+                            Text("Cancel", color = Color.White)
+                        }
                     }
                 }
             }
