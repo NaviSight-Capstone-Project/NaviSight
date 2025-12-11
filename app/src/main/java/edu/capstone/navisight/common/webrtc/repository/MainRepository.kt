@@ -11,7 +11,6 @@ import org.webrtc.IceCandidate
 import edu.capstone.navisight.common.webrtc.vendor.MyPeerObserver
 import edu.capstone.navisight.common.webrtc.vendor.WebRTCClient
 import com.google.gson.Gson
-import edu.capstone.navisight.MainActivity
 import edu.capstone.navisight.caregiver.model.Viu
 import edu.capstone.navisight.common.webrtc.GsonSingleton
 import edu.capstone.navisight.common.webrtc.service.MainService
@@ -32,10 +31,11 @@ class MainRepository private constructor(
 ) : WebRTCClient.Listener {
     var listener: Listener? = null
     private var target: String? = null
-    private var abortSignalSenderUidToCheck: String? = null
-    private var missSignalTargetUidToCheck: String? = null
-    private var justSentACallRequest = false
-    private var receivedAVideoOrAudioCall = false
+    // Use target as the primary tracker for call state, and these flags only for pre-connection signaling logic
+    private var isCaller = false // Tracks if this instance initiated the current potential call
+    private var isCallInProgress = false // Tracks if WebRTC connection is actually established (CONNECTED state)
+    private var abortSignalTargetUid: String? = null // The peer to signal for abort/miss/end
+
     private var remoteView: SurfaceViewRenderer? = null
     private lateinit var currentLatestEvent: DataModel
     private var caregiverStatusListener: (() -> Unit)? = null
@@ -52,22 +52,19 @@ class MainRepository private constructor(
         firebaseClient.clearLatestEvent()
         firebaseClient.observeLatestEvents(object : FirebaseClient.Listener {
             override fun onLatestEventReceived(event: DataModel) {
-                Log.d("MainRepository", "Detected a change on latestevent triggered.")
+                Log.d("MainRepository", "Detected a change on latestevent triggered. Type: ${event.type}")
                 listener?.onLatestEventReceived(event)
                 currentLatestEvent = event
-                when (event.type) {
-                    StartVideoCall -> {
-                        Log.d("MainRepository", "Detected start video call.")
-                        abortSignalSenderUidToCheck = event.sender // Trigger on receiving
-                        missSignalTargetUidToCheck = event.target // Trigger on receiving // TODO
-                        receivedAVideoOrAudioCall = true
-                    }
-                    StartAudioCall -> {
-                        Log.d("MainRepository", "Detected start video call.")
-                        abortSignalSenderUidToCheck = event.sender // Trigger on receiving
-                        missSignalTargetUidToCheck = event.target // Trigger on receiving
+                abortSignalTargetUid = event.sender // Set the peer for signaling responses
 
-                        receivedAVideoOrAudioCall = true
+                when (event.type) {
+                    StartVideoCall,
+                    StartAudioCall -> {
+                        // Receiving a call
+                        isCaller = false
+                        isCallInProgress = false
+                        Log.d("MainRepository", "Detected incoming call from ${event.sender}.")
+                        // Logic delegates to MainService via listener for UI/timer handling
                     }
                     Offer -> {
                         webRTCClient.onRemoteSessionReceived(
@@ -77,7 +74,7 @@ class MainRepository private constructor(
                             )
                         )
                         webRTCClient.answer(target!!)
-                        abortSignalSenderUidToCheck = event.sender // Trigger on receiving
+                        isCaller = false
                     }
                     Answer -> {
                         Log.d("MainRepository", "Detected an answer.")
@@ -102,7 +99,6 @@ class MainRepository private constructor(
                         listener?.endCall()
                     }
                     DenyCall -> {
-                        Log.d("DenySignal", "Denied call detected")
                         listener?.deniedCall()
                     }
                     AbortCall -> {
@@ -111,10 +107,7 @@ class MainRepository private constructor(
                     MissCall -> {
                         listener?.missCall()
                     }
-                    else -> {
-                        Log.e("MainRepositoryIceCandidate", "I am hitting the else statement? $Unit")
-                        Unit
-                    }
+                    else -> Unit
                 }
             }
         })
@@ -123,9 +116,9 @@ class MainRepository private constructor(
     fun setOffline() {
         firebaseClient.changeMyStatus(UserStatus.OFFLINE)
         Log.d("abortsignal", "set offline triggered")
-        if (abortSignalSenderUidToCheck != null && justSentACallRequest) {
-            Log.d("abort", "send abort call should work now")
-            sendAbortCall()
+        // If we are the caller and haven't established connection, send an abort signal
+        if (isCaller && !isCallInProgress && target != null) {
+            sendAbortCall(target!!)
         }
         webRTCClient.closeConnection()
     }
@@ -137,10 +130,11 @@ class MainRepository private constructor(
                 target = target
             ), success
         )
-        abortSignalSenderUidToCheck = target // Trigger on receiving
-        justSentACallRequest = true
-        Log.d("MainRepository", "Triggered send connection request")
-        Log.d("EndCallProblem", "Current abortSignalSenderUidToCheck is: $abortSignalSenderUidToCheck")
+        this.target = target
+        this.abortSignalTargetUid = target
+        isCaller = true
+        isCallInProgress = false // Reset state
+        Log.d("MainRepository", "Triggered send connection request to: $target")
     }
 
     interface Listener {
@@ -170,11 +164,9 @@ class MainRepository private constructor(
                 Log.d("MainRepository", "onAddStream is activated!")
                 super.onAddStream(p0)
                 try {
-                    Log.d("MainRepository", "onAddStream is finished!")
                     p0?.videoTracks?.get(0)?.addSink(remoteView)
                 } catch (e: Exception) {
-                    Log.d("MainRepository", "onAddStream failed ${e.stackTraceToString()}.")
-                    e.printStackTrace()
+                    Log.e("MainRepository", "onAddStream failed ${e.stackTraceToString()}.")
                 }
             }
 
@@ -186,19 +178,22 @@ class MainRepository private constructor(
             }
 
             override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) {
-                Log.d("MainRepository", "onConnectionChange is activated! New State: $newState") // Log the new state
+                Log.d("MainRepository", "onConnectionChange is activated! New State: $newState")
                 super.onConnectionChange(newState)
 
                 when (newState) {
                     PeerConnection.PeerConnectionState.CONNECTED -> {
                         firebaseClient.clearLatestEvent()
                         changeMyStatus(UserStatus.IN_CALL)
+                        isCallInProgress = true // Connection established!
                         MainService.stopCallTimer() // Stop missed call timer
                         listener?.onConnectionEstablished()
                     }
                     // Check for failure/disconnection states
                     PeerConnection.PeerConnectionState.DISCONNECTED,
                     PeerConnection.PeerConnectionState.FAILED -> {
+                        // Only auto-abort if a call was actually in progress or if we were waiting for an answer
+                        // The MainService listener handles the cleanup after this signal.
                         listener?.onAbortCallConnectionBased(target ?: "Unknown")
                     }
                     else -> Unit
@@ -228,62 +223,69 @@ class MainRepository private constructor(
     fun endCall() {
         webRTCClient.closeConnection()
         changeMyStatus(UserStatus.ONLINE)
+        isCaller = false
+        isCallInProgress = false
+        target = null
+        abortSignalTargetUid = null
         caregiverStatusListener?.invoke()
         caregiverStatusListener = null
     }
 
-    fun sendEndCall(endCallTarget: String? = target!!) {
+    fun sendEndCall(endCallTarget: String? = target) {
+        // Use target or the last known abortSignalTargetUid if target is null (safe fallback)
+        val signalTarget = endCallTarget ?: abortSignalTargetUid ?: return
         onTransferEventToSocket(
             DataModel(
                 type = EndCall,
-                target = endCallTarget!!
+                target = signalTarget
             )
         )
-        justSentACallRequest = false
     }
 
-    fun sendDeniedCall(deniedCallTarget: String? = target!!) {
+    fun sendDeniedCall(deniedCallTarget: String? = abortSignalTargetUid) {
+        val signalTarget = deniedCallTarget ?: return
         onTransferEventToSocket(
             DataModel(
                 type = DenyCall,
-                target = deniedCallTarget!!
+                target = signalTarget
             )
         )
-        justSentACallRequest = false
     }
 
-    fun sendMissCall() {
+    fun sendMissCall(missCallTarget: String? = abortSignalTargetUid) {
+        val signalTarget = missCallTarget ?: return
         onTransferEventToSocket(
             DataModel(
                 type = MissCall,
-                target = abortSignalSenderUidToCheck.toString()
+                target = signalTarget
             )
         )
-        justSentACallRequest = false
     }
 
     fun sendEndOrAbortCall() {
-        var verdict = EndCall
-        if (justSentACallRequest && !receivedAVideoOrAudioCall) {
-            verdict = AbortCall
+        val signalTarget = target ?: abortSignalTargetUid ?: return
+        val verdict = when {
+            isCallInProgress -> EndCall // Established connection, must be an end call
+            isCaller && !isCallInProgress -> AbortCall // Caller, pre-connection, must be an abort
+            else -> EndCall // Default to EndCall if unsure (e.g., callee hangs up before answering)
         }
+
         onTransferEventToSocket(
             DataModel(
                 type = verdict,
-                target = abortSignalSenderUidToCheck.toString()
+                target = signalTarget
             )
         )
-        justSentACallRequest = false
     }
 
-    fun sendAbortCall() {
+    fun sendAbortCall(abortTarget: String? = abortSignalTargetUid) {
+        val signalTarget = abortTarget ?: return
         onTransferEventToSocket(
             DataModel(
                 type = AbortCall,
-                target = abortSignalSenderUidToCheck.toString()
+                target = signalTarget
             )
         )
-        justSentACallRequest = false
     }
 
     private fun changeMyStatus(status: UserStatus) {

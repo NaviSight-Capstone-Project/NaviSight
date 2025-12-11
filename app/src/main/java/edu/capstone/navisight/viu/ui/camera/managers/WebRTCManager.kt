@@ -26,12 +26,6 @@ class WebRTCManager(
 
     private var callRequestDialog: AlertDialog? = null
 
-
-    init {
-
-    }
-
-
     fun disconnectMainServiceListener() {
         if (MainService.listener == this) {
             MainService.listener = null

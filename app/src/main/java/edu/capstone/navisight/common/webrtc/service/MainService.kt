@@ -29,7 +29,7 @@ import org.webrtc.SurfaceViewRenderer
 
 
 class MainService : Service(), MainRepository.Listener {
-    private val TAG = "MainServiceCountdown"
+    private val TAG = "MainService" // Consistent TAG usage
     private var isServiceRunning = false
     private var email: String? = null
 
@@ -53,20 +53,18 @@ class MainService : Service(), MainRepository.Listener {
 
     // This Runnable defines the action to take when the 30 seconds expire
     private val callTimeoutRunnable = Runnable {
-        Log.w("calltimeout", "callTimeoutRunnable is now working")
+        Log.w(TAG, "Call timeout triggered.")
         currentIncomingCallerId?.let { targetId ->
-            Log.w("calltimeout", "Call to $targetId timed out after 30 seconds. Aborting.")
-            // Call the existing abort function to dismiss the UI/popup
+            Log.w(TAG, "Call from $targetId timed out after 30 seconds. Aborting.")
+            // Call onMissCall for full cleanup and remote signaling
             onMissCall(targetId)
         }
-        val intent2 = Intent("TARGET_MISSED_YOUR_CALL")
-        LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent2)
         currentIncomingCallerId = null
+        // The broadcast for missed call will be sent by MainActivity upon receiving onCallMissed from listener
+        // The repository logic also handles signaling to the remote peer
     }
 
     companion object {
-        private const val TAG = "MainServiceCountdown"
-
         @Volatile // Ensures INSTANCE is up-to-date across all threads
         private var INSTANCE: MainService? = null
 
@@ -104,22 +102,25 @@ class MainService : Service(), MainRepository.Listener {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d("CallSignal", "making mainservice")
+        Log.d(TAG, "MainService created.")
         INSTANCE = this
 
         mainRepository = MainRepository.getInstance(applicationContext)
 
-        rtcAudioManager = RTCAudioManager.create(this)
-        rtcAudioManager.setDefaultAudioDevice(RTCAudioManager.AudioDevice.SPEAKER_PHONE)
+        initializeRTCAudioManager()
         notificationManager = getSystemService(
             NotificationManager::class.java
         )
     }
 
+    fun initializeRTCAudioManager(){
+        rtcAudioManager = RTCAudioManager.create(this)
+        rtcAudioManager.setDefaultAudioDevice(RTCAudioManager.AudioDevice.SPEAKER_PHONE)
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("CallSignal", "onStartCommand triggered")
+        Log.d(TAG, "onStartCommand triggered")
         intent?.let { incomingIntent ->
-            // Exception to this is missed calls.
             when (incomingIntent.action) {
                 START_SERVICE.name -> handleStartService(incomingIntent)
                 SETUP_VIEWS.name -> handleSetupViews(incomingIntent)
@@ -139,37 +140,66 @@ class MainService : Service(), MainRepository.Listener {
         return START_STICKY
     }
 
-    // Handle denied calls
+    // Consolidated call cleanup function
+    private fun endCallCleanUp() {
+        Log.d(TAG, "COMMENCING END CALL CLEANUP")
+        stopCallTimeoutTimer()
+
+        // Stop the RTCAudioManager to release audio focus and microphone
+        if (::rtcAudioManager.isInitialized) { // Check if initialized before stopping
+            rtcAudioManager.stop()
+            Log.d(TAG, "RTCAudioManager stopped, releasing microphone.")
+        }
+
+        mainRepository.endCall() // Cleans up WebRTC and sets status to ONLINE
+        endAndDeniedCallListener?.onCallEnded()
+        // Re-initialize the client, but ONLY if the service is meant to stay alive (e.g., for subsequent incoming calls).
+        // If the service is about to stop, this is redundant.
+        if (isServiceRunning && email != null) {
+            // Re-initialize for future calls only if service is running
+            mainRepository.initWebrtcClient(email!!)
+        }
+        // Re-initialize the audio manager so it's ready for the next call
+        initializeRTCAudioManager()
+
+        Log.d(TAG, "FINISHED END CALL CLEANUP")
+    }
+
+    // Handle denied calls (local action)
     private fun handleDeniedCall() {
-        mainRepository.sendEndCall()
-        endCallAndRestartRepository()
+        Log.d(TAG, "HANDLING DENIED CALL (Local Action)")
+        mainRepository.sendDeniedCall() // Signal remote peer
+        endCallCleanUp()
     }
 
     private fun handleEndOrAbortCall() {
-        Log.d("abortcall", "handling end or abort call")
-        mainRepository.sendEndOrAbortCall()
-        endCallAndRestartRepository()
+        Log.d(TAG, "HANDLING END OR ABORT CALL")
+        mainRepository.sendEndOrAbortCall() // Logic to determine EndCall or AbortCall is in repo
+        endCallCleanUp()
     }
 
-    // Handle abort calls
+    // Handle abort calls (local action)
     private fun handleAbortCall() {
-        Log.d("abortcall", "call aborted detected")
+        Log.d(TAG, "HANDLING ABORT CALL (Local Action)")
         listener?.onCallAborted()
+        // No need to call endCallCleanUp here as this command is usually for UI cleanup after an immediate failure/abort
+        // The clean-up is handled by the peer connection state change in MainRepository.
     }
 
     private fun handleEndCall() {
+        Log.d(TAG, "HANDLING END CALL (Local Action)")
         mainRepository.sendEndCall()
-        endCallAndRestartRepository()
+        endCallCleanUp()
     }
 
     private fun handleStartService(incomingIntent: Intent) {
-        //start our foreground service
+        // Start our foreground service
         if (!isServiceRunning) {
             isServiceRunning = true
             email = incomingIntent.getStringExtra("email")
             startServiceWithNotification()
 
-            //setup my clients
+            // Setup my clients
             mainRepository.listener = this
             mainRepository.initFirebase()
             mainRepository.initWebrtcClient(email!!)
@@ -178,7 +208,7 @@ class MainService : Service(), MainRepository.Listener {
     }
 
     private fun handleStopService() {
-        Log.d("logoff", "Activating handleStopService()")
+        Log.d(TAG, "Activating handleStopService()")
         mainRepository.endCall()
         mainRepository.logOff {
             isServiceRunning = false
@@ -208,7 +238,7 @@ class MainService : Service(), MainRepository.Listener {
             // Start screen share
             // Remove the camera streaming first
             if (isPreviousCallStateVideo) {
-                mainRepository.toggleVideo(true)
+                mainRepository.toggleVideo(true) // Stops camera capture
             }
 
             // Use the safe, non-null 'intent' variable
@@ -228,7 +258,7 @@ class MainService : Service(), MainRepository.Listener {
             }
 
             if (isPreviousCallStateVideo) {
-                mainRepository.toggleVideo(false)
+                mainRepository.toggleVideo(false) // Restarts camera capture
             }
         }
     }
@@ -275,21 +305,10 @@ class MainService : Service(), MainRepository.Listener {
         mainRepository.switchCamera()
     }
 
-    private fun endCallAndRestartRepository(){
-        mainRepository.endCall()
-        endAndDeniedCallListener?.onCallEnded()
-        mainRepository.initWebrtcClient(email!!)
-    }
-
-    private fun deniedCallAndRestartRepository(){
-        Log.d("deniedcall", " got denied call from mainservice.kt")
-        mainRepository.endCall()
-        endAndDeniedCallListener?.onCallEnded()
-        mainRepository.initWebrtcClient(email!!)
-    }
+    // Removed endCallAndRestartRepository and deniedCallAndRestartRepository
 
     private fun handleSetupViews(incomingIntent: Intent) {
-        Log.d("CallCheck", "Handlesetupviews triggered!")
+        Log.d(TAG, "Handlesetupviews triggered!")
 
         val isCaller = incomingIntent.getBooleanExtra("isCaller",false)
         val isVideoCall = incomingIntent.getBooleanExtra("isVideoCall",true)
@@ -310,13 +329,14 @@ class MainService : Service(), MainRepository.Listener {
             mainRepository.initLocalAudioOnly()
         }
         if (!isCaller){
-            Log.d("CallCheck", "Starting video call")
+            Log.d(TAG, "Starting call as callee (answering)")
             mainRepository.startCall()
         }
 
     }
 
     private fun startServiceWithNotification() {
+        // ... (Notification setup logic remains the same)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationChannel = NotificationChannel(
                 "channel1", "foreground", NotificationManager.IMPORTANCE_HIGH
@@ -341,7 +361,7 @@ class MainService : Service(), MainRepository.Listener {
                 startForeground(1, notification.build())
             }
 
-            Log.d("ServiceCheck", "Notification should had popped up.")
+            Log.d(TAG, "Notification should had popped up.")
         }
     }
 
@@ -366,7 +386,7 @@ class MainService : Service(), MainRepository.Listener {
 
     override fun onLatestEventReceived(data: DataModel) {
         if (data.isValid()) {
-            Log.d("CallSignal", "The data type found valid is: ${data.type}")
+            Log.d(TAG, "The data type found valid is: ${data.type}")
             when (data.type) {
                 DataModelType.StartVideoCall,
                 DataModelType.StartAudioCall -> {
@@ -385,13 +405,17 @@ class MainService : Service(), MainRepository.Listener {
     }
 
     override fun endCall() {
-        // Receive end call signal from remote peer
-        endCallAndRestartRepository()
+        // Receive EndCall signal from remote peer
+        Log.d(TAG, "Received EndCall signal from remote peer.")
+        endCallCleanUp()
     }
 
     override fun deniedCall() {
+        // Receive DeniedCall signal from remote peer
+        Log.d(TAG, "Received DeniedCall signal from remote peer.")
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(
             Intent(BR_ACTION_DENIED_CALL))
+        endCallCleanUp() // Clean up after receiving denial signal
     }
 
     interface Listener {
@@ -401,21 +425,26 @@ class MainService : Service(), MainRepository.Listener {
     }
 
     override fun onAbortCallConnectionBased(targetId: String) {
+        Log.d(TAG, "WebRTC connection failed/disconnected. Aborting call: $targetId")
         if (listener != null) {
-            listener?.onCallAborted()
+            listener?.onCallAborted() // Notify UI/Activity
         }
-        mainRepository.sendAbortCall()
+        mainRepository.sendAbortCall() // Signal the other side about the abort
+        endCallCleanUp() // Full cleanup
     }
 
     override fun onMissCall(targetId: String) {
         stopCallTimeoutTimer()
+        Log.d(TAG, "Missed call logic executed for: $targetId")
         if (listener != null) {
             listener?.onCallMissed(targetId)
         }
-        mainRepository.sendMissCall()
+        mainRepository.sendMissCall() // Sends MissCall signal to remote peer (if this was the timer running)
+        endCallCleanUp()
     }
 
     override fun missCall() {
+        Log.d(TAG, "Received MissCall signal from remote peer.")
         val currentUserType = mainRepository.getUserType()
         MainActivity.firstTimeLaunched.let {
             if (!it) {
@@ -423,13 +452,15 @@ class MainService : Service(), MainRepository.Listener {
                     if (currentUserType == "viu") "Caregiver missed your call. Try again?"
                     else "VIU missed your call. Try again?"
                 showToastOnMainThreadAndTTS(textToSay)
-                endCallAndRestartRepository()
+                endCallCleanUp()
             }
         }
     }
 
     override fun abortCall() {
+        Log.d(TAG, "Received AbortCall signal from remote peer.")
         handleAbortCall()
+        endCallCleanUp()
     }
 
     interface EndAndDeniedCallListener {
@@ -438,7 +469,7 @@ class MainService : Service(), MainRepository.Listener {
     }
 
     override fun onConnectionEstablished() {
-        Log.d("MainService", "WebRTC connection established. Notifying CallActivity.")
+        Log.d(TAG, "WebRTC connection established. Notifying CallActivity.")
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(
             Intent(BR_CONNECTION_ESTABLISHED))
     }

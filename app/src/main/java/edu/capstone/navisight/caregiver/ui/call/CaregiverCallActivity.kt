@@ -37,13 +37,15 @@ class CaregiverCallActivity : ComponentActivity(), MainService.EndAndDeniedCallL
     private val finishReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == BR_ACTION_MISSED_CALL) {
-                serviceRepository.showToastOnServiceRepoThreadAndTTS(
-                    "Your VIU missed your call. Try again?")
+                Toast.makeText(context,
+                    "Your VIU missed your call. Try again?",
+                    Toast.LENGTH_LONG).show()
                 stopAndCleanUp()
             }
             if (intent?.action == BR_ACTION_DENIED_CALL) {
-                serviceRepository.showToastOnServiceRepoThreadAndTTS(
-                    "Your VIU declined your call. Try again?")
+                Toast.makeText(context,
+                    "Your VIU declined your call. Try again?",
+                    Toast.LENGTH_LONG).show()
                 stopAndCleanUp()
             }
         }

@@ -19,6 +19,8 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.media.AudioDeviceInfo;
 import android.preference.PreferenceManager;
+import android.util.Log;
+
 import org.webrtc.ThreadUtils;
 import java.util.Collections;
 import java.util.HashSet;
@@ -247,6 +249,7 @@ public class RTCAudioManager {
         }
 
         audioManagerEvents = null;
+        Log.d("RTCMANAGER", "FINISHED STOPPING.");
     }
 
     /**
@@ -270,7 +273,6 @@ public class RTCAudioManager {
 
     /**
      * Changes default audio device.
-     * TODO(henrika): add usage of this method in the AppRTCMobile client.
      */
     public void setDefaultAudioDevice(AudioDevice defaultDevice) {
         ThreadUtils.checkIsOnMainThread();

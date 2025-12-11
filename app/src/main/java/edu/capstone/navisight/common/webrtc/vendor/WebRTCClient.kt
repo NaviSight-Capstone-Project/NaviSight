@@ -27,7 +27,7 @@ class WebRTCClient (
     private var peerConnection: PeerConnection? = null
     private val iceServer = establishICEServer()
     private val localVideoSource by lazy { peerConnectionFactory.createVideoSource(false) }
-    private val localAudioSource by lazy { peerConnectionFactory.createAudioSource(MediaConstraints())}
+    private var localAudioSource: AudioSource? = null
     private val videoCapturer = getVideoCapturer(context)
     private var surfaceTextureHelper:SurfaceTextureHelper?=null
     private val mediaConstraint = MediaConstraints().apply {
@@ -152,12 +152,20 @@ class WebRTCClient (
 
     fun closeConnection(){
         try {
+            localStream?.removeTrack(localAudioTrack) // Fix para sa permissions tracking.
+            localAudioTrack?.dispose()
+            localAudioSource?.dispose()
             videoCapturer.dispose()
             screenCapturer?.dispose()
             localStream?.dispose()
             peerConnection?.close()
         }catch (e:Exception){
             e.printStackTrace()
+        } finally {
+            localAudioTrack = null
+            localAudioSource = null
+            localStream = null
+            peerConnection = null
         }
     }
 
@@ -166,11 +174,7 @@ class WebRTCClient (
     }
 
     fun toggleAudio(shouldBeMuted:Boolean){
-        if (shouldBeMuted){
-            localStream?.removeTrack(localAudioTrack)
-        }else{
-            localStream?.addTrack(localAudioTrack)
-        }
+        localAudioTrack?.setEnabled(!shouldBeMuted)
     }
 
     fun toggleVideo(shouldBeMuted: Boolean){
@@ -203,6 +207,7 @@ class WebRTCClient (
         startLocalStreaming(localView, isVideoCall)
     }
     private fun startLocalStreaming(localView: SurfaceViewRenderer, isVideoCall: Boolean) {
+        localAudioSource = peerConnectionFactory.createAudioSource(MediaConstraints())
         localStream = peerConnectionFactory.createLocalMediaStream(localStreamId)
         if (isVideoCall){
             startCapturingCamera(localView)
@@ -214,10 +219,11 @@ class WebRTCClient (
     }
 
     fun initLocalAudioOnly() {
-        // Check for safety, pero bihira mangyari ito not unless of memory corruption
-        if (localStream != null) {
-            return
+        if (localStream != null || localAudioSource != null) {
+            // You should not be here, but if you are, I will find you, and I will force cleanup you again
+            closeConnection()
         }
+        localAudioSource = peerConnectionFactory.createAudioSource(MediaConstraints())
         localStream = peerConnectionFactory.createLocalMediaStream(localStreamId)
         localAudioTrack = peerConnectionFactory.createAudioTrack(localTrackId+"_audio",localAudioSource)
         localStream?.addTrack(localAudioTrack)
@@ -250,7 +256,6 @@ class WebRTCClient (
             }?:throw IllegalStateException()
         }
     private fun stopCapturingCamera(){
-
         videoCapturer.dispose()
         localVideoTrack?.removeSink(localSurfaceView)
         localSurfaceView.clearImage()
@@ -307,7 +312,6 @@ class WebRTCClient (
             }
         })
     }
-
 
     interface Listener {
         fun onTransferEventToSocket(data: DataModel)
