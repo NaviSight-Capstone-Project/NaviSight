@@ -16,6 +16,7 @@ class SignupViuUseCase {
         firstName: String,
         lastName: String,
         middleName: String,
+        birthday: String,
         phone: String,
         address: String,
         category: String,
@@ -24,7 +25,7 @@ class SignupViuUseCase {
         sex: String
     ): Result<Pair<Viu, String>> {
         return repository.signupViu(
-            context, email, password, firstName, lastName, middleName,
+            context, email, password, firstName, lastName, middleName, birthday,
             phone, address, category, imageUri, caregiverEmail, sex
         )
     }

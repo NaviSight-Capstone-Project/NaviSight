@@ -6,6 +6,7 @@ data class Viu(
     val firstName: String = "",
     var middleName: String = "",
     var lastName: String = "",
+    val birthday: String = "",
     val phone: String = "",
     var profileImageUrl: String? = null,
     val category : String? = null,
