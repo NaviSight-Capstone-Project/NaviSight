@@ -48,6 +48,10 @@ class MainRepository private constructor(
         return firebaseClient.getUserType()
     }
 
+    fun setUserType(userType: String) {
+        firebaseClient.setUserType(userType)
+    }
+
     fun initFirebase() {
         firebaseClient.clearLatestEvent()
         firebaseClient.observeLatestEvents(object : FirebaseClient.Listener {

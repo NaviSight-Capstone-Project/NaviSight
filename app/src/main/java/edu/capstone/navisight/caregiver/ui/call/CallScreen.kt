@@ -148,7 +148,7 @@ fun CallScreen(
                     Text(
                         text = "Calling VIU",
                         color = Color.White,
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.headlineLarge,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.size(12.dp))
@@ -161,12 +161,6 @@ fun CallScreen(
                         contentScale = ContentScale.Crop
                     )
                     Spacer(modifier = Modifier.size(12.dp))
-                    Text(
-                        text = "VIU",
-                        color = Color.White,
-                        style = MaterialTheme.typography.headlineSmall,
-                        textAlign = TextAlign.Center
-                    )
                     viuRecord?.let { record ->
                         Text(
                             text = "${record.firstName} ${record.lastName}",

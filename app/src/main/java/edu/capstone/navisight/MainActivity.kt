@@ -44,14 +44,9 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var auth: FirebaseAuth
     private lateinit var getUserCollectionUseCase: GetUserCollectionUseCase
-
     private lateinit var mainServiceRepository: MainServiceRepository
     private lateinit var mainRepository: MainRepository
     private lateinit var currentUser : FirebaseUser
-
-    companion object {
-        var firstTimeLaunched: Boolean = true
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,12 +107,21 @@ class MainActivity : AppCompatActivity() {
     fun startAppWithRegisteredUser(){
         currentUser = auth.currentUser!!
         mainRepository.setEmail(currentUser.email.toString())
-        startWebrtcService(currentUser.email.toString())
-        handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
+
+        // Fetch user collection (userType) synchronously (in a coroutine)
         lifecycleScope.launch {
             try {
                 getUserCollectionUseCase = GetUserCollectionUseCase()
                 val collection = getUserCollectionUseCase(currentUser.uid)
+
+                // 1. Pass the determined user type to the MainRepository/FirebaseClient
+                if (collection == "caregivers" || collection == "vius") {
+                    mainRepository.setUserType(collection) // <--- NEW CALL
+                    startWebrtcService(currentUser.email.toString()) // Start service AFTER userType is set
+                    handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
+                }
+
+                // 2. Navigate based on the type
                 when (collection) {
                     "caregivers" -> navigateToHomeFragment(isCaregiver = true)
                     "vius" -> navigateToHomeFragment(isCaregiver = false)

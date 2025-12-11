@@ -54,8 +54,14 @@ class FirebaseClient private constructor(
         to set up the real-time database right.
      */
     private var currentEmail: String? = null
+
     fun setEmail(email: String) {
         this.currentEmail = email
+    }
+
+    fun setUserType(userType: String) {
+        this.userType = userType
+        Log.d("UserTypeCheck", "User type has been set to: $userType")
     }
 
     // Handle relationships
@@ -133,9 +139,6 @@ class FirebaseClient private constructor(
         Log.d("AuthenticationCheck", "Passing through checkRTDB with UID $uid...")
         dbRef.addListenerForSingleValueEvent(object : EventListener() {
             override fun onDataChange(snapshot: DataSnapshot) {
-                // First retrieval
-                userType = snapshot.ref.parent?.key.toString()
-
                 if (snapshot.hasChild(uid)) {
                     dbRef.child(uid).child(STATUS)
                         .setValue(UserStatus.ONLINE)

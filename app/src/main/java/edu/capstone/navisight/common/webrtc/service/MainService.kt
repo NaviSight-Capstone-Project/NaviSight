@@ -446,15 +446,13 @@ class MainService : Service(), MainRepository.Listener {
     override fun missCall() {
         Log.d(TAG, "Received MissCall signal from remote peer.")
         val currentUserType = mainRepository.getUserType()
-        MainActivity.firstTimeLaunched.let {
-            if (!it) {
-                val textToSay =
-                    if (currentUserType == "viu") "Caregiver missed your call. Try again?"
-                    else "VIU missed your call. Try again?"
-                showToastOnMainThreadAndTTS(textToSay)
-                endCallCleanUp()
-            }
-        }
+        if (currentUserType == "vius") {
+            showToastOnMainThreadAndTTS("Caregiver missed your call. Try again?")
+        } else Toast.makeText(
+            applicationContext,
+            "VIU missed your call. Try again?",
+            Toast.LENGTH_LONG).show()
+        endCallCleanUp()
     }
 
     override fun abortCall() {
