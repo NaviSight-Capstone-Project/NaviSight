@@ -413,11 +413,9 @@ class CaregiverHomeFragment : Fragment(),
         if (!senderUid.isNullOrBlank()) {
             fragmentScope.launch(Dispatchers.IO) {
                 try {
-                    Log.e("CallSignal", "tryinbg....")
                     val viu = viuDataSource.getViuDetails(senderUid).first()
                     launch(Dispatchers.Main) {
-                        val viuName = viu?.firstName ?: "VIU ($senderUid)"
-                        // This call will now correctly update the TextView inside the dialog
+                        val viuName = "${viu?.firstName} ${viu?.lastName}"
                         incomingCallDialog?.updateViuName(viuName)
                     }
                 } catch (e: Exception) {

@@ -58,7 +58,7 @@ class IncomingCallDialog(
 
     // This function is called on creation (with null) and when the name is fetched (with the name).
     fun updateViuName(name: String?) {
-        val displayName = name ?: callModel.sender ?: "Unknown"
+        val displayName = name ?: "A VIU"
         val isVideoCall = callModel.type == DataModelType.StartVideoCall
         val isVideoCallText = if (isVideoCall) "video" else "audio"
 

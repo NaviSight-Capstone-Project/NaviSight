@@ -12,10 +12,14 @@ The following must be placed in app/src/main/assets directory:
 
 ## Main Features
 - [x] WebRTC Audio and Video Call
-- [x] QR Pairing
-- [x] Location Tracking
-- [x] Object Detection
-- [ ] Emergency System
+- [x] Google Text-to-Speech and Speech-to-Text Integration
+- [x] Quick QR Pairing
+- [x] Location Tracking and Geofencing
+- [x] Offline Object Detection
+- [x] Remote Emergency System
+- [ ] Local note tracking for VIUs
+- [ ] Google OCR Integration
+- [ ] Google Talkback Integration
 
 ## Attributions
 - TODO: Add attribution to code especially for Tensorflow authors, Ultralytics, and other open-source code from respective authors used.

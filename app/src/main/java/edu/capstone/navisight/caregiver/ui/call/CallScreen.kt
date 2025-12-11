@@ -152,7 +152,7 @@ fun CallScreen(
                     )
                     Spacer(modifier = Modifier.size(12.dp))
                     Text(
-                        text = "Calling VIU${(" " + viuRecord?.firstName)}...",
+                        text = "Calling VIU\n${(viuRecord?.firstName) ?: ""} ${(viuRecord?.lastName) ?: ""}",
                         color = Color.White,
                         style = MaterialTheme.typography.headlineMedium,
                         textAlign = TextAlign.Center
@@ -181,7 +181,13 @@ fun CallScreen(
                     )
                     Spacer(modifier = Modifier.size(12.dp))
                     Text(
-                        text = "VIU ${viuRecord?.firstName}",
+                        text = "VIU Audio Call",
+                        color = Color.White,
+                        style = MaterialTheme.typography.headlineSmall,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "${viuRecord?.firstName ?: ""} ${viuRecord?.lastName ?: ""}",
                         color = Color.White,
                         style = MaterialTheme.typography.headlineMedium,
                         textAlign = TextAlign.Center
@@ -212,7 +218,7 @@ fun CallScreen(
                     modifier = Modifier.padding(horizontal = 10.dp)
                 )
                 Text(
-                    text = "In call with ${viuRecord?.firstName}",
+                    text = "In call with ${viuRecord?.firstName ?: "your VIU"}",
                     color = Color.White,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
@@ -226,25 +232,13 @@ fun CallScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp)
+                .height(100.dp)
                 .background(Color(0xAA000000))
-                .padding(bottom = 24.dp)
+                .padding(bottom = 32.dp)
                 .align(Alignment.BottomCenter),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // End call
-            IconButton(onClick = {
-                serviceRepository.sendEndOrAbortCall()
-                onEndCall()
-            }) {
-                Icon(
-                    painter = rememberAsyncImagePainter(R.drawable.ic_end_call),
-                    contentDescription = "End Call",
-                    tint = Color.Red
-                )
-            }
-
             // Toggle Mic
             IconButton(onClick = {
                 if (!isMicrophoneMuted) {
@@ -307,7 +301,7 @@ fun CallScreen(
             }) {
                 Icon(
                     painter = rememberAsyncImagePainter(
-                        if (isSpeakerMode) R.drawable.ic_ear else R.drawable.ic_speaker
+                        if (isSpeakerMode) R.drawable.ic_speaker else R.drawable.ic_ear
                     ),
                     contentDescription = "Audio Device",
                     tint = Color.White
@@ -344,6 +338,19 @@ fun CallScreen(
                         tint = Color.White
                     )
                 }
+            }
+            // End call
+            IconButton(
+                onClick = {
+                    serviceRepository.sendEndOrAbortCall()
+                    onEndCall()
+                }
+            ) {
+                Icon(
+                    painter = rememberAsyncImagePainter(R.drawable.ic_end_call),
+                    contentDescription = "End Call",
+                    tint = Color.Red
+                )
             }
         }
     }

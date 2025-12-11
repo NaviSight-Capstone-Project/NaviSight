@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
@@ -33,6 +35,7 @@ import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.utils.convertToHumanTime
 import edu.capstone.navisight.common.webrtc.vendor.RTCAudioManager
 import edu.capstone.navisight.R
+import edu.capstone.navisight.common.TextToSpeechHelper
 import kotlinx.coroutines.*
 import org.webrtc.SurfaceViewRenderer
 
@@ -101,7 +104,6 @@ fun CallScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .padding(bottom=50.dp)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         AndroidView(
@@ -128,11 +130,12 @@ fun CallScreen(
         }
 
         if (!isConnected) {
+            // Video call calling...
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color(0xC0000000))
-                    .padding(bottom=50.dp),
+                    .padding(bottom=300.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -149,22 +152,36 @@ fun CallScreen(
                     )
                     Spacer(modifier = Modifier.size(12.dp))
                     Text(
-                        text = "Calling Caregiver${(" " + caregiverRecord?.firstName)}...",
+                        text = "Calling Caregiver",
                         color = Color.White,
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = TextStyle(
+                            fontSize = 24.sp,
+                            color = Color.White,
+                        ),
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "${(caregiverRecord?.firstName) ?: ""} ${(caregiverRecord?.lastName) ?: ""}",
+                        color = Color.White,
+                        style = TextStyle(
+                            fontSize = 32.sp,
+                            color = Color.White,
+                        ),
                         textAlign = TextAlign.Center
                     )
                 }
             }
         } else if (!isVideoCall){
+            // Audio call calling...
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color(0xC0000000))
-                    .padding(bottom=50.dp),
+                    .padding(bottom=300.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -177,16 +194,35 @@ fun CallScreen(
                         contentScale = ContentScale.Crop
                     )
                     Spacer(modifier = Modifier.size(12.dp))
+                    // Caregiver Label
                     Text(
-                        text = "Caregiver ${caregiverRecord?.firstName}",
+                        text = "Caregiver Audio Call",
                         color = Color.White,
-                        style = MaterialTheme.typography.headlineMedium,
-                        textAlign = TextAlign.Center
+                        style = TextStyle(
+                            fontSize = 24.sp,
+                            color = Color.White,
+                        ),
+                        textAlign = TextAlign.Center,
                     )
+                    // Caregiver Name
+                    Text(
+                        text = "${(caregiverRecord?.firstName) ?: ""} ${(caregiverRecord?.lastName) ?: ""}",
+                        color = Color.White,
+                        style = TextStyle(
+                            fontSize = 32.sp,
+                            color = Color.White,
+                        ),
+                        textAlign = TextAlign.Center,
+                    )
+                    // Call Time
                     Text(
                         text = callTime,
                         color = Color.White,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = TextStyle(
+                            fontSize = 24.sp,
+                            color = Color.White,
+                        ),
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 10.dp)
                     )
                 }
@@ -209,7 +245,7 @@ fun CallScreen(
                     modifier = Modifier.padding(horizontal = 10.dp)
                 )
                 Text(
-                    text = "In call with ${caregiverRecord?.firstName}",
+                    text = "In call with ${caregiverRecord?.firstName?: "your Caregiver"} ",
                     color = Color.White,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
@@ -218,52 +254,102 @@ fun CallScreen(
         }
 
         // Bottom control panel
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(60.dp)
-                .background(Color(0xAA000000))
-                .align(Alignment.BottomCenter),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // End call
-            IconButton(onClick = {
-                serviceRepository.sendEndOrAbortCall()
-                onEndCall()
-            },
+        if (!isVideoCall) {
+            Row(
                 modifier = Modifier
-                    .padding(12.dp)
-                    .background(Color.White, shape = CircleShape)
-                ) {
-                Icon(
-                    painter = rememberAsyncImagePainter(R.drawable.ic_end_call),
-                    contentDescription = "End Call",
-
-                    tint = Color.Red
-                )
-            }
-
-            // Toggle Mic
-            IconButton(onClick = {
-                if (!isMicrophoneMuted) {
-                    serviceRepository.toggleAudio(true)
-                } else {
-                    serviceRepository.toggleAudio(false)
+                    .fillMaxWidth()
+                    .height(400.dp)
+                    .background(Color.Transparent)
+                    .align(Alignment.BottomCenter),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = {
+                    if (!isMicrophoneMuted) {
+                        serviceRepository.toggleAudio(true)
+                    } else {
+                        serviceRepository.toggleAudio(false)
+                    }
+                    isMicrophoneMuted = !isMicrophoneMuted
+                }) {
+                    Icon(
+                        painter = rememberAsyncImagePainter(
+                            if (isMicrophoneMuted) R.drawable.ic_mic_on else R.drawable.ic_mic_off
+                        ),
+                        contentDescription = "Mic Toggle",
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.White
+                    )
                 }
-                isMicrophoneMuted = !isMicrophoneMuted
-            }) {
-                Icon(
-                    painter = rememberAsyncImagePainter(
-                        if (isMicrophoneMuted) R.drawable.ic_mic_on else R.drawable.ic_mic_off
-                    ),
-                    contentDescription = "Mic Toggle",
-                    tint = Color.White
-                )
-            }
 
-            // Toggle Camera
-            if (isVideoCall) {
+                // Audio Call: End call
+                IconButton(onClick = {
+                    serviceRepository.sendEndOrAbortCall()
+                    onEndCall()
+                },
+                    modifier = Modifier
+                        .size(150.dp)
+                        .padding(12.dp)
+                        .background(Color.White, shape = CircleShape)
+                ) {
+                    Icon(
+                        painter = rememberAsyncImagePainter(R.drawable.ic_end_call),
+                        contentDescription = "End Call",
+                        modifier = Modifier.fillMaxSize().padding(35.dp),
+                        tint = Color.Red
+                    )
+                }
+
+                // Audio Call: Toggle Audio Device
+                IconButton(onClick = {
+                    if (isSpeakerMode) {
+                        serviceRepository.toggleAudioDevice(RTCAudioManager.AudioDevice.EARPIECE.name)
+                    } else {
+                        serviceRepository.toggleAudioDevice(RTCAudioManager.AudioDevice.SPEAKER_PHONE.name)
+                    }
+                    isSpeakerMode = !isSpeakerMode
+                }) {
+                    Icon(
+                        painter = rememberAsyncImagePainter(
+                            if (isSpeakerMode) R.drawable.ic_speaker else R.drawable.ic_ear
+                        ),
+                        contentDescription = "Audio Device",
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.White
+                    )
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(175.dp)
+                    .background(Color(0xAA000000))
+                    .padding(bottom = 64.dp)
+                    .align(Alignment.BottomCenter),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Toggle Mic
+                IconButton(onClick = {
+                    if (!isMicrophoneMuted) {
+                        serviceRepository.toggleAudio(true)
+                    } else {
+                        serviceRepository.toggleAudio(false)
+                    }
+                    isMicrophoneMuted = !isMicrophoneMuted
+                }) {
+                    Icon(
+                        painter = rememberAsyncImagePainter(
+                            if (isMicrophoneMuted) R.drawable.ic_mic_on else R.drawable.ic_mic_off
+                        ),
+                        contentDescription = "Mic Toggle",
+                        modifier = Modifier.size(48.dp),
+                        tint = Color.White
+                    )
+                }
+
+                // Toggle Camera
                 IconButton(onClick = {
                     if (!isCameraMuted) {
                         serviceRepository.toggleVideo(true)
@@ -277,44 +363,43 @@ fun CallScreen(
                             if (isCameraMuted) R.drawable.ic_camera_on else R.drawable.ic_camera_off
                         ),
                         contentDescription = "Camera Toggle",
+                        modifier = Modifier.size(48.dp),
                         tint = Color.White
                     )
                 }
-            }
 
-            // Switch Camera
-            if (isVideoCall) {
+                // Switch Camera
                 IconButton(onClick = {
                     serviceRepository.switchCamera()
                 }) {
                     Icon(
                         painter = rememberAsyncImagePainter(R.drawable.ic_switch_camera),
                         contentDescription = "Switch Camera",
+                        modifier = Modifier.size(48.dp),
                         tint = Color.White
                     )
                 }
-            }
 
-            // Toggle Audio Device
-            IconButton(onClick = {
-                if (isSpeakerMode) {
-                    serviceRepository.toggleAudioDevice(RTCAudioManager.AudioDevice.EARPIECE.name)
-                } else {
-                    serviceRepository.toggleAudioDevice(RTCAudioManager.AudioDevice.SPEAKER_PHONE.name)
+                // Toggle Audio Device
+                IconButton(onClick = {
+                    if (isSpeakerMode) {
+                        serviceRepository.toggleAudioDevice(RTCAudioManager.AudioDevice.EARPIECE.name)
+                    } else {
+                        serviceRepository.toggleAudioDevice(RTCAudioManager.AudioDevice.SPEAKER_PHONE.name)
+                    }
+                    isSpeakerMode = !isSpeakerMode
+                }) {
+                    Icon(
+                        painter = rememberAsyncImagePainter(
+                            if (isSpeakerMode) R.drawable.ic_speaker else R.drawable.ic_ear
+                        ),
+                        contentDescription = "Audio Device",
+                        modifier = Modifier.size(48.dp),
+                        tint = Color.White
+                    )
                 }
-                isSpeakerMode = !isSpeakerMode
-            }) {
-                Icon(
-                    painter = rememberAsyncImagePainter(
-                        if (isSpeakerMode) R.drawable.ic_ear else R.drawable.ic_speaker
-                    ),
-                    contentDescription = "Audio Device",
-                    tint = Color.White
-                )
-            }
 
-            // Screen Share
-            if (isVideoCall) {
+                // Screen Share
                 IconButton(onClick = {
                     if (!isScreenCasting) {
                         AlertDialog.Builder(context)
@@ -340,7 +425,25 @@ fun CallScreen(
                             else R.drawable.ic_screen_share
                         ),
                         contentDescription = "Screen Share",
+                        modifier = Modifier.size(48.dp),
                         tint = Color.White
+                    )
+                }
+
+                // End call
+                IconButton(onClick = {
+                    serviceRepository.sendEndOrAbortCall()
+                    onEndCall()
+                },
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .background(Color.White, shape = CircleShape)
+                ) {
+                    Icon(
+                        painter = rememberAsyncImagePainter(R.drawable.ic_end_call),
+                        contentDescription = "End Call",
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.Red
                     )
                 }
             }

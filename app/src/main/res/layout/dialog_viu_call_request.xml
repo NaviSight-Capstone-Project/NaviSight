@@ -13,14 +13,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="10dp">
+        android:paddingTop="10dp">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:id="@+id/title"
             android:textSize="25sp"
-            android:textColor="@color/royal_purple"
+            android:textColor="@color/purple_200"
             android:gravity="center"
             android:fontFamily="verdana"
             android:textStyle="bold"
@@ -29,8 +29,9 @@
         <TextView
             android:layout_width="match_parent"
             android:id="@+id/incomingCallTitleTv"
-            android:textSize="14sp"
+            android:textSize="16sp"
             android:gravity="center"
+            android:textColor="@color/ash"
             android:fontFamily="verdana"
             android:text="One of your VIU is calling you!"
             android:layout_height="match_parent"/>
@@ -53,6 +54,8 @@
             android:drawableTint="#003807"
             android:layout_height="40dp"
             android:text="Accept"
+            android:textAllCaps="false"
+            android:textSize="18dp"
             android:background="@drawable/rounded_corners_accept_button"
             android:textColor="@color/white"
             android:id="@+id/acceptButton"/>
@@ -64,7 +67,9 @@
         <androidx.appcompat.widget.AppCompatButton
             android:drawableLeft="@drawable/ic_end_call"
             android:paddingStart="20dp"
+            android:textAllCaps="false"
             android:paddingEnd="20dp"
+            android:textSize="18dp"
             android:drawableTint="#470711"
             android:layout_width="150dp"
             android:layout_height="40dp"
