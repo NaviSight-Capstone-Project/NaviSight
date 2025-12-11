@@ -119,7 +119,7 @@ fun EmergencyScreen(
     responseToConfirm?.let { response ->
         ConfirmationDialog (
             title = "Confirm Action",
-            message = "Are you sure you want to '${response}'?\nThis will close the emergency alert.",
+            message = "Are you sure you want to \n'${response}'?\nThis will close the emergency alert.",
             onConfirm = {
                 onResponseSelected(response)
                 responseToConfirm = null

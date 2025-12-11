@@ -72,7 +72,7 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
                 onEndEmergencyMode = {
                     serviceRepository.sendEndOrAbortCall()
                     viuHomeViewModel?.removeUserEmergencyActivated()
-                    TextToSpeechHelper.queueSpeak(
+                    TextToSpeechHelper.speak(
                         applicationContext,"Emergency mode deactivated")
                     finish()
                 },
@@ -95,7 +95,7 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
         emergencyStatusListener.stopListening()
         serviceRepository.sendEndOrAbortCall()
         viuHomeViewModel?.removeUserEmergencyActivated()
-        TextToSpeechHelper.queueSpeak(
+        TextToSpeechHelper.speak(
             applicationContext,"Emergency mode deactivated by caregiver.")
         finish()
     }

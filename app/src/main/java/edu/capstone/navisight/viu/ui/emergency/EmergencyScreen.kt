@@ -197,7 +197,7 @@ fun EmergencyScreen(
                 imageVector = Icons.Filled.Warning,
                 contentDescription = "Warning",
                 tint = emergencyOrange,
-                modifier = Modifier.size(250.dp).padding(bottom = 64.dp, top=64.dp)
+                modifier = Modifier.size(250.dp).padding(bottom = 16.dp, top=16.dp)
             )
 
 

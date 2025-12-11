@@ -60,6 +60,7 @@ import edu.capstone.navisight.viu.ui.camera.managers.QuickMenuHandler
 import edu.capstone.navisight.viu.ui.camera.managers.ScreensaverHandler
 import edu.capstone.navisight.viu.ui.camera.managers.WebRTCManager
 import edu.capstone.navisight.viu.ui.ocr.DocumentReaderFragment
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -216,7 +217,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     private fun setupInputListeners() {
         val touchInterceptor = fragmentCameraBinding?.touchInterceptorView ?: return
 
-        // 1. Initialize Gesture Detector for Swipes (Profile Navigation)
+        // Initialize Gesture Detector for Swipes (Profile Navigation)
         gestureDetector = GestureDetectorCompat(requireContext(), object : GestureDetector.SimpleOnGestureListener() {
             private val SWIPE_THRESHOLD = 100
             private val SWIPE_VELOCITY_THRESHOLD = 100
@@ -406,6 +407,11 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
 
         // Ensure touch interceptor has focus for Volume Keys
         fragmentCameraBinding?.touchInterceptorView?.requestFocus()
+
+        // For emergency mode statuses. This thing is pretty slow to startup and needs to recheck
+        // the RTDB. Could also na rin as a redundant checker for high-stakes cases (emergency)
+        // TODO: Remove this if found a better way
+        mainRepository.reFetchLatestEvent()
     }
 
     override fun onDestroyView() {

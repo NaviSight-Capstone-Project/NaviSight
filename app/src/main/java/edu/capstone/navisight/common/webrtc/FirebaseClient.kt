@@ -7,6 +7,8 @@ import edu.capstone.navisight.common.webrtc.utils.EventListener
 import edu.capstone.navisight.common.webrtc.utils.UserStatus
 import edu.capstone.navisight.common.webrtc.model.DataModel
 import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FirebaseFirestore
@@ -112,10 +114,8 @@ class FirebaseClient private constructor(
                                 Pair(credentials, userStatus)
                             }
                         }
-
                     val results = deferredFetches.awaitAll()
                         .filter { (viu, _) -> viu != null } // Filter out any VIUs whose credentials failed to load
-
                     withContext(Dispatchers.Main) {
                         status(results)
                     }
@@ -131,6 +131,38 @@ class FirebaseClient private constructor(
 
     fun getUserType(): String {
         return userType
+    }
+
+    fun fetchLatestEventOnce(callback: (DataModel?) -> Unit) {
+        if (currentUID == null) {
+            Log.e("FirebaseClient", "Cannot fetch latest event: currentUID is null.")
+            callback(null)
+            return
+        }
+
+        // Use addListenerForSingleValueEvent for a one-time read
+        dbRef.child(currentUID!!).child(LATEST_EVENT)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val message = snapshot.getValue(String::class.java)
+                    val event = if (message != null) {
+                        try {
+                            // Deserialize the JSON string back into DataModel
+                            gson.fromJson(message, DataModel::class.java)
+                        } catch (e: Exception) {
+                            Log.e("FirebaseClient", "Error parsing latest event: ${e.message}")
+                            null
+                        }
+                    } else null
+                    // Return the fetched event via the callback
+                    callback(event)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e("FirebaseClient", "Failed to fetch latest event: ${error.message}")
+                    callback(null)
+                }
+            })
     }
 
     // Formerly login.

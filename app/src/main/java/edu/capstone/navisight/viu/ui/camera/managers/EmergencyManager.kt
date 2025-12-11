@@ -19,14 +19,14 @@ class EmergencyManager (
     fun initiateEmergencyModeSequence() {
         // Todo: FIX TIMING, PERHAPS MAKE DEDICATED queueSpeakEmergency (then combine with vibration)
         VibrationHelper.vibrate(cameraFragment.context)
-        TextToSpeechHelper.queueSpeak(cameraFragment.context, "Emergency mode initiating now." +
-                "Please hold for 3 seconds to continue.")
+//        TextToSpeechHelper.queueSpeak(cameraFragment.context, "Emergency mode initiating now." +
+//                "Please hold for 3 seconds to continue.")
         cameraFragment.didEmergencySequenceComplete = true // Set flag TODO: DO NOT FORGET TO ADD FALSE ONCE EMERGENCY IS COMPLETE
         setEmergencyModeFlag()
-        webRTCManager.releaseCamera {
-            if (cameraFragment.isAdded) {
-                launchEmergencyMode()
-            }
+        webRTCManager.releaseCamera() // Initiate the delayed CameraX unbind without a callback
+
+        if (cameraFragment.isAdded) {
+            launchEmergencyMode() // Launch EmergencyActivity immediately
         }
     }
 

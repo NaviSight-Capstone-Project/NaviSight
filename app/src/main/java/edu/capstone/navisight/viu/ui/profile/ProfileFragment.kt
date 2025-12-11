@@ -207,6 +207,10 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
         showIncomingCallDialog(model, model.type == DataModelType.StartVideoCall)
     }
 
+    override fun onEmergencyCallReceived(model: DataModel) {
+        startCallFromProfile(model, model.type == DataModelType.StartVideoCall)
+    }
+
     override fun onCallAborted() {
         activity?.runOnUiThread {
             if (callRequestDialog?.isShowing == true) {
@@ -265,23 +269,9 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
 
             acceptButton.setOnClickListener {
                 releaseMediaPlayer()
-
                 // Stop timer on end/miss call timeout
                 service.stopCallTimeoutTimer()
-
-                val activity = requireActivity() as? AppCompatActivity
-
-                activity?.getCameraAndMicPermission {
-                    val intent = Intent(requireActivity(), CallActivity::class.java).apply {
-                        putExtra("target", model.sender)
-                        putExtra("isVideoCall", isVideoCall)
-                        putExtra("isCaller", false)
-                        putExtra("sender_id", model.sender)
-                    }
-                    startActivity(intent)
-                } ?: run {
-                    Toast.makeText(context, "Cannot request permissions. Activity is missing.", Toast.LENGTH_LONG).show()
-                }
+                startCallFromProfile(model, this.isVideoCall)
                 callRequestDialog?.dismiss()
             }
 
@@ -295,6 +285,22 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
         } catch (e: Exception) {
             Log.e("callevent", "Failed to show call dialog: ${e.message}")
             releaseMediaPlayer()
+        }
+    }
+
+    private fun startCallFromProfile(model : DataModel, isVideoCall: Boolean){
+        val activity = requireActivity() as? AppCompatActivity
+
+        activity?.getCameraAndMicPermission {
+            val intent = Intent(requireActivity(), CallActivity::class.java).apply {
+                putExtra("target", model.sender)
+                putExtra("isVideoCall", isVideoCall)
+                putExtra("isCaller", false)
+                putExtra("sender_id", model.sender)
+            }
+            startActivity(intent)
+        } ?: run {
+            Toast.makeText(context, "Cannot request permissions. Activity is missing.", Toast.LENGTH_LONG).show()
         }
     }
 

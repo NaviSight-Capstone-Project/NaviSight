@@ -399,6 +399,16 @@ class MainService : Service(), MainRepository.Listener {
                     startCallTimeoutTimer() // Begin timer for time out
                     listener?.onCallReceived(data)
                 }
+                DataModelType.EmergencyStartAudioCall,
+                DataModelType.EmergencyStartVideoCall -> {
+                    val callerId = data.sender
+                    if (callerId.isNullOrEmpty()) {
+                        Log.e(TAG, "Incoming call event missing valid sender ID.")
+                        return // Skip processing if sender is missing
+                    }
+                    currentIncomingCallerId = callerId
+                    listener?.onEmergencyCallReceived(data)
+                }
                 else -> Unit
             }
         }
@@ -420,6 +430,7 @@ class MainService : Service(), MainRepository.Listener {
 
     interface Listener {
         fun onCallReceived(model: DataModel)
+        fun onEmergencyCallReceived(model: DataModel)
         fun onCallAborted()
         fun onCallMissed(senderId: String)
     }

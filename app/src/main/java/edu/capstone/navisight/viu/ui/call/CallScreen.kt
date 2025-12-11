@@ -245,7 +245,7 @@ fun CallScreen(
                 Text(
                     text = callTime,
                     color = Color.White,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.padding(horizontal = 10.dp)
                 )
                 Text(

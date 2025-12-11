@@ -3,7 +3,8 @@ package edu.capstone.navisight.common.webrtc.model
 import kotlin.compareTo
 
 enum class DataModelType {
-    StartAudioCall, StartVideoCall, Offer, Answer, IceCandidates, EndCall, DenyCall, AbortCall, MissCall
+    StartAudioCall, StartVideoCall, Offer, Answer, IceCandidates, EndCall, DenyCall, AbortCall, MissCall,
+    EmergencyStartAudioCall, EmergencyStartVideoCall
 }
 data class DataModel(
     val sender:String?=null,

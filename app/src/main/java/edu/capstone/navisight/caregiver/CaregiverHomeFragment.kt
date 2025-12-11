@@ -141,9 +141,9 @@ class CaregiverHomeFragment : Fragment(),
         viewLifecycleOwner.lifecycleScope.launch {
             emergencyViewModel.callRequest.collect { (viuUid, isVideoCall) ->
                 if (isVideoCall) {
-                    onVideoCallClickedFromFragment(viuUid)
+                    onEmergencyVideoCallClickedFromFragment(viuUid)
                 } else {
-                    onAudioCallClickedFromFragment(viuUid)
+                    onEmergencyAudioCallClickedFromFragment(viuUid)
                 }
             }
         }
@@ -329,6 +329,48 @@ class CaregiverHomeFragment : Fragment(),
         }
     }
 
+    fun onEmergencyVideoCallClickedFromFragment(uid: String) {
+        Log.d("CallSignal", "Received Video Call request for: $uid")
+
+        (requireActivity() as AppCompatActivity).getCameraAndMicPermission {
+            mainRepository.sendEmergencyConnectionRequest(uid, true) { success ->
+                if (success) {
+                    // No expiration timer, do or no
+                    Log.d("CallSignal", "Emergency Video call request successfully sent.")
+                    val intent = Intent(requireContext(), CaregiverCallActivity::class.java).apply {
+                        putExtra("target", uid)
+                        putExtra("isVideoCall", true)
+                        putExtra("isCaller", true)
+                    }
+                    startActivity(intent)
+                } else {
+                    Log.e("CallSignal", "Failed to send video call request.")
+                }
+            }
+        }
+    }
+
+    fun onEmergencyAudioCallClickedFromFragment(uid: String) {
+        Log.d("CallSignal", "Received Audio Call request for: $uid")
+
+        (requireActivity() as AppCompatActivity).getCameraAndMicPermission {
+            mainRepository.sendEmergencyConnectionRequest(uid, false) { success ->
+                if (success) {
+                    // No expiration timer, do or no
+                    Log.d("CallSignal", "Emergency  call request successfully sent.")
+                    val intent = Intent(requireContext(), CaregiverCallActivity::class.java).apply {
+                        putExtra("target", uid)
+                        putExtra("isVideoCall", false)
+                        putExtra("isCaller", true)
+                    }
+                    startActivity(intent)
+                } else {
+                    Log.e("CallSignal", "Failed to send audio call request.")
+                }
+            }
+        }
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         fragmentJob.cancel()
@@ -423,6 +465,10 @@ class CaregiverHomeFragment : Fragment(),
             }
             }
         }
+    }
+
+    override fun onEmergencyCallReceived(model: DataModel) {
+        // WALA MANGYAYARI DAPAT DITO KASI CAREGIVER ITO >:D
     }
 
     private fun releaseMediaPlayer() {

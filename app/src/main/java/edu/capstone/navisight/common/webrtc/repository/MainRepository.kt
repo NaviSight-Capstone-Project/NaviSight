@@ -52,6 +52,17 @@ class MainRepository private constructor(
         firebaseClient.setUserType(userType)
     }
 
+    fun reFetchLatestEvent() {
+        firebaseClient.fetchLatestEventOnce { event ->
+            event?.let { latestEvent ->
+                Log.d("MainRepository", "Forcibly fetched new event from DB: ${latestEvent.type}")
+                currentLatestEvent = latestEvent
+                abortSignalTargetUid = latestEvent.sender
+                listener?.onLatestEventReceived(latestEvent)
+            }
+        }
+    }
+
     fun initFirebase() {
         firebaseClient.clearLatestEvent()
         firebaseClient.observeLatestEvents(object : FirebaseClient.Listener {
@@ -111,7 +122,13 @@ class MainRepository private constructor(
                     MissCall -> {
                         listener?.missCall()
                     }
-                    else -> Unit
+                    EmergencyStartVideoCall,
+                    EmergencyStartAudioCall -> {
+                        // Receiving a call
+                        isCaller = false
+                        isCallInProgress = false
+                        Log.d("MainRepository", "Detected EMERGENCY incoming call from ${event.sender}.")
+                    }
                 }
             }
         })
@@ -131,6 +148,20 @@ class MainRepository private constructor(
         firebaseClient.sendMessageToOtherClient(
             DataModel(
                 type = if (isVideoCall) StartVideoCall else StartAudioCall,
+                target = target
+            ), success
+        )
+        this.target = target
+        this.abortSignalTargetUid = target
+        isCaller = true
+        isCallInProgress = false // Reset state
+        Log.d("MainRepository", "Triggered send connection request to: $target")
+    }
+
+    fun sendEmergencyConnectionRequest(target: String, isVideoCall: Boolean, success: (Boolean) -> Unit) {
+        firebaseClient.sendMessageToOtherClient(
+            DataModel(
+                type = if (isVideoCall) EmergencyStartVideoCall else EmergencyStartAudioCall,
                 target = target
             ), success
         )
