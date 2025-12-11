@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.gms.google-services")
+
+    id("com.google.devtools.ksp")
 }
 
 val properties = Properties()
@@ -200,4 +202,9 @@ dependencies {
 
     // Text Recognition (OCR - Extracts text from the image)
     implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.0")
+
+    val roomVersion = "2.6.1"
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    add("ksp", "androidx.room:room-compiler:$roomVersion")
 }
