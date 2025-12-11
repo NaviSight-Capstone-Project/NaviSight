@@ -65,6 +65,7 @@ class WebRTCManager(
 
     override fun onCallReceived(model: DataModel) {
         // Ensure switch to the Main thread to handle UI
+        Log.d("MainRepository", "Non-emergency CALL RECEIVED SUCCESSFULLY, BEGINNING CALL NOW. STARTING WITH TYPE: ${model.type}")
         cameraFragment.activity?.runOnUiThread {
             beginCall(model, false)
         }
@@ -126,6 +127,7 @@ class WebRTCManager(
 
 
     fun beginCall(model: DataModel, isEmergency: Boolean) {
+        Log.d(TAG, "begin call has been pass thru")
         if (isEmergency) {
             Log.d(TAG, "DETECTED AN EMERGENCY INCOMING CALL: ${model.sender}")
             reallyBeginCall(model, true)

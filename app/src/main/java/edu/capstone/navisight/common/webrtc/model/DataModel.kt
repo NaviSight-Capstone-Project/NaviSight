@@ -1,7 +1,5 @@
 package edu.capstone.navisight.common.webrtc.model
 
-import kotlin.compareTo
-
 enum class DataModelType {
     StartAudioCall, StartVideoCall, Offer, Answer, IceCandidates, EndCall, DenyCall, AbortCall, MissCall,
     EmergencyStartAudioCall, EmergencyStartVideoCall

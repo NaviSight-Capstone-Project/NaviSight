@@ -385,32 +385,30 @@ class MainService : Service(), MainRepository.Listener {
     }
 
     override fun onLatestEventReceived(data: DataModel) {
-        if (data.isValid()) {
-            Log.d(TAG, "The data type found valid is: ${data.type}")
-            when (data.type) {
-                DataModelType.StartVideoCall,
-                DataModelType.StartAudioCall -> {
-                    val callerId = data.sender
-                    if (callerId.isNullOrEmpty()) {
-                        Log.e(TAG, "Incoming call event missing valid sender ID.")
-                        return // Skip processing if sender is missing
-                    }
-                    currentIncomingCallerId = callerId
-                    startCallTimeoutTimer() // Begin timer for time out
-                    listener?.onCallReceived(data)
+        Log.d(TAG, "MainService - OnLatestEventReceived found something: ${data.type}")
+        when (data.type) {
+            DataModelType.StartVideoCall,
+            DataModelType.StartAudioCall -> {
+                val callerId = data.sender
+                if (callerId.isNullOrEmpty()) {
+                    Log.e(TAG, "Incoming call event missing valid sender ID.")
+                    return // Skip processing if sender is missing
                 }
-                DataModelType.EmergencyStartAudioCall,
-                DataModelType.EmergencyStartVideoCall -> {
-                    val callerId = data.sender
-                    if (callerId.isNullOrEmpty()) {
-                        Log.e(TAG, "Incoming call event missing valid sender ID.")
-                        return // Skip processing if sender is missing
-                    }
-                    currentIncomingCallerId = callerId
-                    listener?.onEmergencyCallReceived(data)
-                }
-                else -> Unit
+                currentIncomingCallerId = callerId
+                startCallTimeoutTimer() // Begin timer for time out
+                listener?.onCallReceived(data)
             }
+            DataModelType.EmergencyStartAudioCall,
+            DataModelType.EmergencyStartVideoCall -> {
+                val callerId = data.sender
+                if (callerId.isNullOrEmpty()) {
+                    Log.e(TAG, "Incoming call event missing valid sender ID.")
+                    return // Skip processing if sender is missing
+                }
+                currentIncomingCallerId = callerId
+                listener?.onEmergencyCallReceived(data)
+            }
+            else -> Unit
         }
     }
 
