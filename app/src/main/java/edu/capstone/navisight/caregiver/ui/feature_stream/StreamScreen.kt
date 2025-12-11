@@ -56,6 +56,7 @@ import edu.capstone.navisight.common.webrtc.adapter.UserListView
 import com.google.firebase.auth.FirebaseAuth
 import edu.capstone.navisight.common.webrtc.FirebaseClient
 import kotlinx.coroutines.launch
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 
 @Composable
 fun StreamScreen(
@@ -79,6 +80,8 @@ fun StreamScreen(
         Log.e("StreamScreen", "Caregiver UID is null. Cannot fetch relationships.")
         return
     }
+
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
 
     // Fetch Associated VIU UIDs from Firestore
     LaunchedEffect(key1 = caregiverUid) {
@@ -170,19 +173,24 @@ fun StreamScreen(
                             query = searchQuery,
                             onQueryChange = { viewModel.onSearchQueryChanged(it) }
                         )
-
-
                         Spacer(modifier = Modifier.height(12.dp))
-
                         // Set main content with controls
-                        if (associatedViuUids == null) {
-                            // loooooaaaaddddinnngggg
-                            Box(
-                                modifier = Modifier.weight(1f),
-                                contentAlignment = Alignment.Center
-                            ) {
+                        // This Box will hold the list and the pull-to-refresh container
+                        PullToRefreshBox(
+                            modifier = Modifier.weight(1f), // Fills the remaining space
+                            isRefreshing = isRefreshing,
+                            onRefresh = {
+                                viewModel.refreshViuStatuses(caregiverUid, firebaseClient)
+                            }
+                            // Note: PullToRefreshBox handles the nested scroll connection internally
+                        ) {
+                            // Content based on loading, empty, or data state
+                            if (associatedViuUids == null) {
+                                // loooooaaaaddddinnngggg
                                 Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                                    modifier = Modifier.fillMaxSize(), // Use fillMaxSize() inside the Box
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
                                 ) {
                                     CircularProgressIndicator()
                                     Spacer(modifier = Modifier.height(25.dp))
@@ -195,29 +203,57 @@ fun StreamScreen(
                                         )
                                     )
                                 }
-                            }
 
-                        } else if (filteredUsers.isEmpty() && associatedViuUids?.isNotEmpty() == true) {
-                            // viu state no changes
-                            Box(
-                                modifier = Modifier.weight(1f),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    if (searchQuery.isNotEmpty()) {
-                                        Text(
-                                            textAlign = TextAlign.Center,
-                                            text = "No matching VIUs found for \"$searchQuery\"",
-                                            style = MaterialTheme.typography.bodyLarge.copy(
-                                                fontWeight = FontWeight.Medium,
-                                                color = Color.Gray
-                                            )
-                                        )
-                                    } else {
-                                        Image(
-                                            painter = painterResource(id = R.drawable.ic_no_internet),
+                                } else if (filteredUsers.isEmpty() && associatedViuUids?.isNotEmpty() == true) {
+                                    // viu state no changes
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            if (searchQuery.isNotEmpty()) {
+                                                Text(
+                                                    textAlign = TextAlign.Center,
+                                                    text = "No matching VIUs found for \"$searchQuery\"",
+                                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                                        fontWeight = FontWeight.Medium,
+                                                        color = Color.Gray
+                                                    )
+                                                )
+                                            } else {
+                                                Image(
+                                                    painter = painterResource(id = R.drawable.ic_no_internet),
+                                                    contentDescription = "Icon",
+                                                    modifier = Modifier.size(120.dp),
+                                                    colorFilter = ColorFilter.tint(Color.Gray)
+                                                )
+                                                Spacer(modifier = Modifier.height(25.dp))
+                                                Text(
+                                                    textAlign = TextAlign.Center,
+                                                    text = "No VIUs are currently online or matching your search.\nTry again later?",
+                                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                                        fontWeight = FontWeight.Medium,
+                                                        color = Color.Gray
+                                                    )
+                                                )
+                                            }
+                                        }
+
+                                    }
+
+                                } else if (associatedViuUids?.isEmpty() == true) {
+                                    //  empty viu
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Image(
+                                            painter = painterResource(id = R.drawable.ic_no_viu_stream),
                                             contentDescription = "Icon",
                                             modifier = Modifier.size(120.dp),
                                             colorFilter = ColorFilter.tint(Color.Gray)
@@ -225,7 +261,7 @@ fun StreamScreen(
                                         Spacer(modifier = Modifier.height(25.dp))
                                         Text(
                                             textAlign = TextAlign.Center,
-                                            text = "No VIUs are currently online or matching your search.\nTry again later?",
+                                            text = "No VIU currently registered.\nTry registering?",
                                             style = MaterialTheme.typography.bodyLarge.copy(
                                                 fontWeight = FontWeight.Medium,
                                                 color = Color.Gray
@@ -233,37 +269,8 @@ fun StreamScreen(
                                         )
                                     }
                                 }
+                            } else {
 
-                            }
-
-                        } else if (associatedViuUids?.isEmpty() == true) {
-                            //  empty viu
-                            Box(
-                                modifier = Modifier.weight(1f),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.ic_no_viu_stream),
-                                        contentDescription = "Icon",
-                                        modifier = Modifier.size(120.dp),
-                                        colorFilter = ColorFilter.tint(Color.Gray)
-                                    )
-                                    Spacer(modifier = Modifier.height(25.dp))
-                                    Text(
-                                        textAlign = TextAlign.Center,
-                                        text = "No VIU currently registered.\nTry registering?",
-                                        style = MaterialTheme.typography.bodyLarge.copy(
-                                            fontWeight = FontWeight.Medium,
-                                            color = Color.Gray
-                                        )
-                                    )
-                                }
-                            }
-                        } else {
-                            Box(modifier = Modifier.weight(1f)) {
                                 UserListView(
                                     users = filteredUsers,
                                     listState = listState,
@@ -279,6 +286,7 @@ fun StreamScreen(
                             }
                         }
                     }
+
 
                     // Set alphabet scrollbar
                     Column(

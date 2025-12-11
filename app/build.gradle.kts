@@ -192,6 +192,8 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
+    // Pull to refresh
+    implementation("androidx.compose.material3:material3:1.3.0")
 
     // Document Scanner (Provides the ready-made Camera UI)
     implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0-beta1")

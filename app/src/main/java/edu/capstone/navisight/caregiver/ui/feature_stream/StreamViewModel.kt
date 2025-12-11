@@ -6,6 +6,7 @@ import edu.capstone.navisight.caregiver.model.Caregiver
 import edu.capstone.navisight.caregiver.model.Viu
 import edu.capstone.navisight.caregiver.ui.feature_records.SortOrder
 import edu.capstone.navisight.common.webrtc.FirebaseClient
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class StreamViewModel () : ViewModel() {
 
@@ -36,6 +38,23 @@ class StreamViewModel () : ViewModel() {
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
+    }
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    fun refreshViuStatuses(caregiverUid: String, firebaseClient: FirebaseClient) {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                // Re-fetch UIDs and re-observe RTDB
+                val uids = firebaseClient.getAssociatedViuUids(caregiverUid)
+                observeViuStatuses(uids, firebaseClient)
+            } finally {
+                delay(500) // Small delay for UX
+                _isRefreshing.value = false
+            }
+        }
     }
 
     fun observeViuStatuses(associatedViuUids: List<String>, firebaseClient: FirebaseClient) {

@@ -251,7 +251,7 @@ fun CallScreen(
                 Text(
                     text = "In call with ${caregiverRecord?.firstName?: "your Caregiver"} ",
                     color = Color.White,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.headlineSmall,
                     textAlign = TextAlign.Center
                 )
             }

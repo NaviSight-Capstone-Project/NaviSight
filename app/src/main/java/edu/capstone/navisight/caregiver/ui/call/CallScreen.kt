@@ -243,7 +243,7 @@ fun CallScreen(
                 Text(
                     text = "In call with ${viuRecord?.firstName ?: "your VIU"}",
                     color = Color.White,
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
                 )
             }
