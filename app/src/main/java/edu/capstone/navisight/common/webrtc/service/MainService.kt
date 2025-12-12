@@ -45,6 +45,8 @@ class MainService : Service(), MainRepository.Listener {
 
     private lateinit var mainRepository : MainRepository
 
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     private val connectionFailureHandler = Handler(Looper.getMainLooper())
     private val connectionFailureRunnable = Runnable {
         Log.d(TAG, "5-second connection failure timeout reached. Auto-ending call.")
@@ -149,28 +151,30 @@ class MainService : Service(), MainRepository.Listener {
 
     // Consolidated call cleanup function
     private fun endCallCleanUp() {
-        Log.d(TAG, "COMMENCING END CALL CLEANUP")
-        stopCallTimeoutTimer()
-        connectionFailureHandler.removeCallbacks(connectionFailureRunnable)
+        mainHandler.post{
+            Log.d(TAG, "COMMENCING END CALL CLEANUP")
+            stopCallTimeoutTimer()
+            connectionFailureHandler.removeCallbacks(connectionFailureRunnable)
 
-        // Stop the RTCAudioManager to release audio focus and microphone
-        if (::rtcAudioManager.isInitialized) { // Check if initialized before stopping
-            rtcAudioManager.stop()
-            Log.d(TAG, "RTCAudioManager stopped, releasing microphone.")
+            // Stop the RTCAudioManager to release audio focus and microphone
+            if (::rtcAudioManager.isInitialized) { // Check if initialized before stopping
+                rtcAudioManager.stop()
+                Log.d(TAG, "RTCAudioManager stopped, releasing microphone.")
+            }
+
+            mainRepository.endCall() // Cleans up WebRTC and sets status to ONLINE
+            endAndDeniedCallListener?.onCallEnded()
+            // Re-initialize the client, but ONLY if the service is meant to stay alive (e.g., for subsequent incoming calls).
+            // If the service is about to stop, this is redundant.
+            if (isServiceRunning && email != null) {
+                // Re-initialize for future calls only if service is running
+                mainRepository.initWebrtcClient(email!!)
+            }
+            // Re-initialize the audio manager so it's ready for the next call
+            initializeRTCAudioManager()
+
+            Log.d(TAG, "FINISHED END CALL CLEANUP")
         }
-
-        mainRepository.endCall() // Cleans up WebRTC and sets status to ONLINE
-        endAndDeniedCallListener?.onCallEnded()
-        // Re-initialize the client, but ONLY if the service is meant to stay alive (e.g., for subsequent incoming calls).
-        // If the service is about to stop, this is redundant.
-        if (isServiceRunning && email != null) {
-            // Re-initialize for future calls only if service is running
-            mainRepository.initWebrtcClient(email!!)
-        }
-        // Re-initialize the audio manager so it's ready for the next call
-        initializeRTCAudioManager()
-
-        Log.d(TAG, "FINISHED END CALL CLEANUP")
     }
 
     // Handle denied calls (local action)
