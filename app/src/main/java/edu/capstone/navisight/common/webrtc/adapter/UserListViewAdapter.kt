@@ -83,7 +83,7 @@ fun UserListItem(
 
     // PFP
     val profileBorderColor = colorResource(R.color.royal_purple)
-    val profileBorderWidth = 2.dp
+    val profileBorderWidth = 10.dp
     val profileImageSize = 60.dp
     val statusBadgeSize = 14.dp
 

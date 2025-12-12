@@ -3,6 +3,7 @@ package edu.capstone.navisight.viu.ui.profile
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -21,7 +22,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -101,7 +104,7 @@ fun ProfileContent(
         // Profile Card
         ProfileCard(user = user)
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // QR Section
         Row(
@@ -142,7 +145,7 @@ fun ProfileContent(
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             if (qrBitmap != null) {
                 Box(
@@ -172,7 +175,7 @@ fun ProfileContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         // Notification Section
         NotificationCard(title = "Notification") {
@@ -182,48 +185,48 @@ fun ProfileContent(
             NotificationToggleItem("Email Alerts")
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         // Buttons
-        Button(
-            onClick = onVideoCall,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8BC34A)),
-            shape = RoundedCornerShape(25.dp)
-        ) {
-            Text("Video call your caregiver", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        }
+//        Button(
+//            onClick = onVideoCall,
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .height(50.dp),
+//            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8BC34A)),
+//            shape = RoundedCornerShape(25.dp)
+//        ) {
+//            Text("Video call your caregiver", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+//        }
+//
+//        Spacer(modifier = Modifier.height(8.dp))
+//
+//        Button(
+//            onClick = onAudioCall,
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .height(50.dp),
+//            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A93C3)),
+//            shape = RoundedCornerShape(25.dp)
+//        ) {
+//            Text("Audio call your caregiver", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+//        }
+//
+//        Spacer(modifier = Modifier.height(8.dp))
+//
+//        // Document Reader Button
+//        Button(
+//            onClick = onScanDocument,
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .height(50.dp),
+//            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6041EC)),
+//            shape = RoundedCornerShape(25.dp)
+//        ) {
+//            Text("Read Document / Letter", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+//        }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = onAudioCall,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A93C3)),
-            shape = RoundedCornerShape(25.dp)
-        ) {
-            Text("Audio call your caregiver", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Document Reader Button
-        Button(
-            onClick = onScanDocument,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6041EC)),
-            shape = RoundedCornerShape(25.dp)
-        ) {
-            Text("Read Document / Letter", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Button(
             onClick = onLogout,
@@ -233,7 +236,7 @@ fun ProfileContent(
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5C5C)),
             shape = RoundedCornerShape(25.dp)
         ) {
-            Text("Logout", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("LOGOUT", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
     }
 
@@ -270,10 +273,13 @@ fun ProfileContent(
 
 @Composable
 fun ProfileCard(user: Viu) {
+
+    val profileBorderColor = colorResource(R.color.royal_purple)
+    val profileBorderWidth = 7.dp
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(140.dp)
             .shadow(8.dp, RoundedCornerShape(30.dp)),
         shape = RoundedCornerShape(30.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
@@ -297,31 +303,55 @@ fun ProfileCard(user: Viu) {
                     contentDescription = "Profile Image",
                     modifier = Modifier
                         .size(80.dp)
-                        .clip(CircleShape),
+                        .clip(CircleShape)
+                        .border(profileBorderWidth, profileBorderColor, CircleShape),
                     contentScale = ContentScale.Crop
                 )
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
                 Column(
-                    verticalArrangement = Arrangement.Center,
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
                         text = "${user.firstName} ${user.lastName}",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
 
                     if (!user.status.isNullOrEmpty()) {
-                        Text("Status: ${user.status}", fontSize = 13.sp, color = Color.White)
+                        Text(
+                            "Status: ${user.status}",
+                            fontSize = 13.sp,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis)
                     }
-                    Text("Email: ${user.email}", fontSize = 13.sp, color = Color.White)
-                    Text("Phone: ${user.phone}", fontSize = 13.sp, color = Color.White)
+                    Text(
+                        "Email: ${user.email}",
+                        fontSize = 13.sp,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        "Phone: ${user.phone}",
+                        fontSize = 13.sp,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
 
                     if (!user.address.isNullOrEmpty()) {
-                        Text("Address: ${user.address}", fontSize = 13.sp, color = Color.White)
+                        Text(
+                            "Address: ${user.address}",
+                            fontSize = 13.sp,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
@@ -357,11 +387,9 @@ fun NotificationCard(
 @Composable
 fun NotificationToggleItem(title: String) {
     var isChecked by remember { mutableStateOf(false) }
-
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(title, modifier = Modifier.weight(1f))

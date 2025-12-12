@@ -70,5 +70,4 @@ class ScreensaverHandler (
     fun cleanupScreensaverHandler() {
         idleHandler.removeCallbacksAndMessages(null)
     }
-
 }
