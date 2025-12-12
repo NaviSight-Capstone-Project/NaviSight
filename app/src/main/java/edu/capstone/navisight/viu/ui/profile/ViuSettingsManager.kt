@@ -5,9 +5,9 @@ import androidx.core.content.edit
 
 object ViuSettingsManager {
     private const val PREFS_NAME = "ViuLocalSettings"
-    const val KEY_APP_NOTIFICATION = "appNotificationEnabled"
-    const val KEY_SOUND_ALERT = "soundAlertEnabled"
-    const val KEY_VIBRATION = "vibrationEnabled"
+    const val KEY_APP_NOTIFICATION = "viuAppNotificationEnabled"
+    const val KEY_SOUND_ALERT = "viuSoundAlertEnabled"
+    const val KEY_VIBRATION = "viuVibrationEnabled"
 
     fun getBoolean(context: Context, key: String, defaultValue: Boolean = true): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
