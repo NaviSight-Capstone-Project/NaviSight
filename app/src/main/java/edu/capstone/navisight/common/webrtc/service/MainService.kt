@@ -15,6 +15,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import edu.capstone.navisight.common.Constants.BR_ACTION_DENIED_CALL
 import edu.capstone.navisight.common.Constants.BR_CONNECTION_ESTABLISHED
 import edu.capstone.navisight.common.Constants.BR_CONNECTION_FAILURE
+import edu.capstone.navisight.common.Constants.USER_TYPE_VIU
 import edu.capstone.navisight.common.NaviSightNotificationManager
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.webrtc.vendor.RTCAudioManager
@@ -450,7 +451,7 @@ class MainService : Service(), MainRepository.Listener {
     override fun missCall() {
         Log.d(TAG, "Received MissCall signal from remote peer.")
         val currentUserType = mainRepository.getUserType()
-        if (currentUserType == "vius") {
+        if (currentUserType == USER_TYPE_VIU) {
             showToastOnMainThreadAndTTS("Caregiver missed your call. Try again?")
         } else Toast.makeText(
             applicationContext,

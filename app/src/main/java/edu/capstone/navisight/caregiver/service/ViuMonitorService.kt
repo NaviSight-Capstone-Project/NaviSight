@@ -1,11 +1,13 @@
 package edu.capstone.navisight.caregiver.service
 
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import edu.capstone.navisight.MainActivity
 import edu.capstone.navisight.R
 import edu.capstone.navisight.caregiver.domain.notificationUseCase.SaveAlertUseCase
 import edu.capstone.navisight.caregiver.domain.viuUseCase.GetConnectedViuUidsUseCase
@@ -14,7 +16,11 @@ import edu.capstone.navisight.caregiver.model.AlertNotification
 import edu.capstone.navisight.caregiver.model.AlertType
 import edu.capstone.navisight.caregiver.ui.emergency.EmergencySignal
 import edu.capstone.navisight.caregiver.ui.emergency.EmergencyViewModel
+import edu.capstone.navisight.common.Constants.SHARED_PREFERENCES_NAME
+import edu.capstone.navisight.common.Constants.USER_TYPE_CAREGIVER
+import edu.capstone.navisight.common.Constants.USER_TYPE_KEY
 import edu.capstone.navisight.common.NaviSightNotificationManager
+import edu.capstone.navisight.common.webrtc.FirebaseClient
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import java.util.UUID
@@ -55,6 +61,12 @@ class ViuMonitorService : Service() {
         return lastEmergencySignal
     }
 
+    private fun getCurrentUserType(): String {
+        val sharedPref = getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
+        // Read the stored value, providing a default if not found
+        return sharedPref.getString(USER_TYPE_KEY, "UNKNOWN") ?: "UNKNOWN"
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         INSTANCE = null // Clear the static instance when the service is destroyed
@@ -62,11 +74,11 @@ class ViuMonitorService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Start as a Foreground Service (required for long-running background tasks)
-        startForeground(NOTIFICATION_ID, buildForegroundNotification())
-
-        // Start monitoring VIUs
-        startViuMonitoring()
+        // Start monitoring VIUs if caregiver
+        if (getCurrentUserType() == USER_TYPE_CAREGIVER) {
+            startForeground(NOTIFICATION_ID, buildForegroundNotification())
+            startViuMonitoring()
+        }
 
         // Ensures the service restarts if it's killed by the OS (useful for reliability)
         return START_STICKY

@@ -26,6 +26,8 @@ import edu.capstone.navisight.auth.data.remote.CloudinaryDataSource
 import edu.capstone.navisight.auth.domain.GetUserCollectionUseCase
 import edu.capstone.navisight.caregiver.CaregiverHomeFragment
 import edu.capstone.navisight.caregiver.service.ViuMonitorService
+import edu.capstone.navisight.common.Constants.SHARED_PREFERENCES_NAME
+import edu.capstone.navisight.common.Constants.USER_TYPE_KEY
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.disclaimer.DisclaimerFragment
 import edu.capstone.navisight.viu.ViuHomeFragment
@@ -83,6 +85,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun saveUserType(userType: String) {
+        val sharedPref = getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
+        with(sharedPref.edit()) {
+            putString(USER_TYPE_KEY, userType)
+            apply()
+        }
+    }
+
     fun startAppWithRegisteredUser(){
         currentUser = auth.currentUser!!
         mainRepository.setEmail(currentUser.email.toString())
@@ -93,14 +103,15 @@ class MainActivity : AppCompatActivity() {
                 getUserCollectionUseCase = GetUserCollectionUseCase()
                 val collection = getUserCollectionUseCase(currentUser.uid)
 
-                // 1. Pass the determined user type to the MainRepository/FirebaseClient
+                // Pass the determined user type to the MainRepository/FirebaseClient
                 if (collection == "caregivers" || collection == "vius") {
-                    mainRepository.setUserType(collection) // <--- NEW CALL
+                    mainRepository.setUserType(collection)
                     startWebrtcService(currentUser.email.toString()) // Start service AFTER userType is set
                     handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
+                    saveUserType(collection)
                 }
 
-                // 2. Navigate based on the type
+                // Navigate based on the type
                 when (collection) {
                     "caregivers" -> navigateToHomeFragment(isCaregiver = true)
                     "vius" -> navigateToHomeFragment(isCaregiver = false)
