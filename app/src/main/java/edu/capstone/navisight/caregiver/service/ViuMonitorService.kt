@@ -42,7 +42,6 @@ class ViuMonitorService : Service() {
 
     companion object {
         const val NOTIFICATION_ID = 101
-        const val CHANNEL_ID = NaviSightNotificationManager.MONITORING_CHANNEL_ID
         var INSTANCE: ViuMonitorService? = null
     }
 
@@ -79,13 +78,8 @@ class ViuMonitorService : Service() {
         return null
     }
 
-    private fun buildForegroundNotification() = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setContentTitle("VIU Monitoring Active")
-        .setContentText("Listening for emergency and low battery alerts.")
-        .setSmallIcon(R.drawable.ic_logo) // Use your app icon
-        .setPriority(NotificationCompat.PRIORITY_LOW)
-        .setOngoing(true) // Makes it non-dismissible
-        .build()
+    private fun buildForegroundNotification() =
+        naviSightNotificationManager.buildViuMonitoringNotification().build()
 
     private fun startViuMonitoring() {
         serviceScope.launch {

@@ -161,9 +161,9 @@ class NaviSightNotificationManager(private val context: Context) {
     // Foreground Service Notification Builders (Used by MainActivity & MainService)
     fun buildWebrtcServiceStartNotification(): NotificationCompat.Builder {
         val builder = NotificationCompat.Builder(context, WEBRTC_CALL_CHANNEL_ID)
-        builder.setSmallIcon(R.mipmap.ic_launcher)
+        builder.setSmallIcon(R.mipmap.ic_launcher_round)
             .setContentTitle("Welcome to NaviSight")
-            .setContentText("NaviSight successfully booted! Live calling is now active")
+            .setContentText("NaviSight successfully booted! Live calling is ready for use.")
             .setPriority(NotificationCompat.PRIORITY_LOW)
         if (!isCaregiverSoundAlertEnabled() || !isViuSoundAlertEnabled()) {
             builder.setSound(null)
@@ -174,11 +174,16 @@ class NaviSightNotificationManager(private val context: Context) {
     }
 
     fun buildViuMonitoringNotification(): NotificationCompat.Builder {
-        return NotificationCompat.Builder(
-            context, MONITORING_CHANNEL_ID // Use the Low Importance channel
-        ).setSmallIcon(R.mipmap.ic_launcher)
+        val builder = NotificationCompat.Builder(context, MONITORING_CHANNEL_ID)
+        builder.setSmallIcon(R.drawable.ic_logo)
             .setContentTitle("VIU Monitoring Active")
             .setContentText("Monitoring status of linked VIUs.")
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+        if (!isCaregiverSoundAlertEnabled()) {
+            builder.setSound(null)
+                .setVibrate(null)
+                .setSilent(true)
+        }
+        return builder
     }
 }
