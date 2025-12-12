@@ -104,8 +104,6 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
 
     // Init. screensaver vars
     private val idleHandler = Handler(Looper.getMainLooper())
-
-    // --- NEW GESTURE HANDLER ---
     private lateinit var gestureDetector: GestureDetectorCompat
 
     // Init. emergency mode vars
@@ -317,6 +315,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     }
 
     private fun navigateToProfile() {
+        screensaverHandler.resetScreensaverBrightness()
         context?.let { safeContext ->
             if (isAdded) {
                 TextToSpeechHelper.speak(safeContext, "Navigating to Profile Page")
@@ -492,6 +491,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
 
     override fun onDestroy() {
         super.onDestroy()
+        screensaverHandler.cleanupScreensaverHandler()
         webRTCManager.releaseMediaPlayer()
     }
 }

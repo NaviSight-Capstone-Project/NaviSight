@@ -273,7 +273,6 @@ fun ProfileContent(
 
 @Composable
 fun ProfileCard(user: Viu) {
-
     val profileBorderColor = colorResource(R.color.royal_purple)
     val profileBorderWidth = 7.dp
 
