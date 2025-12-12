@@ -22,7 +22,6 @@ import java.util.Queue
 import java.util.UUID
 
 object TextToSpeechHelper : TextToSpeech.OnInitListener {
-
     private var tts: TextToSpeech? = null
     private var isInitialized = false
     private var pendingText: String? = null

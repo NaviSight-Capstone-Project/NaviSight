@@ -12,6 +12,7 @@ import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.GestureDetector
 import android.view.KeyEvent
@@ -318,6 +319,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         screensaverHandler.resetScreensaverBrightness()
         context?.let { safeContext ->
             if (isAdded) {
+                TextToSpeechHelper.clearQueue() // Clear
                 TextToSpeechHelper.speak(safeContext, "Navigating to Profile Page")
                 requireActivity().supportFragmentManager.commit {
                     setReorderingAllowed(true)
