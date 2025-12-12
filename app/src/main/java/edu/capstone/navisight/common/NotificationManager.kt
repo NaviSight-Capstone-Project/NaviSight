@@ -1,0 +1,119 @@
+package edu.capstone.navisight.common
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import edu.capstone.navisight.R
+import edu.capstone.navisight.caregiver.model.Viu
+
+
+class NaviSightNotificationManager(private val context: Context) {
+    private val notificationManager: NotificationManager =
+        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+    // Channel IDs (Public access for services/activities that use them)
+    companion object {
+        // For ViuMonitorService (Low Importance)
+        const val MONITORING_CHANNEL_ID = "viu_monitoring_alerts"
+
+        // For Caregiver System Alerts (High Importance)
+        const val EMERGENCY_CHANNEL_ID = "emergency_alerts"
+
+        // For Caregiver System Alerts (Default Importance)
+        const val BATTERY_CHANNEL_ID = "battery_alerts"
+
+        // For WebRTC MainService (High/Default Importance, depends on context)
+        const val WEBRTC_CALL_CHANNEL_ID = "webrtc_call_alerts"
+    }
+
+    init {
+        createAllNotificationChannels()
+    }
+
+    private fun createAllNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+            // VIU Monitoring Service Channel (Low Priority)
+            val monitoringChannel = NotificationChannel(
+                MONITORING_CHANNEL_ID,
+                "VIU Monitoring",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Continuous monitoring for emergency and low battery status of connected VIUs."
+            }
+
+            // Emergency Alerts Channel (High Priority)
+            val emergencyChannel = NotificationChannel(
+                EMERGENCY_CHANNEL_ID,
+                "Emergency Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            )
+
+            // Battery Alerts Channel (Default Priority)
+            val batteryChannel = NotificationChannel(
+                BATTERY_CHANNEL_ID,
+                "Battery Alerts",
+                NotificationManager.IMPORTANCE_DEFAULT // Default priority
+            )
+
+            // WebRTC Call Service Channel (High Priority for foreground call service)
+            val webrtcChannel = NotificationChannel(
+                WEBRTC_CALL_CHANNEL_ID,
+                "Ongoing Call Service",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notification for active video/audio calls."
+            }
+
+            notificationManager.createNotificationChannel(monitoringChannel)
+            notificationManager.createNotificationChannel(emergencyChannel)
+            notificationManager.createNotificationChannel(batteryChannel)
+            notificationManager.createNotificationChannel(webrtcChannel)
+        }
+    }
+
+    fun showEmergencyAlert(viu: Viu, lastLocation: String) {
+        val notification = NotificationCompat.Builder(context, EMERGENCY_CHANNEL_ID)
+            .setContentTitle("🚨 EMERGENCY: ${viu.firstName}")
+            .setContentText("Emergency Activated! Last known location: $lastLocation")
+            .setSmallIcon(R.drawable.ic_alert)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+        // Use VIU UID hash code for a unique ID
+        notificationManager.notify(viu.uid.hashCode(), notification)
+    }
+
+    fun showLowBatteryAlert(viu: Viu) {
+        val notification = NotificationCompat.Builder(context, BATTERY_CHANNEL_ID)
+            .setContentTitle("🔋 Low Battery: ${viu.firstName}")
+            .setContentText("${viu.firstName}'s phone is running low on battery.")
+            .setSmallIcon(R.drawable.ic_battery_alert)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+        // Use a unique ID (VIU UID hash code + 1)
+        notificationManager.notify(viu.uid.hashCode() + 1, notification)
+    }
+
+    // Foreground Service Notification Builders (Used by MainActivity & MainService)
+    fun buildWebrtcServiceStartNotification(): NotificationCompat.Builder {
+        return NotificationCompat.Builder(
+            context, WEBRTC_CALL_CHANNEL_ID // Use the High Importance channel
+        ).setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("Welcome to NaviSight")
+            .setContentText("NaviSight successfully booted! Live calling is now active")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+    }
+
+    fun buildViuMonitoringNotification(): NotificationCompat.Builder {
+        return NotificationCompat.Builder(
+            context, MONITORING_CHANNEL_ID // Use the Low Importance channel
+        ).setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("VIU Monitoring Active")
+            .setContentText("Monitoring status of linked VIUs.")
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+    }
+}

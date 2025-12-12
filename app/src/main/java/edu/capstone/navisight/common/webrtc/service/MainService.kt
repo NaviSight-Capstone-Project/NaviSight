@@ -1,6 +1,5 @@
 package edu.capstone.navisight.common.webrtc.service
 
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
@@ -12,19 +11,16 @@ import android.os.IBinder
 import android.os.Looper
 import android.util.Log
 import android.widget.Toast
-import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import edu.capstone.navisight.R
-import edu.capstone.navisight.MainActivity
 import edu.capstone.navisight.common.Constants.BR_ACTION_DENIED_CALL
 import edu.capstone.navisight.common.Constants.BR_CONNECTION_ESTABLISHED
 import edu.capstone.navisight.common.Constants.BR_CONNECTION_FAILURE
+import edu.capstone.navisight.common.NaviSightNotificationManager
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.webrtc.vendor.RTCAudioManager
 import edu.capstone.navisight.common.webrtc.service.MainServiceActions.*
 import edu.capstone.navisight.common.webrtc.model.DataModel
 import edu.capstone.navisight.common.webrtc.model.DataModelType
-import edu.capstone.navisight.common.webrtc.model.isValid
 import edu.capstone.navisight.common.webrtc.repository.MainRepository
 import org.webrtc.SurfaceViewRenderer
 
@@ -46,6 +42,7 @@ class MainService : Service(), MainRepository.Listener {
     private lateinit var mainRepository : MainRepository
 
     private val mainHandler = Handler(Looper.getMainLooper())
+    private lateinit var naviSightNotificationManager: NaviSightNotificationManager
 
     private val connectionFailureHandler = Handler(Looper.getMainLooper())
     private val connectionFailureRunnable = Runnable {
@@ -113,13 +110,9 @@ class MainService : Service(), MainRepository.Listener {
         super.onCreate()
         Log.d(TAG, "MainService created.")
         INSTANCE = this
-
         mainRepository = MainRepository.getInstance(applicationContext)
-
         initializeRTCAudioManager()
-        notificationManager = getSystemService(
-            NotificationManager::class.java
-        )
+        naviSightNotificationManager = NaviSightNotificationManager(applicationContext)
     }
 
     fun initializeRTCAudioManager(){
@@ -280,9 +273,8 @@ class MainService : Service(), MainRepository.Listener {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val notification = notificationManager.activeNotifications
                 .firstOrNull { it.id == 1 }?.notification
-                ?: NotificationCompat.Builder(this, "channel1")
-                    .setSmallIcon(R.mipmap.ic_launcher)
-                    .setContentTitle("Navisight Viu")
+                ?: naviSightNotificationManager.buildWebrtcServiceStartNotification()
+                    .setContentTitle("Navisight Viu") // Update title for ongoing state
                     .setContentText("Ongoing Call Service")
                     .build()
             startForeground(1, notification, newType)
@@ -348,31 +340,15 @@ class MainService : Service(), MainRepository.Listener {
     }
 
     private fun startServiceWithNotification() {
-        // ... (Notification setup logic remains the same)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val notificationChannel = NotificationChannel(
-                "channel1", "foreground", NotificationManager.IMPORTANCE_HIGH
-            )
-
-            val notification = NotificationCompat.Builder(
-                this, "channel1"
-            ).setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("Welcome to NaviSight")
-                .setContentText("NaviSight successfully booted! Live calling is now active")
-
-            notificationManager.createNotificationChannel(notificationChannel)
-
+            val notificationBuilder = naviSightNotificationManager.buildWebrtcServiceStartNotification()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // API 34+
-                // Compliance for Android 12+ security :D
                 val fgsType = ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA or
                         ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-
-                startForeground(1, notification.build(), fgsType)
+                startForeground(1, notificationBuilder.build(), fgsType)
             } else {
-                // For pre-API 34 versions (this is the old, two-argument call)
-                startForeground(1, notification.build())
+                startForeground(1, notificationBuilder.build())
             }
-
             Log.d(TAG, "Notification should had popped up.")
         }
     }

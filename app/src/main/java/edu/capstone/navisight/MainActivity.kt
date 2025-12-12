@@ -75,32 +75,11 @@ class MainActivity : AppCompatActivity() {
     fun startMonitoringService() {
         val serviceIntent = Intent(this, ViuMonitorService::class.java)
 
-        // Create the Notification Channel first (essential for Android O+)
-        createNotificationChannel()
-
         // Android O (API 26) and higher require startForegroundService()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent)
         } else {
             startService(serviceIntent)
-        }
-    }
-
-    // Helper function to create the channel before starting the service
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "VIU Monitoring"
-            val descriptionText =
-                "Continuous monitoring for emergency and low battery status of connected VIUs."
-            val importance = NotificationManager.IMPORTANCE_LOW // Low priority for notification
-            val channel = NotificationChannel(
-                ViuMonitorService.CHANNEL_ID,
-                name, importance).apply {
-                description = descriptionText
-            }
-            val notificationManager: NotificationManager =
-                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
         }
     }
 

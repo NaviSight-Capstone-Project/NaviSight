@@ -14,6 +14,7 @@ import edu.capstone.navisight.caregiver.model.AlertNotification
 import edu.capstone.navisight.caregiver.model.AlertType
 import edu.capstone.navisight.caregiver.ui.emergency.EmergencySignal
 import edu.capstone.navisight.caregiver.ui.emergency.EmergencyViewModel
+import edu.capstone.navisight.common.NaviSightNotificationManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import java.util.UUID
@@ -42,7 +43,7 @@ class ViuMonitorService : Service() {
 
     companion object {
         const val NOTIFICATION_ID = 101
-        const val CHANNEL_ID = "viu_monitor_channel"
+        const val CHANNEL_ID = NaviSightNotificationManager.MONITORING_CHANNEL_ID
         var INSTANCE: ViuMonitorService? = null
     }
 
