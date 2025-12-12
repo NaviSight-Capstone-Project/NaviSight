@@ -48,6 +48,7 @@ import edu.capstone.navisight.caregiver.ui.feature_records.RecordsFragment
 import edu.capstone.navisight.caregiver.ui.feature_settings.SettingsFragment
 import edu.capstone.navisight.caregiver.ui.feature_stream.StreamFragment
 import edu.capstone.navisight.caregiver.ui.navigation.BottomNavigationBar
+import edu.capstone.navisight.common.VibrationHelper
 import edu.capstone.navisight.common.webrtc.model.DataModel
 import edu.capstone.navisight.common.webrtc.model.DataModelType
 import edu.capstone.navisight.common.webrtc.repository.MainRepository
@@ -189,6 +190,7 @@ class CaregiverHomeFragment : Fragment(),
                         )
                     }
 
+                    VibrationHelper.emergencyVibrate(requireContext()) // Vibrate ASAP
                     EmergencyAlertDialog(
                         onDismissRequest = {
                             emergencyViewModel.clearEmergency()

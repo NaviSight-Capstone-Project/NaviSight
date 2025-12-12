@@ -42,14 +42,8 @@ object VibrationHelper {
         }
     }
 
-    fun vibrateQuick(context: Context?, milliseconds:Long=defaultVibrationMilliseconds){
-        if (context != null && !ViuSettingsManager.getBoolean(
-                context,
-                ViuSettingsManager.KEY_VIBRATION,
-                true)) {
-            Log.i(tag, "Vibration is disabled in settings. Skipping vibration.")
-            return
-        }
+    // Vibrate regardless of setting
+    fun emergencyVibrate(context: Context?, milliseconds:Long=defaultVibrationMilliseconds){
         val vibrator = context?.getSystemService(Vibrator::class.java)
         vibrator?.vibrate(
             VibrationEffect.createOneShot(milliseconds,

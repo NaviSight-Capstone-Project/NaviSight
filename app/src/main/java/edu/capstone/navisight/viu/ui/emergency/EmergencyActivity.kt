@@ -19,6 +19,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import edu.capstone.navisight.common.Constants.SHARED_PREFERENCES_NAME
 import edu.capstone.navisight.common.TextToSpeechHelper
+import edu.capstone.navisight.common.VibrationHelper
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
 import edu.capstone.navisight.viu.ViuHomeViewModel
@@ -41,6 +42,7 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
 
         // Init.
         TextToSpeechHelper.speak(applicationContext, "Emergency mode is active. ")
+        VibrationHelper.emergencyVibrate(applicationContext, 1000L) // Long vibrate to show seriousness
         sayEmergencyModeDescription()
 
         serviceRepository = MainServiceRepository.getInstance(applicationContext)
