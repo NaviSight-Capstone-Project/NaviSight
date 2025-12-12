@@ -13,6 +13,7 @@ import android.content.Context
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
+import edu.capstone.navisight.viu.ui.profile.ViuSettingsManager
 import java.lang.Thread.sleep
 
 private const val tag = "VibrationHelper"
@@ -21,6 +22,13 @@ private const val defaultDelayMilliseconds = 500L // Modify default here
 
 object VibrationHelper {
     fun vibrate(context: Context?, milliseconds:Long=defaultVibrationMilliseconds){
+        if (context != null && !ViuSettingsManager.getBoolean(
+                context,
+                ViuSettingsManager.KEY_VIBRATION,
+                true)) {
+            Log.i(tag, "Vibration is disabled in settings. Skipping vibration.")
+            return
+        }
         val vibrator = context?.getSystemService(Vibrator::class.java)
         vibrator?.vibrate(
             VibrationEffect.createOneShot(milliseconds,
@@ -31,7 +39,15 @@ object VibrationHelper {
     fun vibrateAfterDelay(
         context: Context?,
         delayMilliseconds:Long=defaultDelayMilliseconds,
-        vibrationMilliseconds:Long=defaultVibrationMilliseconds) {
+        vibrationMilliseconds:Long=defaultVibrationMilliseconds)
+    {
+        if (context != null && !ViuSettingsManager.getBoolean(
+                context,
+                ViuSettingsManager.KEY_VIBRATION,
+                true)) {
+            Log.i(tag, "Vibration is disabled in settings. Skipping vibration.")
+            return
+        }
         sleep(delayMilliseconds)
         vibrate(context, vibrationMilliseconds)
     }
