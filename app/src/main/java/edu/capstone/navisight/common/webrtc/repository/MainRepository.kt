@@ -179,6 +179,7 @@ class MainRepository private constructor(
         fun onAbortCallConnectionBased(targetId: String)
         fun onMissCall(targetId: String)
         fun missCall()
+        fun onConnectionFailure()
         fun onConnectionEstablished()
         fun abortCall()
     }
@@ -224,12 +225,11 @@ class MainRepository private constructor(
                         MainService.stopCallTimer() // Stop missed call timer
                         listener?.onConnectionEstablished()
                     }
-                    // Check for failure/disconnection states
-                    PeerConnection.PeerConnectionState.DISCONNECTED,
-                    PeerConnection.PeerConnectionState.FAILED -> {
-                        // Only auto-abort if a call was actually in progress or if we were waiting for an answer
-                        // The MainService listener handles the cleanup after this signal.
+                    PeerConnection.PeerConnectionState.DISCONNECTED -> {
                         listener?.onAbortCallConnectionBased(target ?: "Unknown")
+                    }
+                    PeerConnection.PeerConnectionState.FAILED -> {
+                        listener?.onConnectionFailure() // Show call activity na may "Connection Failed"
                     }
                     else -> Unit
                 }

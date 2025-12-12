@@ -445,16 +445,17 @@ class MainService : Service(), MainRepository.Listener {
         fun onCallMissed(senderId: String)
     }
 
+    override fun onConnectionFailure() {
+        LocalBroadcastManager.getInstance(applicationContext)
+            .sendBroadcast(Intent(BR_CONNECTION_FAILURE))
+        connectionFailureHandler.postDelayed(connectionFailureRunnable, 20000L) // 20 secs.
+    }
+
     override fun onAbortCallConnectionBased(targetId: String) {
         Log.d(TAG, "WebRTC connection failed/disconnected. Aborting call: $targetId")
         if (listener != null) {
             listener?.onCallAborted() // Notify UI/Activity
         }
-
-        LocalBroadcastManager.getInstance(applicationContext)
-            .sendBroadcast(Intent(BR_CONNECTION_FAILURE))
-        // The service will automatically stop after 5 seconds if the user doesn't close it manually.
-        connectionFailureHandler.postDelayed(connectionFailureRunnable, 5000L)
 
         mainRepository.sendAbortCall() // Signal the other side about the abort
         endCallCleanUp() // Full cleanup
