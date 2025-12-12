@@ -47,6 +47,8 @@ fun CallScreen(
     onEndCall: () -> Unit,
     serviceRepository: MainServiceRepository,
     onRequestScreenCapture: () -> Unit,
+    isConnectionFailed: Boolean,
+    failureMessage: String,
     isConnected: Boolean,
     viuDataSource: ViuDataSource
 ) {
@@ -127,6 +129,56 @@ fun CallScreen(
                     .align(Alignment.TopEnd)
                     .padding(end = 10.dp, top = 40.dp)
             )
+        }
+
+        if (isConnectionFailed) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.9f))
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "⚠️ Connection Failed",
+                    color = Color.Red,
+                    fontSize = 28.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                Text(
+                    text = failureMessage,
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 48.dp)
+                )
+                // Manual Close Button (Triggers service stop/cleanup)
+                IconButton(
+                    onClick = {
+                        serviceRepository.stopService()
+                        onEndCall()
+                    },
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .background(Color.Red, shape = CircleShape)
+                        .size(80.dp) // Make it prominent
+                ) {
+                    Icon(
+                        painter = rememberAsyncImagePainter(R.drawable.ic_end_call), // Use a relevant end call icon
+                        contentDescription = "Close",
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.White
+                    )
+                }
+                Text(
+                    text = "Close",
+                    color = Color.White,
+                    fontSize = 14.sp
+                )
+            }
+            return // Stop rendering the rest of the call UI if failed
         }
 
         if (!isConnected) {

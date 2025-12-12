@@ -19,6 +19,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import edu.capstone.navisight.common.Constants.BR_CONNECTION_ESTABLISHED
 import edu.capstone.navisight.common.Constants.BR_ACTION_DENIED_CALL
 import edu.capstone.navisight.common.Constants.BR_ACTION_MISSED_CALL
+import edu.capstone.navisight.common.Constants.BR_CONNECTION_FAILURE
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
@@ -36,6 +37,9 @@ class CallActivity : ComponentActivity(), MainService.EndAndDeniedCallListener {
     // Declare the ActivityResultLauncher for screen capture
     private lateinit var requestScreenCaptureLauncher: ActivityResultLauncher<Intent>
 
+    private var isConnectionFailed = mutableStateOf(false)
+    private var failureMessage = mutableStateOf("Connection failed. Try again.") // Default message
+
     private val finishReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == BR_ACTION_MISSED_CALL) {
@@ -47,6 +51,11 @@ class CallActivity : ComponentActivity(), MainService.EndAndDeniedCallListener {
                 serviceRepository.showToastOnServiceRepoThreadAndTTS(
                     "Your caregiver declined your call. Try again?")
                 stopAndCleanUp()
+            }
+            if (intent?.action == BR_CONNECTION_FAILURE) {
+                isConnectedState.value = false
+                isConnectionFailed.value = true
+
             }
         }
     }
@@ -81,6 +90,7 @@ class CallActivity : ComponentActivity(), MainService.EndAndDeniedCallListener {
         val finishFilter = IntentFilter().apply {
             addAction(BR_ACTION_MISSED_CALL)
             addAction(BR_ACTION_DENIED_CALL)
+            addAction(BR_CONNECTION_FAILURE)
         }
         LocalBroadcastManager.getInstance(this).registerReceiver(
             finishReceiver, finishFilter)
@@ -101,6 +111,8 @@ class CallActivity : ComponentActivity(), MainService.EndAndDeniedCallListener {
                 target = target ?: "",
                 isVideoCall = isVideoCall,
                 isCaller = isCaller,
+                isConnectionFailed = isConnectionFailed.value,
+                failureMessage = failureMessage.value,
                 serviceRepository = serviceRepository,
                 onEndCall = {
                     serviceRepository.sendEndOrAbortCall()

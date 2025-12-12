@@ -18,6 +18,7 @@ import edu.capstone.navisight.caregiver.data.remote.ViuDataSource
 import edu.capstone.navisight.common.Constants.BR_ACTION_DENIED_CALL
 import edu.capstone.navisight.common.Constants.BR_ACTION_MISSED_CALL
 import edu.capstone.navisight.common.Constants.BR_CONNECTION_ESTABLISHED
+import edu.capstone.navisight.common.Constants.BR_CONNECTION_FAILURE
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
 
@@ -34,6 +35,9 @@ class CaregiverCallActivity : ComponentActivity(), MainService.EndAndDeniedCallL
     // Declare the ActivityResultLauncher for screen capture
     private lateinit var requestScreenCaptureLauncher: ActivityResultLauncher<Intent>
 
+    private var isConnectionFailed = mutableStateOf(false)
+    private var failureMessage = mutableStateOf("Connection failed. Try again.") // Default message
+
     private val finishReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == BR_ACTION_MISSED_CALL) {
@@ -48,6 +52,11 @@ class CaregiverCallActivity : ComponentActivity(), MainService.EndAndDeniedCallL
                     Toast.LENGTH_LONG).show()
                 stopAndCleanUp()
             }
+            if (intent?.action == BR_CONNECTION_FAILURE) {
+                isConnectedState.value = false
+                isConnectionFailed.value = true
+
+            }
         }
     }
 
@@ -60,7 +69,7 @@ class CaregiverCallActivity : ComponentActivity(), MainService.EndAndDeniedCallL
     }
 
     private fun stopAndCleanUp(){
-        serviceRepository.sendEndOrAbortCall() // TODO: Formalize this to Missed Call
+        serviceRepository.sendEndOrAbortCall()
         MainService.remoteSurfaceView?.release()
         MainService.remoteSurfaceView = null
         MainService.localSurfaceView?.release()
@@ -77,6 +86,7 @@ class CaregiverCallActivity : ComponentActivity(), MainService.EndAndDeniedCallL
         val finishFilter = IntentFilter().apply {
             addAction(BR_ACTION_MISSED_CALL)
             addAction(BR_ACTION_DENIED_CALL)
+            addAction(BR_CONNECTION_FAILURE)
         }
         LocalBroadcastManager.getInstance(this).registerReceiver(
             finishReceiver, finishFilter)
@@ -105,6 +115,8 @@ class CaregiverCallActivity : ComponentActivity(), MainService.EndAndDeniedCallL
                 // Pass the function to trigger the screen capture request
                 onRequestScreenCapture = { startScreenCapture() },
                 viuRemoteDataSource = viuRemoteDataSource,
+                isConnectionFailed = isConnectionFailed.value,
+                failureMessage = failureMessage.value,
                 isConnected = isConnectedState.value
             )
         }

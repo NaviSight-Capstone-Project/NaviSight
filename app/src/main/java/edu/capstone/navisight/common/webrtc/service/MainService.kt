@@ -18,6 +18,7 @@ import edu.capstone.navisight.R
 import edu.capstone.navisight.MainActivity
 import edu.capstone.navisight.common.Constants.BR_ACTION_DENIED_CALL
 import edu.capstone.navisight.common.Constants.BR_CONNECTION_ESTABLISHED
+import edu.capstone.navisight.common.Constants.BR_CONNECTION_FAILURE
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.webrtc.vendor.RTCAudioManager
 import edu.capstone.navisight.common.webrtc.service.MainServiceActions.*
@@ -43,6 +44,12 @@ class MainService : Service(), MainRepository.Listener {
     private var isPreviousCallStateVideo = true
 
     private lateinit var mainRepository : MainRepository
+
+    private val connectionFailureHandler = Handler(Looper.getMainLooper())
+    private val connectionFailureRunnable = Runnable {
+        Log.d(TAG, "5-second connection failure timeout reached. Auto-ending call.")
+        endCallCleanUp()
+    }
 
     private fun showToastOnMainThreadAndTTS(message: String) {
         Handler(Looper.getMainLooper()).post {
@@ -144,6 +151,7 @@ class MainService : Service(), MainRepository.Listener {
     private fun endCallCleanUp() {
         Log.d(TAG, "COMMENCING END CALL CLEANUP")
         stopCallTimeoutTimer()
+        connectionFailureHandler.removeCallbacks(connectionFailureRunnable)
 
         // Stop the RTCAudioManager to release audio focus and microphone
         if (::rtcAudioManager.isInitialized) { // Check if initialized before stopping
@@ -438,6 +446,12 @@ class MainService : Service(), MainRepository.Listener {
         if (listener != null) {
             listener?.onCallAborted() // Notify UI/Activity
         }
+
+        LocalBroadcastManager.getInstance(applicationContext)
+            .sendBroadcast(Intent(BR_CONNECTION_FAILURE))
+        // The service will automatically stop after 5 seconds if the user doesn't close it manually.
+        connectionFailureHandler.postDelayed(connectionFailureRunnable, 5000L)
+
         mainRepository.sendAbortCall() // Signal the other side about the abort
         endCallCleanUp() // Full cleanup
     }
