@@ -2,6 +2,8 @@ package edu.capstone.navisight.viu.data.remote
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import edu.capstone.navisight.common.Constants.USER_TYPE_CAREGIVER
+import edu.capstone.navisight.common.Constants.USER_TYPE_VIU
 import edu.capstone.navisight.viu.model.Caregiver
 import edu.capstone.navisight.viu.model.Viu
 import kotlinx.coroutines.tasks.await
@@ -17,7 +19,7 @@ class ViuDataSource(
         val currentUser = auth.currentUser ?: throw kotlin.Exception("User not logged in")
         val uid = currentUser.uid
 
-        val doc = firestore.collection("vius").document(uid).get().await()
+        val doc = firestore.collection(USER_TYPE_VIU).document(uid).get().await()
         if (!doc.exists()) throw kotlin.Exception("VIU profile not found")
 
         return doc.toObject(Viu::class.java) ?: throw kotlin.Exception("Invalid VIU data")
@@ -25,7 +27,7 @@ class ViuDataSource(
 
     suspend fun getRegisteredCaregiver(): Caregiver {
         val relationshipsCollection = firestore.collection("relationships")
-        val caregiversCollection = firestore.collection("caregivers")
+        val caregiversCollection = firestore.collection(USER_TYPE_CAREGIVER)
         val viuUid = getCurrentViuProfile().uid
         val querySnapshot = relationshipsCollection
             .whereEqualTo("viuUid", viuUid)

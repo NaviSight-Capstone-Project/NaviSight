@@ -10,6 +10,8 @@ import edu.capstone.navisight.caregiver.model.Relationship
 import edu.capstone.navisight.caregiver.model.RequestStatus
 import edu.capstone.navisight.caregiver.model.SecondaryPairingRequest
 import edu.capstone.navisight.caregiver.model.TransferPrimaryRequest
+import edu.capstone.navisight.common.Constants.USER_TYPE_CAREGIVER
+import edu.capstone.navisight.common.Constants.USER_TYPE_VIU
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -43,7 +45,7 @@ class ConnectionDataSource(
                 if (viuUids.isEmpty()) {
                     trySend(emptyList())
                 } else {
-                    viuListener = firestore.collection("vius")
+                    viuListener = firestore.collection(USER_TYPE_VIU)
                         .whereIn("uid", viuUids)
                         .addSnapshotListener { viuSnap, viuErr ->
                             if (viuErr != null) {
@@ -138,7 +140,7 @@ class ConnectionDataSource(
                 return RequestStatus.AlreadySent
             }
 
-            val caregiverSnapshot = firestore.collection("caregivers")
+            val caregiverSnapshot = firestore.collection(USER_TYPE_CAREGIVER)
                 .document(requesterUid)
                 .get()
                 .await()
@@ -263,7 +265,7 @@ class ConnectionDataSource(
 
             if (otherCaregiverUids.isEmpty()) return emptyList()
 
-            val usersSnapshot = firestore.collection("caregivers")
+            val usersSnapshot = firestore.collection(USER_TYPE_CAREGIVER)
                 .whereIn("uid", otherCaregiverUids)
                 .get()
                 .await()
@@ -373,7 +375,7 @@ class ConnectionDataSource(
     }
     suspend fun getCaregiverName(uid: String): String {
         return try {
-            val document = firestore.collection("caregivers").document(uid).get().await()
+            val document = firestore.collection(USER_TYPE_CAREGIVER).document(uid).get().await()
             if (document.exists()) {
                 val firstName = document.getString("firstName") ?: ""
                 val lastName = document.getString("lastName") ?: ""

@@ -10,6 +10,8 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import edu.capstone.navisight.auth.model.OtpResult
 import edu.capstone.navisight.auth.model.Viu
+import edu.capstone.navisight.common.Constants.USER_TYPE_CAREGIVER
+import edu.capstone.navisight.common.Constants.USER_TYPE_VIU
 import kotlinx.coroutines.tasks.await
 
 class ViuSignupDataSource(
@@ -17,8 +19,8 @@ class ViuSignupDataSource(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
 
-    private val viusCollection = firestore.collection("vius")
-    private val caregiversCollection = firestore.collection("caregivers")
+    private val viusCollection = firestore.collection(USER_TYPE_VIU)
+    private val caregiversCollection = firestore.collection(USER_TYPE_CAREGIVER)
     private val relationshipsCollection = firestore.collection("relationships")
     private val otpDataSource: OtpDataSource = OtpDataSource(auth, firestore)
 

@@ -18,6 +18,7 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FieldValue
 import edu.capstone.navisight.auth.data.remote.CloudinaryDataSource
 import edu.capstone.navisight.auth.data.remote.OtpDataSource
+import edu.capstone.navisight.common.Constants.USER_TYPE_CAREGIVER
 import kotlinx.coroutines.tasks.await
 import java.util.Date
 
@@ -25,7 +26,7 @@ class CaregiverDataSource(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
-    private val usersCollection = firestore.collection("caregivers")
+    private val usersCollection = firestore.collection(USER_TYPE_CAREGIVER)
     private val otpDataSource: OtpDataSource = OtpDataSource(auth, firestore)
 
     suspend fun getProfile(uid: String): Caregiver? {
@@ -283,7 +284,7 @@ class CaregiverDataSource(
                 sex = sex,
             )
 
-            firestore.collection("caregivers")
+            firestore.collection(USER_TYPE_CAREGIVER)
                 .document(uid)
                 .set(caregiver)
                 .await()

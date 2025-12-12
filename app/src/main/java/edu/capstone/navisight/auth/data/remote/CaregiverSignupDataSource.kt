@@ -8,12 +8,13 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import edu.capstone.navisight.auth.model.Caregiver
 import edu.capstone.navisight.auth.model.OtpResult
+import edu.capstone.navisight.common.Constants.USER_TYPE_CAREGIVER
 
 class CaregiverSignupDataSource (
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ){
-    private val usersCollection = firestore.collection("caregivers")
+    private val usersCollection = firestore.collection(USER_TYPE_CAREGIVER)
     private val otpDataSource: OtpDataSource = OtpDataSource(auth, firestore)
 
     suspend fun signupCaregiver(

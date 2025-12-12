@@ -13,6 +13,8 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import edu.capstone.navisight.auth.AuthActivity
+import edu.capstone.navisight.common.Constants.USER_TYPE_CAREGIVER
+import edu.capstone.navisight.common.Constants.USER_TYPE_VIU
 
 class LoginFragment : Fragment() {
 
@@ -33,7 +35,7 @@ class LoginFragment : Fragment() {
                 val userCollection by viewModel.userCollection.collectAsState()
 
                 LaunchedEffect(userCollection) {
-                    if (userCollection == "vius" || userCollection == "caregivers") {
+                    if (userCollection == USER_TYPE_VIU || userCollection == USER_TYPE_CAREGIVER) {
                         // Delegate navigation to the parent Activity
                         authActivity?.onLoginSuccess()
                     }

@@ -27,7 +27,9 @@ import edu.capstone.navisight.auth.domain.GetUserCollectionUseCase
 import edu.capstone.navisight.caregiver.CaregiverHomeFragment
 import edu.capstone.navisight.caregiver.service.ViuMonitorService
 import edu.capstone.navisight.common.Constants.SHARED_PREFERENCES_NAME
+import edu.capstone.navisight.common.Constants.USER_TYPE_CAREGIVER
 import edu.capstone.navisight.common.Constants.USER_TYPE_KEY
+import edu.capstone.navisight.common.Constants.USER_TYPE_VIU
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.disclaimer.DisclaimerFragment
 import edu.capstone.navisight.viu.ViuHomeFragment
@@ -104,7 +106,7 @@ class MainActivity : AppCompatActivity() {
                 val collection = getUserCollectionUseCase(currentUser.uid)
 
                 // Pass the determined user type to the MainRepository/FirebaseClient
-                if (collection == "caregivers" || collection == "vius") {
+                if (collection == USER_TYPE_CAREGIVER || collection == USER_TYPE_VIU) {
                     mainRepository.setUserType(collection)
                     startWebrtcService(currentUser.email.toString()) // Start service AFTER userType is set
                     handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
@@ -113,8 +115,8 @@ class MainActivity : AppCompatActivity() {
 
                 // Navigate based on the type
                 when (collection) {
-                    "caregivers" -> navigateToHomeFragment(isCaregiver = true)
-                    "vius" -> navigateToHomeFragment(isCaregiver = false)
+                    USER_TYPE_CAREGIVER -> navigateToHomeFragment(isCaregiver = true)
+                    USER_TYPE_VIU -> navigateToHomeFragment(isCaregiver = false)
                     else -> navigateToAuth()
                 }
             } catch (e: Exception) {

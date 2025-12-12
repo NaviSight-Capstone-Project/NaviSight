@@ -19,6 +19,7 @@ import edu.capstone.navisight.auth.model.OtpResult.ResendOtpResult
 import edu.capstone.navisight.caregiver.model.Viu
 import edu.capstone.navisight.caregiver.model.ViuLocation
 import edu.capstone.navisight.caregiver.model.ViuStatus
+import edu.capstone.navisight.common.Constants.USER_TYPE_VIU
 import edu.capstone.navisight.viu.model.Caregiver
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -36,11 +37,11 @@ class ViuDataSource(
     private val otpDataSource = OtpDataSource(auth, firestore)
 
     companion object {
-        private const val VIUS_COLLECTION = "vius"
+        private const val VIUS_COLLECTION = USER_TYPE_VIU
         private const val VIU_LOCATION_REF = "viu_location"
     }
 
-    private val viusCollection = firestore.collection("vius")
+    private val viusCollection = firestore.collection(USER_TYPE_VIU)
     private val relationshipsCollection = firestore.collection("relationships")
 
     fun getViuDetails(viuUid: String): Flow<Viu?> = callbackFlow {
