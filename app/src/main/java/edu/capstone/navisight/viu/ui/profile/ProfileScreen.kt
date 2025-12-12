@@ -40,7 +40,13 @@ fun ProfileScreen(
     onVideoCall: () -> Unit,
     onAudioCall: () -> Unit,
     onScanDocument: () -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    appNotificationEnabled: Boolean,
+    onAppNotificationChange: (Boolean) -> Unit,
+    soundAlertEnabled: Boolean,
+    onSoundAlertChange: (Boolean) -> Unit,
+    vibrationEnabled: Boolean,
+    onVibrationChange: (Boolean) -> Unit
 ) {
     when {
         uiState.isLoading -> {
@@ -64,7 +70,13 @@ fun ProfileScreen(
                 onVideoCall = onVideoCall,
                 onAudioCall = onAudioCall,
                 onScanDocument = onScanDocument,
-                onBackClick = onBackClick
+                onBackClick = onBackClick,
+                appNotificationEnabled=appNotificationEnabled,
+                onAppNotificationChange=onAppNotificationChange,
+                soundAlertEnabled=soundAlertEnabled,
+                onSoundAlertChange=onSoundAlertChange,
+                vibrationEnabled=vibrationEnabled,
+                onVibrationChange=onVibrationChange,
             )
         }
     }
@@ -80,7 +92,13 @@ fun ProfileContent(
     onVideoCall: () -> Unit,
     onAudioCall: () -> Unit,
     onScanDocument: () -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    appNotificationEnabled: Boolean,
+    onAppNotificationChange: (Boolean) -> Unit,
+    soundAlertEnabled: Boolean,
+    onSoundAlertChange: (Boolean) -> Unit,
+    vibrationEnabled: Boolean,
+    onVibrationChange: (Boolean) -> Unit
 ) {
     var showFullQrDialog by remember { mutableStateOf(false) }
 
@@ -179,9 +197,21 @@ fun ProfileContent(
 
         // Notification Section
         NotificationCard(title = "Notification") {
-            NotificationToggleItem("App Notification")
-            NotificationToggleItem("Sound Alert")
-            NotificationToggleItem("Vibration")
+            NotificationToggleItem(
+                title = "App Notifications",
+                isChecked = appNotificationEnabled,
+                onCheckedChange = onAppNotificationChange
+            )
+            NotificationToggleItem(
+                title = "Sound Alert",
+                isChecked = soundAlertEnabled,
+                onCheckedChange = onSoundAlertChange
+            )
+            NotificationToggleItem(
+                title = "Vibration",
+                isChecked = vibrationEnabled,
+                onCheckedChange = onVibrationChange
+            )
         }
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -383,8 +413,10 @@ fun NotificationCard(
 }
 
 @Composable
-fun NotificationToggleItem(title: String) {
-    var isChecked by remember { mutableStateOf(false) }
+fun NotificationToggleItem(
+    title: String,
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth(),
@@ -393,8 +425,8 @@ fun NotificationToggleItem(title: String) {
         Text(title, modifier = Modifier.weight(1f))
         Switch(
             checked = isChecked,
-            onCheckedChange = { isChecked = it },
-            colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF4E34C5))
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(checkedThumbColor = colorResource(R.color.light_purple))
         )
     }
 }

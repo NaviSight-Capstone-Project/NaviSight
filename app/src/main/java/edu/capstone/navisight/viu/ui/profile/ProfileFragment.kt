@@ -83,6 +83,17 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
         composeView.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
+                val context = requireContext()
+                var appNotificationEnabled by remember {
+                    mutableStateOf(SettingsManager.getBoolean(context, SettingsManager.KEY_APP_NOTIFICATION))
+                }
+                var soundAlertEnabled by remember {
+                    mutableStateOf(SettingsManager.getBoolean(context, SettingsManager.KEY_SOUND_ALERT))
+                }
+                var vibrationEnabled by remember {
+                    mutableStateOf(SettingsManager.getBoolean(context, SettingsManager.KEY_VIBRATION))
+                }
+
                 val uiState by viewModel.uiState.collectAsState()
                 var showLogoutDialog by remember { mutableStateOf(false) }
                 val targetCaregiverUid by viewModel.caregiverUid.collectAsState()
@@ -117,6 +128,21 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
                                 replace(R.id.fragment_container, CameraFragment(realTimeViewModel))
                                 setReorderingAllowed(true)
                             }
+                        },
+                        appNotificationEnabled = appNotificationEnabled,
+                        onAppNotificationChange = { newValue: Boolean ->
+                            appNotificationEnabled = newValue
+                            SettingsManager.setBoolean(context, SettingsManager.KEY_APP_NOTIFICATION, newValue)
+                        },
+                        soundAlertEnabled = soundAlertEnabled,
+                        onSoundAlertChange = { newValue: Boolean ->
+                            soundAlertEnabled = newValue
+                            SettingsManager.setBoolean(context, SettingsManager.KEY_SOUND_ALERT, newValue)
+                        },
+                        vibrationEnabled = vibrationEnabled,
+                        onVibrationChange = { newValue: Boolean ->
+                            vibrationEnabled = newValue
+                            SettingsManager.setBoolean(context, SettingsManager.KEY_VIBRATION, newValue)
                         }
                     )
                 }
