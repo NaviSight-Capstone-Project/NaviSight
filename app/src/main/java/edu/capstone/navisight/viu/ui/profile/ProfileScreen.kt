@@ -182,7 +182,6 @@ fun ProfileContent(
             NotificationToggleItem("App Notification")
             NotificationToggleItem("Sound Alert")
             NotificationToggleItem("Vibration")
-            NotificationToggleItem("Email Alerts")
         }
 
         Spacer(modifier = Modifier.height(4.dp))

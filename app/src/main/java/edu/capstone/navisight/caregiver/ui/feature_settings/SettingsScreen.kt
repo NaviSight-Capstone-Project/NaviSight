@@ -152,7 +152,6 @@ fun SettingsScreen(
             NotificationToggleItem("Notification")
             NotificationToggleItem("Sound Alert")
             NotificationToggleItem("Vibration")
-            NotificationToggleItem("Email Alerts")
         }
 
         Spacer(modifier = Modifier.height(20.dp))
