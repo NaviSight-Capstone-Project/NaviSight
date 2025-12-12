@@ -85,13 +85,13 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
             setContent {
                 val context = requireContext()
                 var appNotificationEnabled by remember {
-                    mutableStateOf(SettingsManager.getBoolean(context, SettingsManager.KEY_APP_NOTIFICATION))
+                    mutableStateOf(ViuSettingsManager.getBoolean(context, ViuSettingsManager.KEY_APP_NOTIFICATION))
                 }
                 var soundAlertEnabled by remember {
-                    mutableStateOf(SettingsManager.getBoolean(context, SettingsManager.KEY_SOUND_ALERT))
+                    mutableStateOf(ViuSettingsManager.getBoolean(context, ViuSettingsManager.KEY_SOUND_ALERT))
                 }
                 var vibrationEnabled by remember {
-                    mutableStateOf(SettingsManager.getBoolean(context, SettingsManager.KEY_VIBRATION))
+                    mutableStateOf(ViuSettingsManager.getBoolean(context, ViuSettingsManager.KEY_VIBRATION))
                 }
 
                 val uiState by viewModel.uiState.collectAsState()
@@ -132,17 +132,17 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
                         appNotificationEnabled = appNotificationEnabled,
                         onAppNotificationChange = { newValue: Boolean ->
                             appNotificationEnabled = newValue
-                            SettingsManager.setBoolean(context, SettingsManager.KEY_APP_NOTIFICATION, newValue)
+                            ViuSettingsManager.setBoolean(context, ViuSettingsManager.KEY_APP_NOTIFICATION, newValue)
                         },
                         soundAlertEnabled = soundAlertEnabled,
                         onSoundAlertChange = { newValue: Boolean ->
                             soundAlertEnabled = newValue
-                            SettingsManager.setBoolean(context, SettingsManager.KEY_SOUND_ALERT, newValue)
+                            ViuSettingsManager.setBoolean(context, ViuSettingsManager.KEY_SOUND_ALERT, newValue)
                         },
                         vibrationEnabled = vibrationEnabled,
                         onVibrationChange = { newValue: Boolean ->
                             vibrationEnabled = newValue
-                            SettingsManager.setBoolean(context, SettingsManager.KEY_VIBRATION, newValue)
+                            ViuSettingsManager.setBoolean(context, ViuSettingsManager.KEY_VIBRATION, newValue)
                         }
                     )
                 }

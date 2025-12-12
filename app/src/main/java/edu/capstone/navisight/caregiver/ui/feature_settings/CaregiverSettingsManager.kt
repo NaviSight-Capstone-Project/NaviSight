@@ -1,10 +1,12 @@
-package edu.capstone.navisight.viu.ui.profile
+package edu.capstone.navisight.caregiver.ui.feature_settings
 
 import android.content.Context
 import androidx.core.content.edit
 
-object SettingsManager {
-    private const val PREFS_NAME = "ViuSettings"
+
+
+object CaregiverSettingsManager {
+    private const val PREFS_NAME = "CaregiverLocalSettings"
     const val KEY_APP_NOTIFICATION = "appNotificationEnabled"
     const val KEY_SOUND_ALERT = "soundAlertEnabled"
     const val KEY_VIBRATION = "vibrationEnabled"

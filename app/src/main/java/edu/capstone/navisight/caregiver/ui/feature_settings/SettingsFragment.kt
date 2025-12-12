@@ -38,6 +38,19 @@ class SettingsFragment : Fragment() {
 
             setContent {
                 var showLogoutDialog by remember { mutableStateOf(false) }
+                val context = requireContext()
+                var appNotificationEnabled by remember {
+                    mutableStateOf(CaregiverSettingsManager.getBoolean(context,
+                        CaregiverSettingsManager.KEY_APP_NOTIFICATION))
+                }
+                var soundAlertEnabled by remember {
+                    mutableStateOf(CaregiverSettingsManager.getBoolean(context,
+                        CaregiverSettingsManager.KEY_SOUND_ALERT))
+                }
+                var vibrationEnabled by remember {
+                    mutableStateOf(CaregiverSettingsManager.getBoolean(context,
+                        CaregiverSettingsManager.KEY_VIBRATION))
+                }
 
                 currentUid?.let { uid ->
                     SettingsScreen(
@@ -52,6 +65,25 @@ class SettingsFragment : Fragment() {
                                 .replace(R.id.fragment_container, AccountInfoFragment())
                                 .addToBackStack(null)
                                 .commit()
+                        },
+                        // --- START Pass Settings State and Handlers ---
+                        appNotificationEnabled = appNotificationEnabled,
+                        onAppNotificationChange = { newValue: Boolean ->
+                            appNotificationEnabled = newValue
+                            CaregiverSettingsManager.setBoolean(context,
+                                CaregiverSettingsManager.KEY_APP_NOTIFICATION, newValue)
+                        },
+                        soundAlertEnabled = soundAlertEnabled,
+                        onSoundAlertChange = { newValue: Boolean ->
+                            soundAlertEnabled = newValue
+                            CaregiverSettingsManager.setBoolean(context,
+                                CaregiverSettingsManager.KEY_SOUND_ALERT, newValue)
+                        },
+                        vibrationEnabled = vibrationEnabled,
+                        onVibrationChange = { newValue: Boolean ->
+                            vibrationEnabled = newValue
+                            CaregiverSettingsManager.setBoolean(context,
+                                CaregiverSettingsManager.KEY_VIBRATION, newValue)
                         }
                     )
                 }

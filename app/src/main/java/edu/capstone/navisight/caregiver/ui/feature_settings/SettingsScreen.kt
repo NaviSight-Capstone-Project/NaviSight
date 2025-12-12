@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -39,7 +40,13 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     uid: String,
     onEditAccount: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    appNotificationEnabled: Boolean,
+    onAppNotificationChange: (Boolean) -> Unit,
+    soundAlertEnabled: Boolean,
+    onSoundAlertChange: (Boolean) -> Unit,
+    vibrationEnabled: Boolean,
+    onVibrationChange: (Boolean) -> Unit
 ) {
     val caregiver by viewModel.profile.collectAsState()
     val error by viewModel.error.collectAsState()
@@ -149,9 +156,21 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         SettingsSection(title = "Notification", titleColor = Color(0xFF4E34C5)) {
-            NotificationToggleItem("Notification")
-            NotificationToggleItem("Sound Alert")
-            NotificationToggleItem("Vibration")
+            NotificationToggleItem(
+                title = "Notification",
+                isChecked = appNotificationEnabled,
+                onCheckedChange = onAppNotificationChange
+            )
+            NotificationToggleItem(
+                title = "Sound Alert",
+                isChecked = soundAlertEnabled,
+                onCheckedChange = onSoundAlertChange
+            )
+            NotificationToggleItem(
+                title = "Vibration",
+                isChecked = vibrationEnabled,
+                onCheckedChange = onVibrationChange
+            )
         }
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -336,9 +355,11 @@ fun SettingsSection(
 }
 
 @Composable
-fun NotificationToggleItem(title: String) {
-    var isChecked by remember { mutableStateOf(false) }
-
+fun NotificationToggleItem(
+    title: String,
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -348,8 +369,10 @@ fun NotificationToggleItem(title: String) {
         Text(title, modifier = Modifier.weight(1f))
         Switch(
             checked = isChecked,
-            onCheckedChange = { isChecked = it },
-            colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF4E34C5))
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = colorResource(R.color.light_purple)
+            )
         )
     }
 }
