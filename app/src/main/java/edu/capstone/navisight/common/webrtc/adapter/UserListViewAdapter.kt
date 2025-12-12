@@ -3,6 +3,7 @@ package edu.capstone.navisight.common.webrtc.adapter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -34,14 +35,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import edu.capstone.navisight.R
 import edu.capstone.navisight.caregiver.model.Viu
-
-
-// Compose, compose, compose.
 
 @Composable
 fun UserListView (
@@ -82,6 +81,12 @@ fun UserListItem(
     val buttonContainerSize = 45.dp
     val buttonContentSize = 25.dp
 
+    // PFP
+    val profileBorderColor = colorResource(R.color.royal_purple)
+    val profileBorderWidth = 2.dp
+    val profileImageSize = 60.dp
+    val statusBadgeSize = 14.dp
+
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -106,17 +111,31 @@ fun UserListItem(
                     .weight(1f, fill = false)
             ) {
                 Row {
-                    AsyncImage(
-                        model = viu.profileImageUrl,
-                        contentDescription = "Profile Image",
-                        fallback = painterResource(R.drawable.default_profile),
-                        error = painterResource(R.drawable.default_profile),
-                        modifier = Modifier
-                            .size(60.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .shadow(10.dp, RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop
-                    )
+                    // PROFILE PICTURE
+                    Box(modifier = Modifier.size(profileImageSize)) {
+                        AsyncImage(
+                            model = viu.profileImageUrl,
+                            contentDescription = "Profile Image",
+                            fallback = painterResource(R.drawable.default_profile),
+                            error = painterResource(R.drawable.default_profile),
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clip(CircleShape)
+                                .border(profileBorderWidth, profileBorderColor, CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(
+                            modifier = Modifier
+                                .size(statusBadgeSize)
+                                .align(Alignment.TopEnd)
+                                .background(
+                                    color = statusColor,
+                                    shape = CircleShape
+                                )
+                                .padding(end = 0.dp, top = 0.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
                     Column(
                         modifier = Modifier.weight(1f, fill = false)
                     ) {
@@ -124,11 +143,13 @@ fun UserListItem(
                             text = "${viu.firstName} ${viu.lastName}",
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
-                            color = colorResource(id = R.color.dark_violet)
+                            color = colorResource(id = R.color.dark_violet),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = uid,
-                            fontSize = 10.sp,
+                            text = "PRIMARY",
+                            fontSize = 14.sp,
                             color = Color.Gray
                         )
                         Text(
@@ -139,64 +160,60 @@ fun UserListItem(
                                 else -> "Unknown"
                             },
                             color = statusColor,
-                            fontSize = 14.sp,
-                            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                            fontSize = 14.sp
                         )
                     }
                 }
             }
 
-            if (isOnline) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp) // Space between buttons
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { onVideoCallClicked(uid) },
+                    enabled = isOnline,
+                    shape = CircleShape,
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.size(buttonContainerSize),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colorResource(R.color.light_blue),
+                        contentColor = colorResource(R.color.blue)
+                    )
+
                 ) {
-                    // Set video call button
-                    Button(
-                        onClick = { onVideoCallClicked(uid) },
-                        shape = CircleShape,
-                        contentPadding = PaddingValues(0.dp),
-                        modifier = Modifier.size(buttonContainerSize),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colorResource(R.color.light_blue),
-                            contentColor = colorResource(R.color.blue)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_video_call_outline),
+                            contentDescription = "Video Call Icon",
+                            modifier = Modifier.size(buttonContentSize)
                         )
-
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_video_call_outline),
-                                contentDescription = "Video Call Icon",
-                                modifier = Modifier.size(buttonContentSize)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                        }
+                        Spacer(modifier = Modifier.width(4.dp))
                     }
-
-                    // Set audio call button
-                    Button(
-                        onClick = { onAudioCallClicked(uid) },
-                        shape = CircleShape,
-                        contentPadding = PaddingValues(0.dp),
-                        modifier = Modifier.size(buttonContainerSize),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colorResource(R.color.light_purple),
-                            contentColor = colorResource(R.color.royal_purple)
+                }
+                Button(
+                    onClick = { onAudioCallClicked(uid) },
+                    enabled = isOnline,
+                    shape = CircleShape,
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.size(buttonContainerSize),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colorResource(R.color.light_purple),
+                        contentColor = colorResource(R.color.royal_purple)
+                    )
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_call_outline),
+                            contentDescription = "Audio Call Icon",
+                            modifier = Modifier.size(buttonContentSize)
                         )
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_call_outline),
-                                contentDescription = "Audio Call Icon",
-                                modifier = Modifier.size(buttonContentSize)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                        }
+                        Spacer(modifier = Modifier.width(4.dp))
                     }
                 }
             }
+
         }
-        Spacer(modifier = Modifier.height(4.dp))
     }
 
 }
