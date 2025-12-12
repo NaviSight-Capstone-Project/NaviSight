@@ -54,11 +54,23 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
     private var callRequestDialog: AlertDialog? = null
     private var incomingMediaPlayer: MediaPlayer? = null
     private var isVideoCall: Boolean = true
-    private val TAG = "CallEvent"
 
     companion object {
         var firstTimeLaunched: Boolean = true
         var pendingDeniedCallMessage: String? = null
+    }
+
+    private fun performLogoutAndResetSettings () {
+        // Reset local settings upon logout as hindi naman na sa-save sa cloud
+        // This also prevents yung notification setting overlap sa NaviSightNotificationManager
+        ViuSettingsManager.resetSettings(requireContext())
+        try {
+            val repo = MainRepository.getInstance(requireContext())
+            repo.setOffline()
+        } catch (e: Exception) {
+            Log.e("SettingsFragment", "Error setting offline: ${e.message}")
+        }
+        viewModel.logout()
     }
 
     override fun onResume() {
@@ -160,13 +172,7 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
                         onConfirm = {
                             // User clicked "Yes, Logout"
                             showLogoutDialog = false // Reset
-                            try {
-                                val repo = MainRepository.getInstance(requireContext())
-                                repo.setOffline()
-                            } catch (e: Exception) {
-                                Log.e("SettingsFragment", "Error setting offline: ${e.message}")
-                            }
-                            viewModel.logout()
+                            performLogoutAndResetSettings()
                         },
                         onCancel = {
                             // User clicked "No, Stay Logged In" or something something

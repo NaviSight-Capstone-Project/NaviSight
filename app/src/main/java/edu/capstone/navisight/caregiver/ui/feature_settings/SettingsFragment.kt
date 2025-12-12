@@ -26,6 +26,23 @@ class SettingsFragment : Fragment() {
     private val viewModel: SettingsViewModel by viewModels()
     private val getCurrentUserUidUseCase = GetCurrentUserUidUseCase()
 
+    private fun performLogout(){
+        // Reset local settings upon logout as hindi naman na sa-save sa cloud
+        // This also prevents yung notification setting overlap sa NaviSightNotificationManager
+        CaregiverSettingsManager.resetSettings(requireContext())
+        try {
+            val repo = MainRepository.getInstance(requireContext())
+            repo.setOffline()
+        } catch (e: Exception) {
+            Log.e("SettingsFragment", "Error setting offline: ${e.message}")
+        }
+        FirebaseAuth.getInstance().signOut()
+        val intent = Intent(requireContext(), AuthActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -97,17 +114,7 @@ class SettingsFragment : Fragment() {
                         onConfirm = {
                             // User clicked "Yes, Logout"
                             showLogoutDialog = false
-                            try {
-                                val repo = MainRepository.getInstance(requireContext())
-                                repo.setOffline()
-                            } catch (e: Exception) {
-                                Log.e("SettingsFragment", "Error setting offline: ${e.message}")
-                            }
-                            FirebaseAuth.getInstance().signOut()
-                            val intent = Intent(requireContext(), AuthActivity::class.java).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                            }
-                            startActivity(intent)
+                            performLogout()
                         },
                         onCancel = {
                             // User clicked "No, Stay Logged In" or something something
