@@ -81,7 +81,7 @@ fun ViuProfileContainer(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Viu Profile") },
+                title = { Text("VIU Profile") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
