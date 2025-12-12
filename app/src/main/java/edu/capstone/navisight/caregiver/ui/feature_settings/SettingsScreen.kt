@@ -155,18 +155,18 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        SettingsSection(title = "Notification", titleColor = Color(0xFF4E34C5)) {
-            NotificationToggleItem(
+        QuickSettingsCard(title = "Quick Settings", titleColor = Color(0xFF4E34C5)) {
+            QuickSettingSwitchItem(
                 title = "Notification",
                 isChecked = appNotificationEnabled,
                 onCheckedChange = onAppNotificationChange
             )
-            NotificationToggleItem(
+            QuickSettingSwitchItem(
                 title = "Sound Alert",
                 isChecked = soundAlertEnabled,
                 onCheckedChange = onSoundAlertChange
             )
-            NotificationToggleItem(
+            QuickSettingSwitchItem(
                 title = "Vibration",
                 isChecked = vibrationEnabled,
                 onCheckedChange = onVibrationChange
@@ -175,7 +175,7 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        SettingsSection(title = "Help and Support", titleColor = Color(0xFF4E34C5)) {
+        QuickSettingsCard(title = "Help and Support", titleColor = Color(0xFF4E34C5)) {
             SettingsClickableItem(
                 title = "Help Center",
                 onClick = { showHelpCenter = true }
@@ -330,7 +330,7 @@ fun ProfileCard(
 }
 
 @Composable
-fun SettingsSection(
+fun QuickSettingsCard(
     title: String,
     titleColor: Color = Color.Gray,
     content: @Composable ColumnScope.() -> Unit
@@ -355,7 +355,7 @@ fun SettingsSection(
 }
 
 @Composable
-fun NotificationToggleItem(
+fun QuickSettingSwitchItem(
     title: String,
     isChecked: Boolean,
     onCheckedChange: (Boolean) -> Unit

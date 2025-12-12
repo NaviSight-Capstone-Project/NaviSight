@@ -196,18 +196,18 @@ fun ProfileContent(
         Spacer(modifier = Modifier.height(4.dp))
 
         // Notification Section
-        NotificationCard(title = "Notification") {
-            NotificationToggleItem(
+        QuickSettingsCard(title = "Quick Settings") {
+            QuickSettingSwitchItem(
                 title = "App Notifications",
                 isChecked = appNotificationEnabled,
                 onCheckedChange = onAppNotificationChange
             )
-            NotificationToggleItem(
+            QuickSettingSwitchItem(
                 title = "Sound Alert",
                 isChecked = soundAlertEnabled,
                 onCheckedChange = onSoundAlertChange
             )
-            NotificationToggleItem(
+            QuickSettingSwitchItem(
                 title = "Vibration",
                 isChecked = vibrationEnabled,
                 onCheckedChange = onVibrationChange
@@ -388,7 +388,7 @@ fun ProfileCard(user: Viu) {
 }
 
 @Composable
-fun NotificationCard(
+fun QuickSettingsCard(
     title: String,
     titleColor: Color = Color(0xFF4E34C5),
     content: @Composable ColumnScope.() -> Unit
@@ -413,7 +413,7 @@ fun NotificationCard(
 }
 
 @Composable
-fun NotificationToggleItem(
+fun QuickSettingSwitchItem(
     title: String,
     isChecked: Boolean,
     onCheckedChange: (Boolean) -> Unit) {
