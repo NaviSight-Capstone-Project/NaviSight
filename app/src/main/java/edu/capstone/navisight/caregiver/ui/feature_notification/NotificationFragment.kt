@@ -8,7 +8,6 @@ import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import edu.capstone.navisight.R
@@ -16,10 +15,6 @@ import edu.capstone.navisight.caregiver.domain.connectionUseCase.SecondaryConnec
 import edu.capstone.navisight.caregiver.domain.connectionUseCase.TransferPrimaryUseCase
 import edu.capstone.navisight.caregiver.domain.notificationUseCase.DismissActivityUseCase
 import edu.capstone.navisight.caregiver.domain.notificationUseCase.GetActivityFeedUseCase
-import edu.capstone.navisight.caregiver.domain.viuUseCase.GetConnectedViuUidsUseCase
-import edu.capstone.navisight.caregiver.domain.viuUseCase.GetViuByUidUseCase
-import edu.capstone.navisight.caregiver.model.Viu
-import edu.capstone.navisight.caregiver.service.SystemNotificationService
 import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
 
 class NotificationFragment : Fragment() {
@@ -47,8 +42,6 @@ class NotificationViewModelFactory(private val application: Application) : ViewM
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(NotificationViewModel::class.java)) {
-            val notificationService = SystemNotificationService(application.applicationContext)
-
             return NotificationViewModel(
                 secondaryConnectionUseCase = SecondaryConnectionUseCase(),
                 transferPrimaryUseCase = TransferPrimaryUseCase(),

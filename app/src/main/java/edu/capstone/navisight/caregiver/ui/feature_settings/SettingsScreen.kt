@@ -157,7 +157,7 @@ fun SettingsScreen(
 
         QuickSettingsCard(title = "Quick Settings", titleColor = Color(0xFF4E34C5)) {
             QuickSettingSwitchItem(
-                title = "Notification",
+                title = "App Notifications",
                 isChecked = appNotificationEnabled,
                 onCheckedChange = onAppNotificationChange
             )

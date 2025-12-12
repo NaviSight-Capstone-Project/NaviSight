@@ -4,9 +4,12 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import edu.capstone.navisight.R
 import edu.capstone.navisight.caregiver.model.Viu
+import edu.capstone.navisight.caregiver.ui.feature_settings.CaregiverSettingsManager
+import edu.capstone.navisight.viu.ui.profile.ViuSettingsManager
 
 
 class NaviSightNotificationManager(private val context: Context) {
@@ -74,7 +77,30 @@ class NaviSightNotificationManager(private val context: Context) {
         }
     }
 
+    private fun isViuAppNotificationEnabled(): Boolean {
+        val isEnabled = ViuSettingsManager.getBoolean(
+            context, ViuSettingsManager.KEY_APP_NOTIFICATION, true)
+        if (!isEnabled) {
+            Log.d(
+                "NotificationManager",
+                "VIU app notifications are disabled in user settings.")
+        }
+        return isEnabled
+    }
+
+    private fun isCaregiverAppNotificationEnabled(): Boolean {
+        val isEnabled = CaregiverSettingsManager.getBoolean(
+            context, CaregiverSettingsManager.KEY_APP_NOTIFICATION, true)
+        if (!isEnabled) {
+            Log.d(
+                "NotificationManager",
+                "Caregiver app notifications are disabled in user settings.")
+        }
+        return isEnabled
+    }
+
     fun showEmergencyAlert(viu: Viu, lastLocation: String) {
+        if (!isViuAppNotificationEnabled() && !isCaregiverAppNotificationEnabled()) return
         val notification = NotificationCompat.Builder(context, EMERGENCY_CHANNEL_ID)
             .setContentTitle("🚨 EMERGENCY: ${viu.firstName}")
             .setContentText("Emergency Activated! Last known location: $lastLocation")
@@ -87,6 +113,7 @@ class NaviSightNotificationManager(private val context: Context) {
     }
 
     fun showLowBatteryAlert(viu: Viu) {
+        if (!isViuAppNotificationEnabled() && !isCaregiverAppNotificationEnabled()) return
         val notification = NotificationCompat.Builder(context, BATTERY_CHANNEL_ID)
             .setContentTitle("🔋 Low Battery: ${viu.firstName}")
             .setContentText("${viu.firstName}'s phone is running low on battery.")

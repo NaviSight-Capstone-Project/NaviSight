@@ -25,7 +25,6 @@ const val EXTRA_VIU_ID = "viu_id"
 const val EXTRA_VIU_NAME = "viu_name"
 const val EXTRA_LOCATION = "last_location"
 const val EXTRA_TIMESTAMP = "timestamp"
-const val EXTRA_VIU_ITSELF = "hi_my_name_is_viu"
 
 class ViuMonitorService : Service() {
 
@@ -35,7 +34,7 @@ class ViuMonitorService : Service() {
     // Dependencies (Instantiate them here, assuming default constructors work)
     private val getConnectedViuUidsUseCase = GetConnectedViuUidsUseCase()
     private val getViuByUidUseCase = GetViuByUidUseCase()
-    private lateinit var notificationService: SystemNotificationService // Will be initialized later
+    private lateinit var naviSightNotificationManager: NaviSightNotificationManager
     private val saveAlertUseCase = SaveAlertUseCase()
 
     // Make it similar to MainService
@@ -50,7 +49,7 @@ class ViuMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
         INSTANCE = this
-        notificationService = SystemNotificationService(applicationContext)
+        naviSightNotificationManager = NaviSightNotificationManager(applicationContext)
     }
 
     fun getCurrentEmergencySignal(): EmergencySignal? {
@@ -147,7 +146,9 @@ class ViuMonitorService : Service() {
                         lastLocation = lastLocation,
                         timestamp = alertTimestamp
                     )
-                    notificationService.showEmergencyAlert(currentViu, lastLocation)
+
+                    naviSightNotificationManager.showEmergencyAlert(currentViu, lastLocation)
+
                     val intent = Intent(ACTION_EMERGENCY_ALERT).apply {
                         putExtra(EXTRA_VIU_ID, currentViu.uid)
                         putExtra(EXTRA_VIU_NAME, currentViu.firstName)
@@ -165,7 +166,7 @@ class ViuMonitorService : Service() {
                 // low bat
                 if (status.isLowBattery && !lastBatteryStatus) {
                     // system Alert
-                    notificationService.showLowBatteryAlert(currentViu)
+                    naviSightNotificationManager.showLowBatteryAlert(currentViu)
 
                     val batteryAlert = AlertNotification(
                         id = UUID.randomUUID().toString(), // Generates a unique document ID
