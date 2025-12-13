@@ -27,6 +27,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -104,29 +105,51 @@ fun SettingsScreen(
                 .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_sett),
-                contentDescription = null,
-                tint = Color(0xFF6041EC),
-                modifier = Modifier.size(28.dp)
-            )
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_sett),
+                    contentDescription = null,
+                    tint = Color(0xFF6041EC),
+                    modifier = Modifier.size(28.dp)
+                )
 
-            Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
-            Text(
-                text = "Settings",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF202833),
-                style = TextStyle(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFFB644F1), Color(0xFF6041EC))
+                Text(
+                    text = "Settings",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF202833),
+                    style = TextStyle(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color(0xFFB644F1), Color(0xFF6041EC))
+                        )
                     )
                 )
-            )
+            }
+
+            Button(
+                onClick = onEditAccount,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFE0E0E0).copy(alpha = 0.8f)
+                ),
+                shape = RoundedCornerShape(50),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
+                modifier = Modifier.height(32.dp)
+            ) {
+                Text(
+                    text = "Edit Profile",
+                    color = Color(0xFF6041EC),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         when {
             error != null -> {
@@ -138,7 +161,13 @@ fun SettingsScreen(
             }
 
             caregiver != null -> {
-                ProfileCard(caregiver = caregiver!!, onEditClick = onEditAccount)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp) // Add padding top to give space for the button
+                ) {
+                    ProfileCard(caregiver = caregiver!!)
+                }
             }
 
             else -> {
@@ -153,7 +182,7 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         QuickSettingsCard(title = "Quick Settings", titleColor = Color(0xFF4E34C5)) {
             QuickSettingSwitchItem(
@@ -172,8 +201,6 @@ fun SettingsScreen(
                 onCheckedChange = onVibrationChange
             )
         }
-
-        Spacer(modifier = Modifier.height(20.dp))
 
         QuickSettingsCard(title = "Help and Support", titleColor = Color(0xFF4E34C5)) {
             SettingsClickableItem(
@@ -199,7 +226,7 @@ fun SettingsScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Button(
             onClick = onLogout,
@@ -210,7 +237,7 @@ fun SettingsScreen(
             shape = RoundedCornerShape(25.dp)
         ) {
             Text(
-                text = "Logout",
+                text = "LOGOUT",
                 color = Color.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
@@ -224,14 +251,13 @@ fun SettingsScreen(
 @Composable
 fun ProfileCard(
     caregiver: Caregiver,
-    onEditClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(120.dp)
-            .shadow(8.dp, RoundedCornerShape(30.dp))
-            .padding(horizontal = 2.dp),
+            // Removed .height(120.dp)
+            .padding(horizontal = 2.dp)
+            .shadow(8.dp, RoundedCornerShape(30.dp)),
         shape = RoundedCornerShape(30.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
@@ -253,13 +279,13 @@ fun ProfileCard(
                     model = caregiver.profileImageUrl ?: R.drawable.default_profile,
                     contentDescription = null,
                     modifier = Modifier
-                        .size(60.dp)
+                        .size(75.dp)
                         .clip(CircleShape)
                         .border(2.dp, Color.White, CircleShape),
                     contentScale = ContentScale.Crop
                 )
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
                 Column(
                     verticalArrangement = Arrangement.Center,
@@ -267,7 +293,9 @@ fun ProfileCard(
                 ) {
                     Text(
                         text = "${caregiver.firstName} ${caregiver.lastName}",
-                        fontSize = 18.sp,
+                        fontSize = 20.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
@@ -285,7 +313,9 @@ fun ProfileCard(
                         Text(
                             text = caregiver.email,
                             fontSize = 12.sp,
-                            color = Color.White
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
@@ -300,30 +330,12 @@ fun ProfileCard(
                         Text(
                             text = caregiver.phoneNumber,
                             fontSize = 12.sp,
-                            color = Color.White
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
-            }
-
-            Button(
-                onClick = onEditClick,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White.copy(alpha = 0.9f)
-                ),
-                shape = RoundedCornerShape(50),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 4.dp, end = 4.dp)
-                    .height(28.dp)
-            ) {
-                Text(
-                    text = "Edit Profile",
-                    color = Color(0xFF6041EC),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
             }
         }
     }
@@ -349,7 +361,7 @@ fun QuickSettingsCard(
             fontSize = 14.sp,
             color = titleColor
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         content()
     }
 }
@@ -362,11 +374,12 @@ fun QuickSettingSwitchItem(
 ) {
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, modifier = Modifier.weight(1f))
+        Text(title, modifier = Modifier
+            .weight(1f),
+            fontSize = 16.sp)
         Switch(
             checked = isChecked,
             onCheckedChange = onCheckedChange,
