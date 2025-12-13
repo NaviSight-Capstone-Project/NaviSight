@@ -48,6 +48,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import edu.capstone.navisight.R
 import edu.capstone.navisight.auth.util.VoiceHandler
+import edu.capstone.navisight.common.Constants
+import edu.capstone.navisight.common.HapticEvent
+import edu.capstone.navisight.common.VibrationHelper
 
 enum class InputStage { EMAIL, PASSWORD, DONE }
 
@@ -194,6 +197,7 @@ fun LoginScreen(
         // --- TOP ACTION BUTTONS ---
         FloatingActionButton(
             onClick = {
+                VibrationHelper.vibrate(context, Constants.VIBRATE_BUTTON_TAP)
                 email = ""
                 password = ""
                 voiceHandler.speak("Fields cleared.")
@@ -205,7 +209,8 @@ fun LoginScreen(
         ) { Icon(Icons.Filled.Refresh, "Reset Fields", Modifier.size(28.dp)) }
 
         FloatingActionButton(
-            onClick = { voiceHandler.speak("Please enter your email and password.") },
+            onClick = { VibrationHelper.vibrate(context, Constants.VIBRATE_BUTTON_TAP)
+                voiceHandler.speak("Please enter your email and password.") },
             containerColor = Color(0xFF6041EC), contentColor = Color.White,
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 24.dp).size(56.dp).shadow(8.dp, RoundedCornerShape(16.dp))
@@ -230,7 +235,18 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth().onFocusChanged { emailFocused = it.isFocused }
                     .background(Color.White, RoundedCornerShape(16.dp))
                     .border(1.5.dp, if (emailFocused || activeInputStage == InputStage.EMAIL) Color(0xFF6041EC) else Color(0xFFE0E0E0), RoundedCornerShape(16.dp))
-                    .semantics { contentDescription = "Email Input Field. Current value: ${if(email.isEmpty()) "Empty" else email}" }
+                    .semantics { contentDescription = "Email Input Field. Current value: ${if(email.isEmpty()) "Empty" else email}"}
+                    .clickable {
+                        VibrationHelper.vibratePattern(
+                            context,
+                            listOf(
+                                HapticEvent(
+                                    Constants.VIBRATE_BUTTON_TAP.inWholeMilliseconds,
+                                    isVibration = true
+                                )
+                            )
+                        )
+                    }
             )
             Spacer(Modifier.height(20.dp))
 
@@ -253,11 +269,24 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth().onFocusChanged { passwordFocused = it.isFocused }
                     .background(Color.White, RoundedCornerShape(16.dp))
                     .border(1.5.dp, if (passwordFocused || activeInputStage == InputStage.PASSWORD) Color(0xFF6041EC) else Color(0xFFE0E0E0), RoundedCornerShape(16.dp))
+                    .clickable {
+                        VibrationHelper.vibratePattern(
+                            context,
+                            listOf(
+                                HapticEvent(
+                                    Constants.VIBRATE_BUTTON_TAP.inWholeMilliseconds,
+                                    isVibration = true
+                                )
+                            )
+                        )
+                    }
             )
             Spacer(Modifier.height(28.dp))
 
             Button(
-                onClick = { viewModel.login(email, password) },
+                onClick = {
+                    VibrationHelper.vibrate(context, Constants.VIBRATE_BUTTON_TAP)
+                    viewModel.login(email, password) },
                 contentPadding = PaddingValues(), shape = RoundedCornerShape(50),
                 modifier = Modifier.fillMaxWidth().height(50.dp).shadow(10.dp, RoundedCornerShape(50))
             ) {
@@ -265,12 +294,12 @@ fun LoginScreen(
                     Text("Login", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
-
             errorState?.let { msg ->
                 if (msg.isNotEmpty()) {
                     LaunchedEffect(msg) {
                         voiceHandler.speak(msg)
                         announceForAccessibility("Error: $msg")
+                        VibrationHelper.vibratePattern(context, Constants.VIBRATE_ERROR)
                     }
                     Text(msg, color = Color.Red, fontSize = 14.sp, modifier = Modifier.padding(top = 16.dp))
                 }
@@ -284,9 +313,11 @@ fun LoginScreen(
                     .padding(top = 20.dp)
                     .clickable {
                         if(email.isNotBlank()) {
+                            VibrationHelper.vibratePattern(context, Constants.VIBRATE_SUCCESS)
                             voiceHandler.speak("Sending reset email.")
                             viewModel.resetPassword(email)
                         } else {
+                            VibrationHelper.vibratePattern(context, Constants.VIBRATE_ERROR)
                             val msg = "Please enter your email first."
                             voiceHandler.speak(msg)
                             viewModel.setError(msg)
@@ -389,6 +420,7 @@ fun LoginScreen(
                 Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                     Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         LaunchedEffect(Unit) {
+                            VibrationHelper.vibratePattern(context, Constants.VIBRATE_ERROR)
                             val msg = "Verification required. Please solve the captcha."
                             voiceHandler.speak(msg)
                             announceForAccessibility(msg)
@@ -407,7 +439,8 @@ fun LoginScreen(
                         )
                         Spacer(Modifier.height(16.dp))
                         Button(
-                            onClick = { viewModel.dismissCaptchaDialog() },
+                            onClick = { VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
+                                viewModel.dismissCaptchaDialog() },
                             colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
                         ) {
                             Text("Cancel", color = Color.White)

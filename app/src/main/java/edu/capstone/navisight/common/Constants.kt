@@ -1,5 +1,13 @@
 package edu.capstone.navisight.common
 
+import kotlin.time.Duration.Companion.milliseconds
+
+
+data class HapticEvent(
+    val durationMs: Long,
+    val isVibration: Boolean // true for vibration, false for pause
+)
+
 object Constants {
 
     // Shared Preferences
@@ -25,4 +33,25 @@ object Constants {
     const val PREF_MAX_RESULTS = "pref_max_results"
     const val PREF_THREADS = "pref_threads"
     const val PREF_DELEGATE = "pref_delegate"
+
+    // Vibration Haptic Patterns (most follows the pattern: PULSE 1, PAUSE, PULSE 2)
+    val VIBRATE_DEFAULT_DURATION = 20.milliseconds
+    val VIBRATE_KEY_PRESS = 10.milliseconds
+    val VIBRATE_BUTTON_TAP = 30.milliseconds
+    val VIBRATE_SUCCESS = listOf(
+        HapticEvent(80L, isVibration = true), // Pulse 1: 80ms Vibrate
+        HapticEvent(durationMs = 50L, isVibration = false), // Pause: 50ms Silence
+        HapticEvent(durationMs = 80L, isVibration = true) // Pulse 2: 80ms Vibrate
+    )
+    val VIBRATE_ERROR = listOf(
+        HapticEvent(50L, isVibration = true),
+        HapticEvent(durationMs = 50L, isVibration = false),
+        HapticEvent(durationMs = 50L, isVibration = true)
+    )
+    val VIBRATE_OBJECT_DETECTED = listOf(
+        HapticEvent(60L, isVibration = true),
+        HapticEvent(durationMs = 40L, isVibration = false),
+        HapticEvent(durationMs = 60L, isVibration = true)
+    )
 }
+

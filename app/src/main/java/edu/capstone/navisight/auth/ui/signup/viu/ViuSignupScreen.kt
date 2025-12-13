@@ -46,6 +46,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import edu.capstone.navisight.R
 import edu.capstone.navisight.auth.util.LegalDocuments
+import edu.capstone.navisight.common.Constants
+import edu.capstone.navisight.common.VibrationHelper
 import java.util.*
 
 private enum class ViuSignupStep { PERSONAL, AVATAR, LEGAL, ACCOUNT }
@@ -106,6 +108,7 @@ fun ViuSignupScreen(
 
     LaunchedEffect(uiState.signupSuccess) {
         if (uiState.signupSuccess && uiState.createdUserId != null) {
+            VibrationHelper.vibratePattern(context, Constants.VIBRATE_SUCCESS)
             onSignupSuccess(uiState.createdUserId!!)
         }
     }
@@ -113,6 +116,7 @@ fun ViuSignupScreen(
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
             if (!it.contains("OTP", ignoreCase = true)) {
+                VibrationHelper.vibratePattern(context, Constants.VIBRATE_ERROR)
                 Toast.makeText(context, it, Toast.LENGTH_LONG).show()
                 viewModel.clearError()
             }
@@ -124,6 +128,7 @@ fun ViuSignupScreen(
 
         IconButton(
             onClick = {
+                VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
                 when (currentStep) {
                     ViuSignupStep.PERSONAL -> onBackClick()
                     ViuSignupStep.AVATAR -> currentStep = ViuSignupStep.PERSONAL
@@ -227,12 +232,14 @@ fun StepViuPersonal(
     val isCategoryError = category.isEmpty()
     val isSexError = sex.isEmpty()
     val isBirthdayError = birthday.isEmpty() || isAgeInvalid
+    val context = LocalContext.current
 
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
+                    VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
                     datePickerState.selectedDateMillis?.let { millis ->
                         // Validate Age 18-60
                         if (isAgeValid(millis)) {
@@ -250,7 +257,9 @@ fun StepViuPersonal(
                 }) { Text("OK") }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                TextButton(onClick = {
+                    VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
+                    showDatePicker = false }) { Text("Cancel") }
             }
         ) {
             DatePicker(state = datePickerState)
@@ -303,7 +312,9 @@ fun StepViuPersonal(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 trailingIcon = {
-                    IconButton(onClick = { showDatePicker = true }) {
+                    IconButton(onClick = {
+                        VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
+                        showDatePicker = true }) {
                         Icon(Icons.Default.DateRange,
                             contentDescription = "Date",
                             tint = if (showDatePicker) Color(0xFF6641EC) else Color.Gray)
@@ -354,7 +365,9 @@ fun StepViuPersonal(
             )
             ExposedDropdownMenu(isSexExpanded, { isSexExpanded = false }) {
                 sexOptions.forEach { op ->
-                    DropdownMenuItem(text = { Text(op) }, onClick = { onUpdate(fName, mName, lName, birthday, phone, address, op, category); isSexExpanded = false })
+                    DropdownMenuItem(text = { Text(op) }, onClick = {
+                        VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
+                        onUpdate(fName, mName, lName, birthday, phone, address, op, category); isSexExpanded = false })
                 }
             }
         }
@@ -402,19 +415,25 @@ fun StepViuPersonal(
             )
             ExposedDropdownMenu(isCategoryExpanded, { isCategoryExpanded = false }) {
                 categoryOptions.forEach { op ->
-                    DropdownMenuItem(text = { Text(op) }, onClick = { onUpdate(fName, mName, lName, birthday ,phone, address, sex, op); isCategoryExpanded = false })
+                    DropdownMenuItem(text = { Text(op) }, onClick = {
+                        VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
+                        onUpdate(fName, mName, lName, birthday ,phone, address, sex, op); isCategoryExpanded = false })
                 }
             }
         }
         Spacer(Modifier.height(16.dp))
 
         val isValid = !isFirstNameError && !isLastNameError && !isBirthdayError && !isPhoneError && !isAddressError && !isSexError && !isCategoryError
-        GradientButton(text = "Next", onClick = onNext, enabled = isValid)
+
+        GradientButton(text = "Next", onClick = {
+            VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
+            onNext}, enabled = isValid)
     }
 }
 
 @Composable
 fun StepViuAvatar(imageUri: android.net.Uri?, onAddPhoto: () -> Unit, onNext: () -> Unit) {
+    val context = LocalContext.current
     val focusedColor = Color(0xFF6641EC)
     Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text("Step 2: Profile Picture", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = focusedColor, modifier = Modifier.align(Alignment.Start))
@@ -433,7 +452,10 @@ fun StepViuAvatar(imageUri: android.net.Uri?, onAddPhoto: () -> Unit, onNext: ()
             }
         }
         Spacer(Modifier.height(48.dp))
-        GradientButton(text = if (imageUri == null) "Skip" else "Next", onClick = onNext)
+        GradientButton(text = if (imageUri == null) "Skip" else "Next", onClick = {
+
+            VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
+            onNext})
     }
 }
 
@@ -446,6 +468,7 @@ fun StepViuLegal(
 ) {
     val focusedColor = Color(0xFF6641EC)
     var selectedTab by remember { mutableIntStateOf(0) } // 0 = Terms, 1 = Privacy
+    val context = LocalContext.current
 
     Column(Modifier.padding(24.dp)) {
         Text("Step 3: Legal Agreements", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = focusedColor)
@@ -459,14 +482,18 @@ fun StepViuLegal(
                 text = "Terms",
                 isSelected = selectedTab == 0,
                 isCompleted = termsAccepted,
-                onClick = { selectedTab = 0 },
+                onClick = {
+                    VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
+                    selectedTab = 0 },
                 modifier = Modifier.weight(1f)
             )
             TabButton(
                 text = "Privacy",
                 isSelected = selectedTab == 1,
                 isCompleted = privacyAccepted,
-                onClick = { selectedTab = 1 },
+                onClick = {
+                    VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
+                    selectedTab = 1 },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -500,7 +527,8 @@ fun StepViuLegal(
 
         GradientButton(
             text = "Agree & Continue",
-            onClick = onNext,
+            onClick = {VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
+                onNext},
             enabled = termsAccepted && privacyAccepted
         )
     }
@@ -525,6 +553,7 @@ fun StepViuAccount(
     val hasMinLength = pass.length >= 8
     val isPassValid = hasMinLength && hasUpperCase && hasLowerCase && hasSpecialChar
     val isRePassValid = pass == rePass && pass.isNotEmpty()
+    val context = LocalContext.current
 
     Column(Modifier.padding(24.dp)) {
         Text("Step 4: Account Info", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6641EC))
@@ -557,7 +586,8 @@ fun StepViuAccount(
         Spacer(Modifier.height(24.dp))
 
         val isValid = isEmailValid && isCaregiverEmailValid && isPassValid && isRePassValid && !isLoading
-        GradientButton(text = "Create Account", onClick = onSignup, isLoading = isLoading, enabled = isValid)
+        GradientButton(text = "Create Account", onClick = {VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
+            onSignup}, isLoading = isLoading, enabled = isValid)
     }
 }
 
@@ -656,6 +686,7 @@ fun ViuOtpScreen(
                     text = "Verify Code",
                     onClick = {
                         val caregiverUid = uiState.createdCaregiverId
+                        VibrationHelper.vibrate(context, Constants.VIBRATE_BUTTON_TAP)
                         if (otpValue.length == 6 && caregiverUid != null) {
                             viewModel.verifyOtp(uid, caregiverUid, otpValue)
                         } else {
@@ -668,9 +699,11 @@ fun ViuOtpScreen(
 
                 Spacer(Modifier.height(16.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    TextButton(onClick = onCancelSignup) { Text("Cancel", color = Color.Gray) }
+                    TextButton(onClick = {VibrationHelper.vibrate(context, Constants.VIBRATE_BUTTON_TAP)
+                            onCancelSignup}) { Text("Cancel", color = Color.Gray) }
                     TextButton(
-                        onClick = { uiState.createdCaregiverId?.let { viewModel.resendOtp(context, it) } },
+                        onClick = { VibrationHelper.vibrate(context, Constants.VIBRATE_BUTTON_TAP)
+                            uiState.createdCaregiverId?.let { viewModel.resendOtp(context, it) } },
                         enabled = uiState.resendTimer == 0
                     ) {
                         Text(if (uiState.resendTimer > 0) "Wait ${uiState.resendTimer}s" else "Resend Code", color = Color(0xFF6641EC))
