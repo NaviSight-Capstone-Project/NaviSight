@@ -15,6 +15,7 @@ import android.content.ClipData
 import android.content.ClipDescription
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Bundle
@@ -44,11 +45,18 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import edu.capstone.navisight.R
 import edu.capstone.navisight.auth.AuthActivity
+import edu.capstone.navisight.common.Constants.GUEST_LOCAL_SETTINGS
+import edu.capstone.navisight.common.Constants.PREF_DELEGATE
+import edu.capstone.navisight.common.Constants.PREF_MAX_RESULTS
+import edu.capstone.navisight.common.Constants.PREF_THREADS
+import edu.capstone.navisight.common.Constants.PREF_THRESHOLD
+import edu.capstone.navisight.common.Constants.VIU_LOCAL_SETTINGS
 import edu.capstone.navisight.viu.detectors.ObjectDetection
 import edu.capstone.navisight.viu.utils.ObjectDetectorHelper
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.databinding.FragmentGuestBinding
 import edu.capstone.navisight.viu.ui.braillenote.BrailleNoteFragment
+import edu.capstone.navisight.viu.ui.camera.managers.DetectionControlsHandler
 import edu.capstone.navisight.viu.ui.ocr.DocumentReaderFragment
 import java.util.LinkedList
 import java.util.concurrent.ExecutorService
@@ -68,6 +76,10 @@ class GuestFragment :
     val fragmentCameraBinding get() = fragmentGuestBinding
     private lateinit var guestQuickMenuHandler : GuestQuickMenuHandler
     var guestQuickMenuFragment: GuestQuickMenuFragment? = null
+
+    var isDetectionUiModeActive: Boolean = false
+    private lateinit var detectionControlsHandler : GuestDetectionControlsHandler
+    lateinit var guestDetectionSharedPreferences: SharedPreferences
 
     lateinit var objectDetectorHelper: ObjectDetectorHelper
     private lateinit var bitmapBuffer: Bitmap
@@ -156,9 +168,26 @@ class GuestFragment :
         guestQuickMenuHandler = GuestQuickMenuHandler(this)
         cameraBindsHandler = GuestCameraBindsHandler(this)
 
+        guestDetectionSharedPreferences = requireContext().getSharedPreferences(
+            GUEST_LOCAL_SETTINGS,
+            Context.MODE_PRIVATE)
+
+        val savedThreshold = guestDetectionSharedPreferences.getFloat(
+            PREF_THRESHOLD, 0.50f)
+        val savedMaxResults = guestDetectionSharedPreferences.getInt(
+            PREF_MAX_RESULTS, 3)
+        val savedThreads = guestDetectionSharedPreferences.getInt(
+            PREF_THREADS, 1)
+        val savedDelegate = guestDetectionSharedPreferences.getInt(
+            PREF_DELEGATE, 0)
+
         objectDetectorHelper = ObjectDetectorHelper(
             context = requireContext(),
-            objectDetectorListener = this
+            objectDetectorListener = this,
+            threshold = savedThreshold,
+            maxResults = savedMaxResults,
+            numThreads = savedThreads,
+            currentDelegate = savedDelegate
         )
 
         cameraExecutor = Executors.newSingleThreadExecutor()
@@ -189,18 +218,31 @@ class GuestFragment :
                     return super.performAccessibilityAction(host, action, args)
                 }
             })
+
+            detectionControlsHandler = GuestDetectionControlsHandler(this)
+            detectionControlsHandler.initControlsAndListeners()
+            detectionControlsHandler.synchronizeUiWithDetector()
         }
 
         // Gesture Detector
+
+
         val gestureDetector = GestureDetector(requireContext(), object : GestureDetector.SimpleOnGestureListener() {
             override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
                 if (e1 != null && e1.x - e2.x > 100 && abs(velocityX) > 100) {
                     navigateToLogin()
                     return true
                 }
+
+                if (e1 != null && e1.y - e2.y > 100 && abs(velocityY) > 100) {
+                    Log.d(TAG, "Swipe Up Detected: Executing action.")
+                    toggleDetectionUiMode(true)
+                    return true
+                }
                 return false
             }
         })
+
 
         // Click Listener
         fragmentCameraBinding?.previewModeHitbox?.setOnClickListener {
@@ -209,12 +251,45 @@ class GuestFragment :
 
         //Touch Listener
         fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
-            doAutoScreensaver()
+            if (isDetectionUiModeActive) {
+                toggleDetectionUiMode(false) // Tap outside bottom sheet to exit
+            } else {
+                doAutoScreensaver()
+            }
             gestureDetector.onTouchEvent(event)
         }
 
         fragmentGuestBinding?.previewModeHitbox.apply {
             this!!.setOnLongClickListener {
+                startQuickMenuDrag(it)
+                return@setOnLongClickListener true // Consumed
+            }
+        }
+    }
+
+    fun toggleDetectionUiMode(enable: Boolean) {
+        TextToSpeechHelper.speak(
+            requireContext(),
+            "Object detection settings opened")
+        if (!isAdded) return
+        if (enable == isDetectionUiModeActive) return // Avoid redundant toggles
+        isDetectionUiModeActive = enable
+
+        if (enable) {
+            fragmentCameraBinding?.previewModeOverlay?.visibility = View.INVISIBLE
+
+            detectionControlsHandler.toggleBottomSheet(true)
+            fragmentCameraBinding?.previewModeHitbox?.setOnLongClickListener(null)
+        } else {
+            TextToSpeechHelper.speak(
+                requireContext(),
+                "Object detection settings closed")
+            detectionControlsHandler.toggleBottomSheet(false) // Close
+            fragmentCameraBinding?.previewModeOverlay?.visibility = View.VISIBLE
+            fragmentCameraBinding?.previewModeHitbox?.setOnLongClickListener {
+                // If Volume Key is held, or Detection UI is active, do NOT open menu
+                if (isDetectionUiModeActive)
+                    return@setOnLongClickListener true
                 startQuickMenuDrag(it)
                 return@setOnLongClickListener true // Consumed
             }
@@ -361,6 +436,8 @@ class GuestFragment :
         imageWidth: Int
     ) {
         activity?.runOnUiThread {
+            fragmentCameraBinding?.bottomSheetLayout?.inferenceTimeVal?.text =
+                String.format("%d ms", inferenceTime)
             fragmentCameraBinding?.overlay?.setResults(
                 results ?: LinkedList(),
                 imageHeight,

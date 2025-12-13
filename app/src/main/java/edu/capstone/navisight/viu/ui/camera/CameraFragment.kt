@@ -492,14 +492,14 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         emergencyManager = EmergencyManager(this, webRTCManager, realTimeViewModel)
         quickMenuHandler = QuickMenuHandler(this)
 
+        webRTCManager.connectMainServiceListener()
+        service = MainService.getInstance()
+        mainRepository = MainRepository.getInstance(requireContext())
+
         val savedThreshold = detectionSharedPreferences.getFloat(PREF_THRESHOLD, 0.50f)
         val savedMaxResults = detectionSharedPreferences.getInt(PREF_MAX_RESULTS, 3)
         val savedThreads = detectionSharedPreferences.getInt(PREF_THREADS, 2)
         val savedDelegate = detectionSharedPreferences.getInt(PREF_DELEGATE, 0)
-
-        webRTCManager.connectMainServiceListener()
-        service = MainService.getInstance()
-        mainRepository = MainRepository.getInstance(requireContext())
 
         objectDetectorHelper = ObjectDetectorHelper(
             context = requireContext(),

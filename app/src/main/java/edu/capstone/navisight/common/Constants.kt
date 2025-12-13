@@ -14,6 +14,7 @@ object Constants {
     const val GLOBAL_LOCAL_SETTINGS = "NaviData"
     const val VIU_LOCAL_SETTINGS = "ViuLocalSettings"
     const val CAREGIVER_LOCAL_SETTINGS = "CaregiverLocalSettings"
+    const val GUEST_LOCAL_SETTINGS = "GuestLocalSettings"
     const val USER_TYPE_KEY = "CURRENT_USER_TYPE"
     const val SP_IS_USER_WARNED_OF_LOWBAT = "IsUserWarnedOnLowBatteryLevel"
     const val SP_IS_EMERGENCY_MODE_ACTIVE = "IsEmergencyModeActive"

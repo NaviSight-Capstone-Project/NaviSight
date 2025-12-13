@@ -35,11 +35,7 @@
         android:layout_height="match_parent"
         android:layout_width="match_parent" />
 
-    <include
-        android:id="@+id/bottom_sheet_layout"
-        layout="@layout/info_bottom_sheet"
-        android:visibility="gone"
-        android:importantForAccessibility="no"/>
+
 
     <FrameLayout
         android:id="@+id/preview_mode_overlay"
@@ -112,5 +108,11 @@
         android:clickable="true"
         android:focusable="true"
         android:contentDescription="@string/screensaver_mode_tooltip_title"/>
+
+    <include
+        android:id="@+id/bottom_sheet_layout"
+        layout="@layout/info_bottom_sheet"
+        android:visibility="gone"
+        android:importantForAccessibility="no"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
