@@ -37,22 +37,25 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/bottom_sheet_default_row_margin"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
             <TextView
                 android:id="@+id/inference_time_label"
                 android:text="Processing Speed "
                 android:textColor="@color/bottom_sheet_text_color"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:textSize="@dimen/bottom_sheet_text_size"
-                android:textStyle="bold" /> <TextView
-            android:id="@+id/inference_time_val"
-            android:text="0ms"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="end"
-            android:textColor="@color/royal_purple" android:textSize="@dimen/bottom_sheet_text_size"
-            android:textStyle="bold" />
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/inference_time_val"
+                android:text="0ms"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:textColor="@color/royal_purple" android:textSize="@dimen/bottom_sheet_text_size"
+                android:textStyle="bold" />
         </androidx.appcompat.widget.LinearLayoutCompat>
 
         <View
@@ -61,24 +64,24 @@
             android:layout_marginTop="10dp"
             android:background="@color/royal_purple" />
 
-        <!-- Threshold -->
-        <RelativeLayout
+        <androidx.appcompat.widget.LinearLayoutCompat
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/bottom_sheet_default_row_margin"
-        >
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            >
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="Detection Sensitivity"
-                android:layout_centerVertical="true"
                 android:textSize="@dimen/bottom_sheet_text_size"
                 android:textColor="@color/bottom_sheet_text_color" />
 
             <LinearLayout
-                android:layout_width="190dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentRight="true"
                 android:padding="2dp"
                 android:gravity="center"
                 android:orientation="horizontal"
@@ -113,27 +116,26 @@
                     android:src="@drawable/ic_plus"
                     android:background="@drawable/bg_stepper_button" />
             </LinearLayout>
-    </RelativeLayout>
-        <!-- ML max results adjustment row -->
-        <RelativeLayout
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+        <androidx.appcompat.widget.LinearLayoutCompat
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/bottom_sheet_default_row_margin"
-            android:gravity="center"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="Max Detections"
                 android:textSize="@dimen/bottom_sheet_text_size"
-                android:layout_centerVertical="true"
                 android:textColor="@color/bottom_sheet_text_color" />
 
             <LinearLayout
-                android:layout_width="190dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentRight="true"
                 android:gravity="center"
                 android:orientation="horizontal">
 
@@ -152,8 +154,8 @@
                     android:layout_height="wrap_content"
                     android:minEms="@integer/bottom_sheet_control_text_min_ems"
                     android:gravity="center"
-                    android:layout_marginLeft="@dimen/bottom_sheet_control_text_side_margin"
-                    android:layout_marginRight="@dimen/bottom_sheet_control_text_side_margin"
+                    android:layout_marginStart="@dimen/bottom_sheet_control_text_side_margin"
+                    android:layout_marginEnd="@dimen/bottom_sheet_control_text_side_margin"
                     android:text="3"
                     android:textColor="@color/ash"
                     android:textSize="18dp" />
@@ -168,28 +170,26 @@
                     android:background="@drawable/bg_stepper_button" />
 
             </LinearLayout>
-        </RelativeLayout>
+        </androidx.appcompat.widget.LinearLayoutCompat>
 
-        <!-- Number of threads adjustment row -->
-        <RelativeLayout
+        <androidx.appcompat.widget.LinearLayoutCompat
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/bottom_sheet_default_row_margin"
-            android:gravity="center"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="Processing Power"
-                android:layout_centerVertical="true"
                 android:textSize="@dimen/bottom_sheet_text_size"
                 android:textColor="@color/bottom_sheet_text_color" />
 
             <LinearLayout
-                android:layout_width="190dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentRight="true"
                 android:gravity="center"
                 android:orientation="horizontal"
                 >
@@ -207,8 +207,8 @@
                     android:id="@+id/threads_value"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginLeft="@dimen/bottom_sheet_control_text_side_margin"
-                    android:layout_marginRight="@dimen/bottom_sheet_control_text_side_margin"
+                    android:layout_marginStart="@dimen/bottom_sheet_control_text_side_margin"
+                    android:layout_marginEnd="@dimen/bottom_sheet_control_text_side_margin"
                     android:gravity="center"
                     android:minEms="@integer/bottom_sheet_control_text_min_ems"
                     android:text="2"
@@ -224,33 +224,34 @@
                     android:tint="@color/ash"
                     android:background="@drawable/bg_stepper_button" />
             </LinearLayout>
-        </RelativeLayout>
+        </androidx.appcompat.widget.LinearLayoutCompat>
 
-        <RelativeLayout
+        <androidx.appcompat.widget.LinearLayoutCompat
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/bottom_sheet_default_row_margin"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
             >
 
             <TextView
                 android:text="Your Processor:"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
+                android:layout_weight="1"
                 android:textSize="@dimen/bottom_sheet_text_size"
                 android:textColor="@color/bottom_sheet_text_color" />
 
             <androidx.appcompat.widget.AppCompatSpinner
                 android:id="@+id/spinnerDelegate"
-                android:layout_width="190dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:minWidth="@dimen/bottom_sheet_spinner_delegate_min_width"
                 android:spinnerMode="dropdown"
                 android:minHeight="@dimen/bottom_sheet_control_btn_size"
                 android:theme="@style/BottomSheetSpinnerItemStyle"
-                android:layout_alignParentRight="true"
                 android:entries="@array/delegate_spinner_titles"/>
-        </RelativeLayout>
+        </androidx.appcompat.widget.LinearLayoutCompat>
 
         <RelativeLayout
             android:layout_width="match_parent"
@@ -260,6 +261,7 @@
             android:layout_width="match_parent"
             android:layout_height="50sp"
             android:textSize="12dp"
+            android:textColor="@color/ash"
             android:textAlignment="center"
             android:text="@string/warning_bottom_sheet_control"/>
 
