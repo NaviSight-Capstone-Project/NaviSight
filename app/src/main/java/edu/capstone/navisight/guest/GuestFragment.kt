@@ -11,6 +11,8 @@ This fragment will and only will be used if there is NO user logged in.
  */
 
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipDescription
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -25,11 +27,13 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Toast
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -37,12 +41,15 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.commit
 import edu.capstone.navisight.R
 import edu.capstone.navisight.auth.AuthActivity
 import edu.capstone.navisight.viu.detectors.ObjectDetection
 import edu.capstone.navisight.viu.utils.ObjectDetectorHelper
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.databinding.FragmentGuestBinding
+import edu.capstone.navisight.viu.ui.braillenote.BrailleNoteFragment
+import edu.capstone.navisight.viu.ui.ocr.DocumentReaderFragment
 import java.util.LinkedList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -50,22 +57,29 @@ import kotlin.math.abs
 
 // TODO: Make this fragment's camera front facing on deployment time
 
-class GuestFragment : Fragment(R.layout.fragment_guest), ObjectDetectorHelper.DetectorListener {
+class GuestFragment :
+    Fragment(R.layout.fragment_guest),
+    ObjectDetectorHelper.DetectorListener,
+    GuestQuickMenuListener {
 
     private val TAG = "ObjectDetection"
-
+    var imageCapture: ImageCapture? = null
     private var fragmentGuestBinding: FragmentGuestBinding? = null
-    private val fragmentCameraBinding get() = fragmentGuestBinding
+    val fragmentCameraBinding get() = fragmentGuestBinding
+    private lateinit var guestQuickMenuHandler : GuestQuickMenuHandler
+    var guestQuickMenuFragment: GuestQuickMenuFragment? = null
 
-    private lateinit var objectDetectorHelper: ObjectDetectorHelper
+    lateinit var objectDetectorHelper: ObjectDetectorHelper
     private lateinit var bitmapBuffer: Bitmap
-    private var preview: Preview? = null
-    private var imageAnalyzer: ImageAnalysis? = null
-    private var camera: Camera? = null
-    private var cameraProvider: ProcessCameraProvider? = null
+    var preview: Preview? = null
+    var imageAnalyzer: ImageAnalysis? = null
+    var camera: Camera? = null
+    var cameraProvider: ProcessCameraProvider? = null
 
     private var isScreensaverActive = false
     private var currentBrightness = 0.0F
+    var currentCameraFacing: Int = CameraSelector.LENS_FACING_BACK
+    lateinit var cameraBindsHandler : GuestCameraBindsHandler
 
     // --- Crash Prevention: Timer to stop TTS from spamming ---
     private var lastAnnouncementTime = 0L
@@ -81,13 +95,51 @@ class GuestFragment : Fragment(R.layout.fragment_guest), ObjectDetectorHelper.De
         }
     }
 
-    private lateinit var cameraExecutor: ExecutorService
+    lateinit var cameraExecutor: ExecutorService
 
     override fun onDestroyView() {
         idleHandler.removeCallbacks(idleRunnable)
         fragmentGuestBinding = null
         super.onDestroyView()
         cameraExecutor.shutdown()
+    }
+
+
+    override fun onGuestQuickMenuAction(actionId: Int) {
+        when(actionId) {
+            R.id.ball_snap -> {
+                guestQuickMenuHandler.takePicture()
+            }
+            R.id.ball_flip_camera -> {
+                guestQuickMenuHandler.switchCamera()
+            }
+            R.id.ball_ocr -> {
+                requireActivity().supportFragmentManager.beginTransaction()
+                    .replace(
+                        R.id.fragment_container,
+                        DocumentReaderFragment())
+                    .addToBackStack(null)
+                    .commit()
+            }
+            R.id.ball_bk_note -> {
+                requireActivity().supportFragmentManager.beginTransaction()
+                    .replace(
+                        R.id.fragment_container,
+                        BrailleNoteFragment())
+                    .addToBackStack(null)
+                    .commit()
+            }
+        }
+    }
+
+    override fun onGuestQuickMenuDismissed() {
+        if (isAdded) {
+            childFragmentManager.commit {
+                guestQuickMenuFragment?.let { remove(it) }
+            }
+        }
+        guestQuickMenuFragment = null
+        fragmentCameraBinding?.quickMenuContainer?.visibility = View.GONE
     }
 
     override fun onStop() {
@@ -100,6 +152,9 @@ class GuestFragment : Fragment(R.layout.fragment_guest), ObjectDetectorHelper.De
         super.onViewCreated(view, savedInstanceState)
 
         fragmentGuestBinding = FragmentGuestBinding.bind(view)
+
+        guestQuickMenuHandler = GuestQuickMenuHandler(this)
+        cameraBindsHandler = GuestCameraBindsHandler(this)
 
         objectDetectorHelper = ObjectDetectorHelper(
             context = requireContext(),
@@ -156,6 +211,53 @@ class GuestFragment : Fragment(R.layout.fragment_guest), ObjectDetectorHelper.De
         fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
             doAutoScreensaver()
             gestureDetector.onTouchEvent(event)
+        }
+
+        fragmentGuestBinding?.previewModeHitbox.apply {
+            this!!.setOnLongClickListener {
+                startQuickMenuDrag(it)
+                return@setOnLongClickListener true // Consumed
+            }
+        }
+    }
+
+    private fun startQuickMenuDrag(view: View) {
+        context?.let { safeContext ->
+            // Show the drag fragment (the drop targets)
+            guestQuickMenuHandler.showQuickMenuFragment()
+
+            fragmentCameraBinding?.quickMenuContainer?.visibility = View.VISIBLE
+
+            // Prepare the View for the Drag Shadow
+            val shadowView = View(safeContext).apply {
+                layoutParams = ViewGroup.LayoutParams(50, 50)
+                setBackgroundResource(R.drawable.quick_menu_drag_shadow)
+            }
+
+            val widthSpec = View.MeasureSpec.makeMeasureSpec(50, View.MeasureSpec.EXACTLY)
+            val heightSpec = View.MeasureSpec.makeMeasureSpec(50, View.MeasureSpec.EXACTLY)
+            shadowView.measure(widthSpec, heightSpec)
+            shadowView.layout(0, 0, shadowView.measuredWidth, shadowView.measuredHeight)
+
+            val clipItem = ClipData.Item("Quick Menu Drag")
+            val dragData = ClipData(
+                "Quick Menu Drag",
+                arrayOf(ClipDescription.MIMETYPE_TEXT_PLAIN),
+                clipItem
+            )
+
+            val shadowBuilder = View.DragShadowBuilder(shadowView)
+
+            // Temporarily remove listener to prevent conflicts during drag
+            fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener(null)
+
+            // Start the drag operation
+            view.startDragAndDrop(
+                dragData,
+                shadowBuilder,
+                null,
+                0
+            )
         }
     }
 
@@ -241,6 +343,15 @@ class GuestFragment : Fragment(R.layout.fragment_guest), ObjectDetectorHelper.De
         super.onConfigurationChanged(newConfig)
         imageAnalyzer?.targetRotation =
             fragmentCameraBinding?.viewFinder?.display?.rotation ?: Surface.ROTATION_0
+    }
+
+    override fun onResume() {
+        super.onResume()
+        context?.let {
+            fragmentCameraBinding?.viewFinder?.post {
+                cameraBindsHandler.setUpCamera()
+            }
+        }
     }
 
     override fun onResults(

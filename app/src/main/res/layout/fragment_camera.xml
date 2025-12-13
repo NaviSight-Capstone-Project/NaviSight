@@ -104,6 +104,7 @@
         android:contentDescription="@string/camera_accessibility_hint"
         android:background="@android:color/transparent"
         />
+
     <include
         android:id="@+id/bottom_sheet_layout"
         android:visibility="gone"

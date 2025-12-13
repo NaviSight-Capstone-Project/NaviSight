@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import android.util.Log
-import android.net.Uri
 import androidx.core.app.NotificationCompat
 import edu.capstone.navisight.R
 import edu.capstone.navisight.caregiver.model.Viu
@@ -79,7 +78,7 @@ class NaviSightNotificationManager(private val context: Context) {
             val batteryChannel = NotificationChannel(
                 BATTERY_CHANNEL_ID,
                 "Battery Alerts",
-                NotificationManager.IMPORTANCE_DEFAULT 
+                NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 if (!isCaregiverSoundEnabled) {
                     setSound(null, null)
@@ -100,7 +99,6 @@ class NaviSightNotificationManager(private val context: Context) {
                     Log.d("NotificationManager", "WebRTC Call Channel created silently due to VIU user settings.")
                 }
             }
-
             notificationManager.createNotificationChannel(monitoringChannel)
             notificationManager.createNotificationChannel(emergencyChannel)
             notificationManager.createNotificationChannel(batteryChannel)
