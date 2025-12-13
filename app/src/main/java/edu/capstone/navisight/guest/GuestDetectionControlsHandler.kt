@@ -115,10 +115,11 @@ class GuestDetectionControlsHandler (
             object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
                     objectDetectorHelper.currentDelegate = p2
+                    TextToSpeechHelper.speak(cameraFragment.requireContext(),
+                        "Hardware target changed successfully")
                     updateControlsUi()
-                    TextToSpeechHelper.speak(cameraFragment.requireContext(), "Hardware target changed successfully")
-                }
 
+                }
                 override fun onNothingSelected(p0: AdapterView<*>?) {
                     /* no op */
                 }

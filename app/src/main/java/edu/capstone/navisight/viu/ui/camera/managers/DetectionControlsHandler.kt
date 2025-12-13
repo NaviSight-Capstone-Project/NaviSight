@@ -112,9 +112,10 @@ class DetectionControlsHandler (
         fragmentCameraBinding?.bottomSheetLayout?.spinnerDelegate?.onItemSelectedListener =
             object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+                    TextToSpeechHelper.speak(cameraFragment.requireContext(),
+                        "Hardware target changed successfully")
                     objectDetectorHelper.currentDelegate = p2
                     updateControlsUi()
-                    TextToSpeechHelper.speak(cameraFragment.requireContext(), "Hardware target changed successfully")
                 }
 
                 override fun onNothingSelected(p0: AdapterView<*>?) {
