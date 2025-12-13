@@ -57,7 +57,7 @@ object Constants {
 
     // Object Detection
     val INDOOR_MODE = true
-    val OUTDOOR_ITEMS = listOf<String>(
+    val OUTDOOR_ITEMS = listOf(
         "bicycle",
         "car",
         "motorcycle",
@@ -89,6 +89,37 @@ object Constants {
         "skateboard",
         "surfboard",
         "tennis racket"
+    )
+
+    val COLLISION_ITEMS = listOf(
+        "person",
+        "bicycle",
+        "car",
+        "motorcycle",
+        "airplane",
+        "bus",
+        "train",
+        "truck",
+        "boat",
+        "traffic light",
+        "fire hydrant",
+        "stop sign",
+        "parking meter",
+        "bench",
+        "horse",
+        "cow",
+        "elephant",
+        "bear",
+        "zebra",
+        "giraffe",
+        "couch",
+        "bed",
+        "dining table",
+        "tv",
+        "microwave",
+        "oven",
+        "refrigerator",
+        "toilet"
     )
 }
 

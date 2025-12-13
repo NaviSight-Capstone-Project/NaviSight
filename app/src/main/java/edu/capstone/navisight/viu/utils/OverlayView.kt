@@ -16,6 +16,7 @@ import java.util.LinkedList
 import kotlin.math.abs
 import kotlin.math.max
 import edu.capstone.navisight.R
+import edu.capstone.navisight.common.Constants.COLLISION_ITEMS
 import edu.capstone.navisight.common.Constants.INDOOR_MODE
 import edu.capstone.navisight.common.Constants.OUTDOOR_ITEMS
 import edu.capstone.navisight.common.Constants.VIBRATE_OBJECT_DETECTED
@@ -86,7 +87,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
                 canvas.drawRect(drawableRect, boxPaint)
 
                 // Create text to display alongside detected objects
-                // THE LABEL IS HERE.
+                // THE LABEL IS HERE: result.category.label
                 val drawableText =
                     result.category.label + " " +
                             String.format("%.2f %.2f", result.category.confidence,
@@ -158,12 +159,19 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
         // DEBUG LOGS.
         // Log.println(Log.INFO, "screen size", "$results")
         // Log.println(Log.INFO, "bounds check (l/x1 t/y1 r/x2 b/y2)", "$left $top $right $bottom")
-        return when {
-            percent >= areaThresholds[0] -> "A $label is on front of you. Please proceed with caution."
+
+        var estimatedLabel =  when {
+            percent >= areaThresholds[0] -> "A $label is on front of you"
             percent >= areaThresholds[1] -> "A $label is close to you"
             percent >= areaThresholds[2] -> "A $label is nearby"
             else -> "A $label has been detected"
         }
+
+        // If item is going to be bad if its going to collide, then add extra caution
+        if (percent >= areaThresholds[0] && COLLISION_ITEMS.contains(label)) {
+            estimatedLabel += ". Please proceed with caution."
+        }
+        return estimatedLabel
     }
 
     private fun didBBAThresholdChanged(currentDetectedArea: Float): Boolean {
@@ -192,7 +200,12 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
         val currentSpeechQueue = TextToSpeechHelper.getSpeechQueue()
         if (lastLabel != currentLabel || didBBAThresholdChanged(currentDetectedArea)) {
             if (currentSpeechQueue.size > speechQueueThreshold) TextToSpeechHelper.clearQueue()
+
+            // Labels the severity
             val proximityStatus = bbEstimatedProximity(currentDetectedArea, currentLabel)
+
+            //
+
             if (lastLabel == currentLabel) {
                 if (currentAreaThreshold > lastAreaThreshold) TextToSpeechHelper.queueSpeakLatest(
                     context,
