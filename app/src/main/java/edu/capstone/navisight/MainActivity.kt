@@ -108,9 +108,12 @@ class MainActivity : AppCompatActivity() {
                 // Pass the determined user type to the MainRepository/FirebaseClient
                 if (collection == USER_TYPE_CAREGIVER || collection == USER_TYPE_VIU) {
                     mainRepository.setUserType(collection)
-                    startWebrtcService(currentUser.email.toString()) // Start service AFTER userType is set
-                    handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
                     saveUserType(collection)
+
+                    // Start services and fully log in
+                    startWebrtcService(currentUser.email.toString())
+                    if (collection == USER_TYPE_CAREGIVER) startMonitoringService()
+                    handleSuccessfulLogin(currentUser.email.toString(), currentUser.uid)
                 }
 
                 // Navigate based on the type
@@ -124,7 +127,6 @@ class MainActivity : AppCompatActivity() {
                 navigateToAuth()
             }
         }
-        startMonitoringService()
     }
 
     fun beginAppFlow() {

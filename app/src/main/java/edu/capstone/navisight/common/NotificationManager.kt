@@ -56,10 +56,8 @@ class NaviSightNotificationManager(private val context: Context) {
             val monitoringChannel = NotificationChannel(
                 MONITORING_CHANNEL_ID,
                 "VIU Monitoring",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Continuous monitoring for emergency and low battery status of connected VIUs."
-            }.apply {
                 description = "Continuous monitoring for emergency and low battery status of connected VIUs."
                 setSound(null, null)
                 enableVibration(false)
@@ -81,7 +79,7 @@ class NaviSightNotificationManager(private val context: Context) {
             val batteryChannel = NotificationChannel(
                 BATTERY_CHANNEL_ID,
                 "Battery Alerts",
-                NotificationManager.IMPORTANCE_DEFAULT // Default priority
+                NotificationManager.IMPORTANCE_DEFAULT 
             ).apply {
                 if (!isCaregiverSoundEnabled) {
                     setSound(null, null)
@@ -93,7 +91,7 @@ class NaviSightNotificationManager(private val context: Context) {
             val webrtcChannel = NotificationChannel(
                 WEBRTC_CALL_CHANNEL_ID,
                 "Ongoing Call Service",
-                NotificationManager.IMPORTANCE_HIGH
+                NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "Notification for active video/audio calls."
                 if (!isViuSoundEnabled) {
@@ -178,6 +176,7 @@ class NaviSightNotificationManager(private val context: Context) {
         builder.setSmallIcon(R.drawable.ic_logo)
             .setContentTitle("VIU Monitoring Active")
             .setContentText("Monitoring status of linked VIUs.")
+            .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
         if (!isCaregiverSoundAlertEnabled()) {
             builder.setSound(null)
