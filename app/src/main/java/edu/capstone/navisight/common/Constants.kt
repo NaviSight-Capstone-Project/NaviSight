@@ -56,7 +56,6 @@ object Constants {
     )
 
     // Object Detection
-    val INDOOR_MODE = true
     val OUTDOOR_ITEMS = listOf(
         "bicycle",
         "car",
