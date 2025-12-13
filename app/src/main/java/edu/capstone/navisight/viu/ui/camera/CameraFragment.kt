@@ -37,6 +37,11 @@ import androidx.fragment.app.commit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.lifecycleScope
 import edu.capstone.navisight.R
+import edu.capstone.navisight.common.Constants.PREF_DELEGATE
+import edu.capstone.navisight.common.Constants.PREF_MAX_RESULTS
+import edu.capstone.navisight.common.Constants.PREF_THREADS
+import edu.capstone.navisight.common.Constants.PREF_THRESHOLD
+import edu.capstone.navisight.common.Constants.VIU_LOCAL_SETTINGS
 import edu.capstone.navisight.databinding.FragmentCameraBinding
 import edu.capstone.navisight.viu.detectors.ObjectDetection
 import edu.capstone.navisight.viu.ui.profile.ProfileFragment
@@ -97,13 +102,16 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     var imageAnalyzer: ImageAnalysis? = null
     var cameraProvider: ProcessCameraProvider? = null
 
+    // Detection settings
+    lateinit var detectionSharedPreferences: SharedPreferences
+
     private lateinit var emergencyManager : EmergencyManager
     private lateinit var batteryHandler: BatteryHandler
     private lateinit var screensaverHandler : ScreensaverHandler
     lateinit var cameraBindsHandler : CameraBindsHandler
     private lateinit var quickMenuHandler : QuickMenuHandler
     private lateinit var webRTCManager : WebRTCManager
-    private lateinit var detectionControls : DetectionControlsHandler
+    private lateinit var detectionControlsHandler : DetectionControlsHandler
     var isDetectionUiModeActive: Boolean = false
 
     // Init. screensaver vars
@@ -331,13 +339,13 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
 
         if (enable) {
             fragmentCameraBinding?.previewModeOverlay?.visibility = View.INVISIBLE
-            detectionControls.toggleBottomSheet(true)
+            detectionControlsHandler.toggleBottomSheet(true)
             fragmentCameraBinding?.touchInterceptorView?.setOnLongClickListener(null)
         } else {
             TextToSpeechHelper.speak(
                 requireContext(),
                 "Object detection settings closed")
-            detectionControls.toggleBottomSheet(false) // Close
+            detectionControlsHandler.toggleBottomSheet(false) // Close
             fragmentCameraBinding?.previewModeOverlay?.visibility = View.VISIBLE
             fragmentCameraBinding?.touchInterceptorView?.setOnLongClickListener {
                 // If Volume Key is held, or Detection UI is active, do NOT open menu
@@ -471,6 +479,10 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
             SHARED_PREFERENCES_NAME,
             Context.MODE_PRIVATE)
 
+        detectionSharedPreferences = requireContext().getSharedPreferences(
+            VIU_LOCAL_SETTINGS,
+            Context.MODE_PRIVATE)
+
         _fragmentCameraBinding = FragmentCameraBinding.bind(view)
 
         batteryHandler = BatteryHandler(this, realTimeViewModel)
@@ -480,13 +492,22 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         emergencyManager = EmergencyManager(this, webRTCManager, realTimeViewModel)
         quickMenuHandler = QuickMenuHandler(this)
 
+        val savedThreshold = detectionSharedPreferences.getFloat(PREF_THRESHOLD, 0.50f)
+        val savedMaxResults = detectionSharedPreferences.getInt(PREF_MAX_RESULTS, 3)
+        val savedThreads = detectionSharedPreferences.getInt(PREF_THREADS, 2)
+        val savedDelegate = detectionSharedPreferences.getInt(PREF_DELEGATE, 0)
+
         webRTCManager.connectMainServiceListener()
         service = MainService.getInstance()
         mainRepository = MainRepository.getInstance(requireContext())
 
         objectDetectorHelper = ObjectDetectorHelper(
             context = requireContext(),
-            objectDetectorListener = this
+            objectDetectorListener = this,
+            threshold = savedThreshold,
+            maxResults = savedMaxResults,
+            numThreads = savedThreads,
+            currentDelegate = savedDelegate
         )
         cameraExecutor = Executors.newSingleThreadExecutor()
         fragmentCameraBinding?.viewFinder?.post {
@@ -498,8 +519,9 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         quickMenuHandler.observeCaregiverUid()
 
         // Init. detection controls
-        detectionControls = DetectionControlsHandler(this)
-        detectionControls.initControlsAndListeners()
+        detectionControlsHandler = DetectionControlsHandler(this)
+        detectionControlsHandler.initControlsAndListeners()
+        detectionControlsHandler.synchronizeUiWithDetector()
 
         viewLifecycleOwner.lifecycleScope.launch {
             if (emergencyManager.checkIfEmergencyMode()) {

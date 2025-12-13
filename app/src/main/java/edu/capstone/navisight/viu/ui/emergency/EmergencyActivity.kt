@@ -17,7 +17,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import edu.capstone.navisight.common.Constants.SHARED_PREFERENCES_NAME
+import edu.capstone.navisight.common.Constants.GLOBAL_LOCAL_SETTINGS
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.VibrationHelper
 import edu.capstone.navisight.common.webrtc.service.MainService
@@ -48,7 +48,7 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
         serviceRepository = MainServiceRepository.getInstance(applicationContext)
 
         sharedPreferences = applicationContext.getSharedPreferences(
-            SHARED_PREFERENCES_NAME,
+            GLOBAL_LOCAL_SETTINGS,
             MODE_PRIVATE)
 
         // Set the listener to handle remote end call signals

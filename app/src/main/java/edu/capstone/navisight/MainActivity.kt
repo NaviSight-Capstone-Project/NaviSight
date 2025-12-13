@@ -9,8 +9,6 @@ Please do not delete necessary comments or TODOs unless finished or unneeded.
 
  */
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -26,7 +24,7 @@ import edu.capstone.navisight.auth.data.remote.CloudinaryDataSource
 import edu.capstone.navisight.auth.domain.GetUserCollectionUseCase
 import edu.capstone.navisight.caregiver.CaregiverHomeFragment
 import edu.capstone.navisight.caregiver.service.ViuMonitorService
-import edu.capstone.navisight.common.Constants.SHARED_PREFERENCES_NAME
+import edu.capstone.navisight.common.Constants.GLOBAL_LOCAL_SETTINGS
 import edu.capstone.navisight.common.Constants.USER_TYPE_CAREGIVER
 import edu.capstone.navisight.common.Constants.USER_TYPE_KEY
 import edu.capstone.navisight.common.Constants.USER_TYPE_VIU
@@ -88,7 +86,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun saveUserType(userType: String) {
-        val sharedPref = getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
+        val sharedPref = getSharedPreferences(GLOBAL_LOCAL_SETTINGS, Context.MODE_PRIVATE)
         with(sharedPref.edit()) {
             putString(USER_TYPE_KEY, userType)
             apply()

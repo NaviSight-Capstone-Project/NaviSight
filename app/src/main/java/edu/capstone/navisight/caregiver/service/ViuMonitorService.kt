@@ -5,22 +5,17 @@ import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import android.util.Log
-import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import edu.capstone.navisight.MainActivity
-import edu.capstone.navisight.R
 import edu.capstone.navisight.caregiver.domain.notificationUseCase.SaveAlertUseCase
 import edu.capstone.navisight.caregiver.domain.viuUseCase.GetConnectedViuUidsUseCase
 import edu.capstone.navisight.caregiver.domain.viuUseCase.GetViuByUidUseCase
 import edu.capstone.navisight.caregiver.model.AlertNotification
 import edu.capstone.navisight.caregiver.model.AlertType
 import edu.capstone.navisight.caregiver.ui.emergency.EmergencySignal
-import edu.capstone.navisight.caregiver.ui.emergency.EmergencyViewModel
-import edu.capstone.navisight.common.Constants.SHARED_PREFERENCES_NAME
+import edu.capstone.navisight.common.Constants.GLOBAL_LOCAL_SETTINGS
 import edu.capstone.navisight.common.Constants.USER_TYPE_CAREGIVER
 import edu.capstone.navisight.common.Constants.USER_TYPE_KEY
 import edu.capstone.navisight.common.NaviSightNotificationManager
-import edu.capstone.navisight.common.webrtc.FirebaseClient
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import java.util.UUID
@@ -62,7 +57,7 @@ class ViuMonitorService : Service() {
     }
 
     private fun getCurrentUserType(): String {
-        val sharedPref = getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
+        val sharedPref = getSharedPreferences(GLOBAL_LOCAL_SETTINGS, Context.MODE_PRIVATE)
         // Read the stored value, providing a default if not found
         return sharedPref.getString(USER_TYPE_KEY, "UNKNOWN") ?: "UNKNOWN"
     }

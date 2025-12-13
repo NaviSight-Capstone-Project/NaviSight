@@ -1,12 +1,20 @@
 package edu.capstone.navisight.viu.ui.camera.managers
 
+import android.content.SharedPreferences
 import android.util.Log
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.AdapterView
 import edu.capstone.navisight.R
+import edu.capstone.navisight.common.Constants.PREF_DELEGATE
+import edu.capstone.navisight.common.Constants.PREF_MAX_RESULTS
+import edu.capstone.navisight.common.Constants.PREF_THREADS
+import edu.capstone.navisight.common.Constants.PREF_THRESHOLD
+import edu.capstone.navisight.common.Constants.VIU_LOCAL_SETTINGS
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.viu.ui.camera.CameraFragment
+
+private const val TAG = "DetectionControlsHandler"
 
 class DetectionControlsHandler (
     private val cameraFragment : CameraFragment) {
@@ -14,6 +22,32 @@ class DetectionControlsHandler (
     val fragmentCameraBinding = cameraFragment.fragmentCameraBinding
     val objectDetectorHelper = cameraFragment.objectDetectorHelper
     var isControlsVisible: Boolean = false // Track mode state
+
+    private val detectionSharedPreferences: SharedPreferences
+        get() = cameraFragment.requireContext().getSharedPreferences(
+            VIU_LOCAL_SETTINGS,
+            android.content.Context.MODE_PRIVATE)
+
+    fun synchronizeUiWithDetector() {
+        Log.d(TAG, "Synchronizing UI controls with detector settings.")
+        fragmentCameraBinding?.bottomSheetLayout?.maxResultsValue?.text =
+            objectDetectorHelper.maxResults.toString()
+        fragmentCameraBinding?.bottomSheetLayout?.thresholdValue?.text =
+            String.format("%.2f", objectDetectorHelper.threshold)
+        fragmentCameraBinding?.bottomSheetLayout?.threadsValue?.text =
+            objectDetectorHelper.numThreads.toString()
+        fragmentCameraBinding?.bottomSheetLayout?.spinnerDelegate?.setSelection(
+            objectDetectorHelper.currentDelegate,
+            false // Do not call onItemSelected listener
+        )
+        objectDetectorHelper.clearObjectDetector()
+        fragmentCameraBinding?.overlay?.clear()
+    }
+
+    private fun onControlsChanged() {
+        synchronizeUiWithDetector()
+        saveDetectionSettings()
+    }
 
     // Initialize all the listeners for the bottom sheet controls
     fun initControlsAndListeners() {
@@ -108,8 +142,18 @@ class DetectionControlsHandler (
         // delegate needs to be initialized on the thread using it when applicable
         objectDetectorHelper.clearObjectDetector()
         fragmentCameraBinding?.overlay?.clear()
+        saveDetectionSettings()
     }
 
+    private fun saveDetectionSettings() {
+        detectionSharedPreferences.edit().apply {
+            putFloat(PREF_THRESHOLD, objectDetectorHelper.threshold)
+            putInt(PREF_MAX_RESULTS, objectDetectorHelper.maxResults)
+            putInt(PREF_THREADS, objectDetectorHelper.numThreads)
+            putInt(PREF_DELEGATE, objectDetectorHelper.currentDelegate)
+            apply()
+        }
+    }
 
     fun toggleBottomSheet(isVisible: Boolean) {
         val bottomSheet = fragmentCameraBinding?.bottomSheetLayout?.bottomSheetLayout ?: return
