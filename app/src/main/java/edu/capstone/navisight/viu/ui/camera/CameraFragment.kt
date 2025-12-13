@@ -12,7 +12,6 @@ import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.GestureDetector
 import android.view.KeyEvent
@@ -34,7 +33,6 @@ import androidx.core.view.GestureDetectorCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.lifecycleScope
 import edu.capstone.navisight.R
 import edu.capstone.navisight.common.Constants.PREF_DELEGATE
@@ -45,9 +43,8 @@ import edu.capstone.navisight.common.Constants.VIU_LOCAL_SETTINGS
 import edu.capstone.navisight.databinding.FragmentCameraBinding
 import edu.capstone.navisight.viu.detectors.ObjectDetection
 import edu.capstone.navisight.viu.ui.profile.ProfileFragment
-import edu.capstone.navisight.viu.utils.ObjectDetectorHelper
+import edu.capstone.navisight.common.objectdetection.ObjectDetectorHelper
 import edu.capstone.navisight.common.TextToSpeechHelper
-import edu.capstone.navisight.common.VibrationHelper
 import edu.capstone.navisight.common.webrtc.repository.MainRepository
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.viu.ViuHomeViewModel
@@ -67,7 +64,6 @@ import edu.capstone.navisight.viu.ui.camera.managers.QuickMenuHandler
 import edu.capstone.navisight.viu.ui.camera.managers.ScreensaverHandler
 import edu.capstone.navisight.viu.ui.camera.managers.WebRTCManager
 import edu.capstone.navisight.viu.ui.ocr.DocumentReaderFragment
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 

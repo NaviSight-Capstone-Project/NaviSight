@@ -1,4 +1,4 @@
-package edu.capstone.navisight.viu.utils
+package edu.capstone.navisight.common.objectdetection
 
 import android.content.Context
 import android.graphics.Bitmap

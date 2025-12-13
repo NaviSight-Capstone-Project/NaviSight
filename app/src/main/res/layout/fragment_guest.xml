@@ -30,7 +30,7 @@
         android:importantForAccessibility="no"
         app:scaleType="fillStart"/>
 
-    <edu.capstone.navisight.viu.utils.OverlayView
+    <edu.capstone.navisight.common.objectdetection.OverlayView
         android:id="@+id/overlay"
         android:layout_height="match_parent"
         android:layout_width="match_parent" />
