@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-
+import edu.capstone.navisight.viu.domain.locationUseCase.UpdateUserRealTimeDataUseCase
 data class ProfileUiState(
     val user: Viu? = null,
     val qr: QR? = null,
@@ -36,8 +36,8 @@ sealed class ProfileUiEvent {
 class ProfileViewModel(
     private val getViuProfileUseCase: GetViuProfileUseCase = GetViuProfileUseCase(),
     private val generateQrUseCase: GenerateOrFetchQrUseCase = GenerateOrFetchQrUseCase(),
-    private val remoteDataSource: ViuDataSource
-
+    private val remoteDataSource: ViuDataSource,
+    private val updateUserRealTimeDataUseCase: UpdateUserRealTimeDataUseCase = UpdateUserRealTimeDataUseCase()
 ) : ViewModel() {
 
     private val firebaseClient = FirebaseClient.getInstance()
@@ -53,13 +53,15 @@ class ProfileViewModel(
         fun provideFactory(
             remoteDataSource: ViuDataSource,
             getViuProfileUseCase: GetViuProfileUseCase = GetViuProfileUseCase(),
-            generateQrUseCase: GenerateOrFetchQrUseCase = GenerateOrFetchQrUseCase()
+            generateQrUseCase: GenerateOrFetchQrUseCase = GenerateOrFetchQrUseCase(),
+            updateUserRealTimeDataUseCase: UpdateUserRealTimeDataUseCase = UpdateUserRealTimeDataUseCase()
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 return ProfileViewModel(
                     getViuProfileUseCase = getViuProfileUseCase,
                     generateQrUseCase = generateQrUseCase,
+                    updateUserRealTimeDataUseCase = updateUserRealTimeDataUseCase,
                     remoteDataSource = remoteDataSource
                 ) as T
             }
@@ -117,6 +119,13 @@ class ProfileViewModel(
 
     fun logout() {
         viewModelScope.launch {
+            try {
+                // 1. Set Realtime DB status to offline using the UseCase
+                updateUserRealTimeDataUseCase.setOffline()
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error setting offline status: ${e.message}")
+            }
+
             // Logout visually then update all firebase instances:
             //      Firestore DB
             //      Realtime DB
