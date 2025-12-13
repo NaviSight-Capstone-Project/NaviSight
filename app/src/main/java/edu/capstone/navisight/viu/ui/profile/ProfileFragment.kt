@@ -136,6 +136,7 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
                         },
                         onScanDocument = { showReader = true }, // Trigger reader view
                         onBackClick = {
+                            TextToSpeechHelper.speak(requireContext(),"Going back to camera. Please wait.")
                             requireActivity().supportFragmentManager.commit {
                                 replace(R.id.fragment_container, CameraFragment(realTimeViewModel))
                                 setReorderingAllowed(true)
