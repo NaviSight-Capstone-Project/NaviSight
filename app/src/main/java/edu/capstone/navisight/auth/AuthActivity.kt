@@ -11,6 +11,7 @@ import edu.capstone.navisight.auth.ui.signup.RoleSelectionFragment
 import edu.capstone.navisight.auth.ui.signup.caregiver.CaregiverSignupFragment
 import edu.capstone.navisight.auth.ui.signup.viu.ViuSignupFragment
 import edu.capstone.navisight.common.Constants.VIBRATE_SUCCESS
+import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.VibrationHelper
 
 class AuthActivity : AppCompatActivity() {
@@ -31,6 +32,7 @@ class AuthActivity : AppCompatActivity() {
         val intent = Intent(this, MainActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
+        TextToSpeechHelper.speak(applicationContext, "Welcome back to NaviSight!")
         VibrationHelper.vibratePattern(applicationContext, VIBRATE_SUCCESS)
         finish()
     }
