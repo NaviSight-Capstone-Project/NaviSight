@@ -39,12 +39,14 @@ import edu.capstone.navisight.common.Constants.PREF_DELEGATE
 import edu.capstone.navisight.common.Constants.PREF_MAX_RESULTS
 import edu.capstone.navisight.common.Constants.PREF_THREADS
 import edu.capstone.navisight.common.Constants.PREF_THRESHOLD
+import edu.capstone.navisight.common.Constants.VIBRATE_SUCCESS
 import edu.capstone.navisight.common.Constants.VIU_LOCAL_SETTINGS
 import edu.capstone.navisight.databinding.FragmentCameraBinding
 import edu.capstone.navisight.viu.detectors.ObjectDetection
 import edu.capstone.navisight.viu.ui.profile.ProfileFragment
 import edu.capstone.navisight.common.objectdetection.ObjectDetectorHelper
 import edu.capstone.navisight.common.TextToSpeechHelper
+import edu.capstone.navisight.common.VibrationHelper
 import edu.capstone.navisight.common.webrtc.repository.MainRepository
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.viu.ViuHomeViewModel
@@ -326,14 +328,15 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     }
 
     fun toggleDetectionUiMode(enable: Boolean) {
-        TextToSpeechHelper.speak(
-            requireContext(),
-            "Object detection settings opened")
         if (!isAdded) return
         if (enable == isDetectionUiModeActive) return // Avoid redundant toggles
         isDetectionUiModeActive = enable
 
         if (enable) {
+            TextToSpeechHelper.speak(
+                requireContext(),
+                "Object detection settings opened")
+            VibrationHelper.vibratePattern(requireContext(), VIBRATE_SUCCESS)
             screensaverHandler.resetScreensaverBrightness()
             fragmentCameraBinding?.previewModeOverlay?.visibility = View.INVISIBLE
             detectionControlsHandler.toggleBottomSheet(true)
@@ -343,6 +346,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
             TextToSpeechHelper.speak(
                 requireContext(),
                 "Object detection settings closed")
+            VibrationHelper.vibratePattern(requireContext(), VIBRATE_SUCCESS)
             detectionControlsHandler.toggleBottomSheet(false) // Close
             fragmentCameraBinding?.previewModeOverlay?.visibility = View.VISIBLE
             fragmentCameraBinding?.touchInterceptorView?.setOnLongClickListener {
@@ -368,6 +372,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
             if (isAdded) {
                 TextToSpeechHelper.clearQueue() // Clear
                 TextToSpeechHelper.speak(safeContext, "Navigating to Profile Page")
+                VibrationHelper.vibratePattern(requireContext(), VIBRATE_SUCCESS)
                 requireActivity().supportFragmentManager.commit {
                     setReorderingAllowed(true)
                     replace(

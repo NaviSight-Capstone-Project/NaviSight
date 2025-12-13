@@ -25,12 +25,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import edu.capstone.navisight.R
+import edu.capstone.navisight.common.Constants
+import edu.capstone.navisight.common.Constants.VIBRATE_SUCCESS
 import edu.capstone.navisight.guest.GuestFragment
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.viu.domain.usecase.GenerateOrFetchQrUseCase
 import edu.capstone.navisight.viu.domain.usecase.GetViuProfileUseCase
 import edu.capstone.navisight.viu.ui.call.CallActivity
 import edu.capstone.navisight.common.TextToSpeechHelper
+import edu.capstone.navisight.common.VibrationHelper
 import edu.capstone.navisight.common.webrtc.repository.MainRepository
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.model.DataModel
@@ -71,6 +74,7 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
             Log.e("SettingsFragment", "Error setting offline: ${e.message}")
         }
         viewModel.logout()
+        VibrationHelper.vibratePattern(requireContext(), VIBRATE_SUCCESS)
     }
 
     override fun onResume() {
@@ -136,6 +140,7 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
                         },
                         onScanDocument = { showReader = true }, // Trigger reader view
                         onBackClick = {
+                            VibrationHelper.vibratePattern(requireContext(), VIBRATE_SUCCESS)
                             TextToSpeechHelper.speak(requireContext(),"Going back to camera. Please wait.")
                             requireActivity().supportFragmentManager.commit {
                                 replace(R.id.fragment_container, CameraFragment(realTimeViewModel))

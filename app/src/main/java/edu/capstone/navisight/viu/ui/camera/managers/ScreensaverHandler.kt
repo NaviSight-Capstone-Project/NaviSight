@@ -6,6 +6,7 @@ import android.provider.Settings
 import android.view.View
 import androidx.core.content.ContextCompat
 import edu.capstone.navisight.R
+import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.viu.ui.camera.CameraFragment
 
 class ScreensaverHandler (
@@ -34,6 +35,7 @@ class ScreensaverHandler (
         println("TOGGLED SCREENSAVER is screen saver on state: $isScreensaverActive")
         cameraFragment.fragmentCameraBinding?.let { binding ->
             if (!isScreensaverActive) {
+                TextToSpeechHelper.speak(cameraFragment.requireContext(),"Screensaving")
                 isScreensaverActive = true
                 currentBrightness = Settings.System.getInt(
                     cameraFragment.requireContext().contentResolver, Settings.System.SCREEN_BRIGHTNESS
@@ -49,6 +51,7 @@ class ScreensaverHandler (
                 binding.tooltipDescription1.setText(R.string.screensaver_mode_tooltip_1)
                 binding.tooltipDescription2.setText(R.string.screensaver_mode_tooltip_2)
             } else {
+                TextToSpeechHelper.speak(cameraFragment.requireContext(),"Preview mode")
                 isScreensaverActive = false
                 binding.screensaverEye.setVisibility(View.INVISIBLE)
                 changeScreenBrightness(currentBrightness)

@@ -50,9 +50,11 @@ import edu.capstone.navisight.common.Constants.PREF_DELEGATE
 import edu.capstone.navisight.common.Constants.PREF_MAX_RESULTS
 import edu.capstone.navisight.common.Constants.PREF_THREADS
 import edu.capstone.navisight.common.Constants.PREF_THRESHOLD
+import edu.capstone.navisight.common.Constants.VIBRATE_SUCCESS
 import edu.capstone.navisight.viu.detectors.ObjectDetection
 import edu.capstone.navisight.common.objectdetection.ObjectDetectorHelper
 import edu.capstone.navisight.common.TextToSpeechHelper
+import edu.capstone.navisight.common.VibrationHelper
 import edu.capstone.navisight.databinding.FragmentGuestBinding
 import edu.capstone.navisight.viu.ui.braillenote.BrailleNoteFragment
 import edu.capstone.navisight.viu.ui.ocr.DocumentReaderFragment
@@ -266,14 +268,15 @@ class GuestFragment :
     }
 
     fun toggleDetectionUiMode(enable: Boolean) {
-        TextToSpeechHelper.speak(
-            requireContext(),
-            "Object detection settings opened")
         if (!isAdded) return
         if (enable == isDetectionUiModeActive) return // Avoid redundant toggles
         isDetectionUiModeActive = enable
 
         if (enable) {
+            TextToSpeechHelper.speak(
+                requireContext(),
+                "Object detection settings opened")
+            VibrationHelper.vibratePattern(requireContext(), VIBRATE_SUCCESS)
             fragmentCameraBinding?.previewModeOverlay?.visibility = View.INVISIBLE
             resetScreensaverBrightness()
             detectionControlsHandler.toggleBottomSheet(true)
@@ -283,6 +286,7 @@ class GuestFragment :
             TextToSpeechHelper.speak(
                 requireContext(),
                 "Object detection settings closed")
+            VibrationHelper.vibratePattern(requireContext(), VIBRATE_SUCCESS)
             detectionControlsHandler.toggleBottomSheet(false) // Close
             fragmentCameraBinding?.previewModeOverlay?.visibility = View.VISIBLE
             fragmentCameraBinding?.previewModeHitbox?.setOnLongClickListener {
