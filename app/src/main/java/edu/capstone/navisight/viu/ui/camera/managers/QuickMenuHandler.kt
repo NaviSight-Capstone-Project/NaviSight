@@ -3,6 +3,7 @@ package edu.capstone.navisight.viu.ui.camera.managers
 import android.content.ContentValues
 import android.os.Environment
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
@@ -119,16 +120,18 @@ class QuickMenuHandler (
     fun lockPreviewMode(){
         if (cameraFragment.isPreviewLocked) {
             cameraFragment.isPreviewLocked = false
+            cameraFragment.screensaverHandler.toggleScreenSaver(false)
+            cameraFragment.fragmentCameraBinding?.screensaverEyeAndPreviewLock?.setImageResource(R.drawable.ic_screensaver_eye)
             TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Preview mode is now unlocked")
             cameraFragment.quickMenuFragment?.screensaverLockView?.setImageResource(R.drawable.ic_unlock)
-            cameraFragment.screensaverHandler.toggleScreenSaver(false)
             cameraFragment.screensaverHandler.startAutoScreenSaver()
         } else {
-            Log.d("HAHAHA", "test")
+            cameraFragment.screensaverHandler.toggleScreenSaver(true)
             cameraFragment.isPreviewLocked = true
+            cameraFragment.fragmentCameraBinding?.screensaverEyeAndPreviewLock?.setImageResource(R.drawable.ic_lock)
+            cameraFragment.fragmentCameraBinding?.screensaverEyeAndPreviewLock?.setVisibility(View.VISIBLE)
             TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Preview Mode is now locked")
             cameraFragment.quickMenuFragment?.screensaverLockView?.setImageResource(R.drawable.ic_lock)
-            cameraFragment.screensaverHandler.toggleScreenSaver(true)
             cameraFragment.screensaverHandler.stopAutoScreenSaver()
         }
     }

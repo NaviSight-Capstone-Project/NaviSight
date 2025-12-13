@@ -49,40 +49,33 @@ class ScreensaverHandler (
     fun toggleScreenSaver(forcePreview:Boolean=false) {
         println("TOGGLED SCREENSAVER is screen saver on state: $isScreensaverActive")
         cameraFragment.fragmentCameraBinding?.let { binding ->
-            if (!isScreensaverActive && !forcePreview) {
-                TextToSpeechHelper.speak(cameraFragment.requireContext(),"Screensaving")
-                isScreensaverActive = true
-                currentBrightness = Settings.System.getInt(
-                    cameraFragment.requireContext().contentResolver, Settings.System.SCREEN_BRIGHTNESS
-                ) / 255f
-                binding.screensaverEyeAndPreviewLock.setImageResource(R.drawable.ic_screensaver_eye)
-                binding.screensaverEyeAndPreviewLock.setVisibility(View.VISIBLE)
-                changeScreenBrightness(0.0F)
-                binding.previewModeOverlay.setBackgroundColor(
-                    ContextCompat.getColor(
-                        cameraFragment.context,
-                        R.color.screensaver_color
-                    ))
-                binding.tooltipTitle.setText(R.string.screensaver_mode_tooltip_title)
-                binding.tooltipDescription1.setText(R.string.screensaver_mode_tooltip_1)
-                binding.tooltipDescription2.setText(R.string.screensaver_mode_tooltip_2)
-            } else {
-                TextToSpeechHelper.speak(cameraFragment.requireContext(),"Preview mode")
-                isScreensaverActive = false
-                Log.d("HAHAHA", "oy working")
-                if (cameraFragment.isPreviewLocked) {
-                    Log.d("HAHAHA", "oy set na")
-                    binding.screensaverEyeAndPreviewLock.setImageResource(R.drawable.ic_lock)
+            if (!cameraFragment.isPreviewLocked) {
+                if (!isScreensaverActive && !forcePreview) {
+                    TextToSpeechHelper.speak(cameraFragment.requireContext(),"Screensaving")
+                    isScreensaverActive = true
+                    currentBrightness = Settings.System.getInt(
+                        cameraFragment.requireContext().contentResolver, Settings.System.SCREEN_BRIGHTNESS
+                    ) / 255f
+                    changeScreenBrightness(0.0F)
                     binding.screensaverEyeAndPreviewLock.setVisibility(View.VISIBLE)
+                    binding.previewModeOverlay.setBackgroundColor(
+                        ContextCompat.getColor(
+                            cameraFragment.context,
+                            R.color.screensaver_color
+                        ))
+                    binding.tooltipTitle.setText(R.string.screensaver_mode_tooltip_title)
+                    binding.tooltipDescription1.setText(R.string.screensaver_mode_tooltip_1)
+                    binding.tooltipDescription2.setText(R.string.screensaver_mode_tooltip_2)
                 } else {
-                    binding.screensaverEyeAndPreviewLock.setImageResource(R.drawable.ic_screensaver_eye)
+                    TextToSpeechHelper.speak(cameraFragment.requireContext(),"Preview mode")
+                    isScreensaverActive = false
                     binding.screensaverEyeAndPreviewLock.setVisibility(View.INVISIBLE)
+                    changeScreenBrightness(currentBrightness)
+                    binding.previewModeOverlay.setBackgroundColor(0)
+                    binding.tooltipTitle.setText(R.string.preview_mode_tooltip_title)
+                    binding.tooltipDescription1.setText(R.string.preview_mode_tooltip_1)
+                    binding.tooltipDescription2.setText(R.string.preview_mode_tooltip_2)
                 }
-                changeScreenBrightness(currentBrightness)
-                binding.previewModeOverlay.setBackgroundColor(0)
-                binding.tooltipTitle.setText(R.string.preview_mode_tooltip_title)
-                binding.tooltipDescription1.setText(R.string.preview_mode_tooltip_1)
-                binding.tooltipDescription2.setText(R.string.preview_mode_tooltip_2)
             }
         }
     }
