@@ -234,7 +234,13 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
             ): Boolean {
                 // Check for Slide Left
                 if (e1 != null && e1.x - e2.x > SWIPE_THRESHOLD && abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
-                    navigateToProfile()
+                    navigateToProfile() // Navigate to profile
+                    return true
+                }
+                // Check for Swipe Up
+                if (e1 != null && e1.y - e2.y > SWIPE_THRESHOLD && abs(velocityY) > SWIPE_VELOCITY_THRESHOLD) {
+                    Log.d(TAG, "Swipe Up Detected: Executing action.")
+
                     return true
                 }
                 return false
