@@ -53,6 +53,21 @@ object VibrationHelper {
         Log.i(tag, "Vibrated for $milliseconds milliseconds")
     }
 
+    fun vibrate(context: Context?) {
+        if (context == null || !ViuSettingsManager.getBoolean(
+                context,
+                ViuSettingsManager.KEY_VIBRATION,
+                true)) {
+            Log.i(tag, "Vibration is disabled in settings. Skipping vibration.")
+            return
+        }
+        val singlePulse = listOf(HapticEvent(defaultVibrationMilliseconds, isVibration = true))
+        helperScope.launch {
+            vibrationFlow.emit(Pair(context, singlePulse))
+            Log.d(tag, "Single pulse event emitted. Awaiting debounce.")
+        }
+    }
+
     // Vibrate - default func.
     fun vibrate(context: Context?, milliseconds: Long = defaultVibrationMilliseconds) {
         if (context == null || !ViuSettingsManager.getBoolean(
