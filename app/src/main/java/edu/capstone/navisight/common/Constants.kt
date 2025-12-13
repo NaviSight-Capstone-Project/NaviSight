@@ -54,5 +54,41 @@ object Constants {
         HapticEvent(durationMs = 40L, isVibration = false),
         HapticEvent(durationMs = 60L, isVibration = true)
     )
+
+    // Object Detection
+    val INDOOR_MODE = true
+    val OUTDOOR_ITEMS = listOf<String>(
+        "bicycle",
+        "car",
+        "motorcycle",
+        "airplane",
+        "bus",
+        "train",
+        "truck",
+        "boat",
+        "traffic light",
+        "fire hydrant",
+        "stop sign",
+        "parking meter",
+        "bench",
+        "bird",
+        "horse",
+        "sheep",
+        "cow",
+        "elephant",
+        "bear",
+        "zebra",
+        "giraffe",
+        "frisbee",
+        "skis",
+        "snowboard",
+        "sports ball",
+        "kite",
+        "baseball bat",
+        "baseball glove",
+        "skateboard",
+        "surfboard",
+        "tennis racket"
+    )
 }
 

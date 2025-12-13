@@ -16,6 +16,9 @@ import java.util.LinkedList
 import kotlin.math.abs
 import kotlin.math.max
 import edu.capstone.navisight.R
+import edu.capstone.navisight.common.Constants.INDOOR_MODE
+import edu.capstone.navisight.common.Constants.OUTDOOR_ITEMS
+import edu.capstone.navisight.common.Constants.VIBRATE_OBJECT_DETECTED
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.VibrationHelper
 
@@ -68,42 +71,47 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
 
     override fun draw(canvas: Canvas) {
         super.draw(canvas)
-
         for (result in results) {
-            val boundingBox = result.boundingBox
+            // Check if label is in indoors (if activated, else just detect)
+            if (!INDOOR_MODE || !OUTDOOR_ITEMS.contains(result.category.label)) {
+                val boundingBox = result.boundingBox
 
-            val top = boundingBox.top * scaleFactor
-            val bottom = boundingBox.bottom * scaleFactor
-            val left = boundingBox.left * scaleFactor
-            val right = boundingBox.right * scaleFactor
+                val top = boundingBox.top * scaleFactor
+                val bottom = boundingBox.bottom * scaleFactor
+                val left = boundingBox.left * scaleFactor
+                val right = boundingBox.right * scaleFactor
 
-            // Draw bounding box around detected objects
-            val drawableRect = RectF(left, top, right, bottom)
-            canvas.drawRect(drawableRect, boxPaint)
+                // Draw bounding box around detected objects
+                val drawableRect = RectF(left, top, right, bottom)
+                canvas.drawRect(drawableRect, boxPaint)
 
-            // Create text to display alongside detected objects
-            val drawableText =
-                result.category.label + " " +
-                        String.format("%.2f %.2f", result.category.confidence,
-                            getThresholdLevel(calculateCurrentBBArea(result)))
+                // Create text to display alongside detected objects
+                // THE LABEL IS HERE.
+                val drawableText =
+                    result.category.label + " " +
+                            String.format("%.2f %.2f", result.category.confidence,
+                                getThresholdLevel(calculateCurrentBBArea(result)))
 
-            // Draw rect behind display text
-            textBackgroundPaint.getTextBounds(drawableText, 0, drawableText.length, bounds)
-            val textWidth = bounds.width()
-            val textHeight = bounds.height()
-            canvas.drawRect(
-                left,
-                top,
-                left + textWidth + Companion.BOUNDING_RECT_TEXT_PADDING,
-                top + textHeight + Companion.BOUNDING_RECT_TEXT_PADDING,
-                textBackgroundPaint
-            )
+                // Draw rect behind display text
+                textBackgroundPaint.getTextBounds(drawableText, 0, drawableText.length, bounds)
+                val textWidth = bounds.width()
+                val textHeight = bounds.height()
+                canvas.drawRect(
+                    left,
+                    top,
+                    left + textWidth + Companion.BOUNDING_RECT_TEXT_PADDING,
+                    top + textHeight + Companion.BOUNDING_RECT_TEXT_PADDING,
+                    textBackgroundPaint
+                )
 
-            // Draw text for detected object
-            canvas.drawText(drawableText, left, top + bounds.height(), textPaint)
+                // Draw text for detected object
+                canvas.drawText(drawableText, left, top + bounds.height(), textPaint)
 
-            // Do action if detected
-            doOnDetection(result)
+                // Do action if detected
+                // TODO: LOOK HERE TO PREPROCESS
+                doOnDetection(result)
+            }
+            // Do nothing.
         }
     }
 
@@ -132,7 +140,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
 
     private fun doOnDetection(result : ObjectDetection) {
         speakWhenDetected(context, result)  // Do Text to Speech, with variability.
-        VibrationHelper.vibrate(context)
+        VibrationHelper.vibratePattern(context, VIBRATE_OBJECT_DETECTED)
     }
 
     private fun calculateCurrentBBArea(result: ObjectDetection): Float {
