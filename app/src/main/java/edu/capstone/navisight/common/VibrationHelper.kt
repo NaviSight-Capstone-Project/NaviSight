@@ -46,11 +46,8 @@ object VibrationHelper {
 
     // Vibrate regardless of setting
     fun emergencyVibrate(context: Context?, milliseconds:Long=defaultVibrationMilliseconds){
-        val vibrator = context?.getSystemService(Vibrator::class.java)
-        vibrator?.vibrate(
-            VibrationEffect.createOneShot(milliseconds,
-                VibrationEffect.DEFAULT_AMPLITUDE))
-        Log.i(tag, "Vibrated for $milliseconds milliseconds")
+        val singlePulse = listOf(HapticEvent(milliseconds, isVibration = true))
+        vibratePattern(context, singlePulse)
     }
 
     fun vibrate(context: Context?) {
@@ -61,11 +58,9 @@ object VibrationHelper {
             Log.i(tag, "Vibration is disabled in settings. Skipping vibration.")
             return
         }
-        val singlePulse = listOf(HapticEvent(defaultVibrationMilliseconds, isVibration = true))
-        helperScope.launch {
-            vibrationFlow.emit(Pair(context, singlePulse))
-            Log.d(tag, "Single pulse event emitted. Awaiting debounce.")
-        }
+        val singlePulse = listOf(HapticEvent(defaultVibrationMilliseconds,
+            isVibration = true))
+        vibratePattern(context, singlePulse)
     }
 
     // Vibrate - default func.
@@ -78,10 +73,7 @@ object VibrationHelper {
             return
         }
         val singlePulse = listOf(HapticEvent(milliseconds, isVibration = true))
-        helperScope.launch {
-            vibrationFlow.emit(Pair(context, singlePulse))
-            Log.d(tag, "Single pulse event emitted. Awaiting debounce.")
-        }
+        vibratePattern(context, singlePulse)
     }
 
     // Overloaded default func. for handling kotlin durasyon
@@ -95,35 +87,7 @@ object VibrationHelper {
         }
         val singlePulse = listOf(HapticEvent(
             milliseconds.toLong(DurationUnit.MILLISECONDS), isVibration = true))
-        helperScope.launch {
-            vibrationFlow.emit(Pair(context, singlePulse))
-            Log.d(tag, "Single pulse event emitted. Awaiting debounce.")
-        }
-    }
-
-
-    private fun performVibration(context: Context, milliseconds: Long) {
-        val vibrator = context.getSystemService(Vibrator::class.java)
-        vibrator?.vibrate(
-            VibrationEffect.createOneShot(milliseconds,
-                VibrationEffect.DEFAULT_AMPLITUDE))
-        Log.i(tag, "VIBRATION TRIGGERED. Time since last trigger > $DEBOUNCE_PERIOD_MS ms.")
-    }
-
-    fun vibrateAfterDelay(
-        context: Context?,
-        delayMilliseconds:Long=defaultDelayMilliseconds,
-        vibrationMilliseconds:Long=defaultVibrationMilliseconds)
-    {
-        if (context != null && !ViuSettingsManager.getBoolean(
-                context,
-                ViuSettingsManager.KEY_VIBRATION,
-                true)) {
-            Log.i(tag, "Vibration is disabled in settings. Skipping vibration.")
-            return
-        }
-        sleep(delayMilliseconds)
-        vibrate(context, vibrationMilliseconds)
+        vibratePattern(context, singlePulse)
     }
 
     fun vibratePattern(context: Context?, pattern: List<HapticEvent>) {
@@ -134,22 +98,51 @@ object VibrationHelper {
             Log.i(tag, "Vibration is disabled or context is null. Skipping pattern.")
             return
         }
-        helperScope.launch {
-            vibrationFlow.emit(Pair(context, pattern))
-            Log.d(tag, "Pattern event emitted. Awaiting debounce.")
+
+        // Debounce Bypass Logic
+        val isShortSinglePulse = pattern.size == 1 &&
+                pattern.first().isVibration &&
+                pattern.first().durationMs < 100L // < 100ms is a safe UI tap threshold
+
+        if (isShortSinglePulse) {
+            // Execute immediately, bypassing the flow/debounce
+            performVibrationPattern(context, pattern)
+            Log.d(tag, "Single pulse executed immediately (bypassed debounce).")
+        } else {
+            // Use the debounced flow for complex or longer patterns
+            helperScope.launch {
+                vibrationFlow.emit(Pair(context, pattern))
+                Log.d(tag, "Pattern event emitted to debounced flow.")
+            }
         }
     }
 
+    @Suppress("Deprecation")
     private fun performVibrationPattern(context: Context, pattern: List<HapticEvent>) {
-        val vibrator = context.getSystemService(Vibrator::class.java)
+        // Service Lookup
+        val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            // Modern, type-safe lookup for Android 12+
+            context.getSystemService(Vibrator::class.java)
+        } else {
+            // Old, reliable string constant lookup for older/problematic OEMs
+            @Suppress("DEPRECATION")
+            context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        }
+
+        if (vibrator == null) {
+            Log.e(tag, "Vibrator service not available on this device.")
+            return
+        }
+
         val timings = pattern.map { it.durationMs }.toLongArray()
         val amplitudes = pattern.map {
             if (it.isVibration) VibrationEffect.DEFAULT_AMPLITUDE else 0
         }.toIntArray()
+
         // Log the pattern execution details
         Log.i(tag,
             "PATTERN TRIGGERED: Timings: ${timings.joinToString()}, " +
                     "Amplitudes: ${amplitudes.joinToString()}")
-        vibrator?.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
+        vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
     }
 }
