@@ -38,10 +38,8 @@ class ObjectDetectorHelper(
     // that are created on the main thread and used on a background thread, but
     // the GPU delegate needs to be used on the thread that initialized the detector
     fun setupObjectDetector() {
-
         try {
                 objectDetector = YoloDetector(
-
                     threshold,
                     0.3f,
                     numThreads,
@@ -49,22 +47,15 @@ class ObjectDetectorHelper(
                     currentDelegate,
                     currentModel,
                     context,
-
                     )
-
         }
         catch (e : Exception) {
-
             objectDetectorListener?.onError(e.toString())
-
         }
-
-
     }
 
 
     fun detect(image: Bitmap, imageRotation: Int) {
-
         if (objectDetector == null) {
             setupObjectDetector()
         }

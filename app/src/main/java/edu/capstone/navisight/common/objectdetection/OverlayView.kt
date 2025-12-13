@@ -8,6 +8,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.util.DisplayMetrics
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import androidx.core.content.ContextCompat
@@ -22,6 +23,7 @@ import edu.capstone.navisight.common.Constants.OUTDOOR_ITEMS
 import edu.capstone.navisight.common.Constants.VIBRATE_OBJECT_DETECTED
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.VibrationHelper
+import kotlin.math.pow
 
 class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs) {
 
@@ -31,13 +33,14 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
     private var textPaint = Paint()
 
     private var lastLabel = "";
+    private var lastSpokenStatement = "";
 
     private var scaleFactor: Float = 1f
 
     private var bounds = Rect()
 
     // For TTS and handling Bounding Box Area changes
-    private var lastDetectedArea =  0F
+    private var lastDetectedArea = 0F
     private var lastAreaThreshold = 0.0F
     private var currentAreaThreshold = 0.0F
     private val areaThresholds = listOf(0.70F, 0.35F, 0.10F) // In percentages
@@ -47,6 +50,15 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
     init {
         initPaints()
     }
+
+//    data class StableDetection(
+//        val trackId: Int,             // Simplified: just a unique ID for aggregation (0 for now)
+//        val className: String,
+//        val confidence: Float,
+//        val position: String,         // "AHEAD", "TO YOUR LEFT", or "TO YOUR RIGHT"
+//        val proximityThreshold: Float, // Proximity based on area (0.0F - 100.0F)
+//        val box: RectF                // The current bounding box
+//    )
 
     fun clear() {
         textPaint.reset()
@@ -73,6 +85,9 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
     override fun draw(canvas: Canvas) {
         super.draw(canvas)
         for (result in results) {
+
+            getObjectPosition(result)
+
             // Check if label is in indoors (if activated, else just detect)
             if (!INDOOR_MODE || !OUTDOOR_ITEMS.contains(result.category.label)) {
                 val boundingBox = result.boundingBox
@@ -90,8 +105,10 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
                 // THE LABEL IS HERE: result.category.label
                 val drawableText =
                     result.category.label + " " +
-                            String.format("%.2f %.2f", result.category.confidence,
-                                getThresholdLevel(calculateCurrentBBArea(result)))
+                            String.format(
+                                "%.2f %.2f", result.category.confidence,
+                                getThresholdLevel(calculateCurrentBBArea(result))
+                            )
 
                 // Draw rect behind display text
                 textBackgroundPaint.getTextBounds(drawableText, 0, drawableText.length, bounds)
@@ -139,7 +156,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
         return Pair(displayMetrics.widthPixels, displayMetrics.heightPixels)
     }
 
-    private fun doOnDetection(result : ObjectDetection) {
+    private fun doOnDetection(result: ObjectDetection) {
         speakWhenDetected(context, result)  // Do Text to Speech, with variability.
         VibrationHelper.vibratePattern(context, VIBRATE_OBJECT_DETECTED)
     }
@@ -160,7 +177,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
         // Log.println(Log.INFO, "screen size", "$results")
         // Log.println(Log.INFO, "bounds check (l/x1 t/y1 r/x2 b/y2)", "$left $top $right $bottom")
 
-        var estimatedLabel =  when {
+        var estimatedLabel = when {
             percent >= areaThresholds[0] -> "A $label is on front of you"
             percent >= areaThresholds[1] -> "A $label is close to you"
             percent >= areaThresholds[2] -> "A $label is nearby"
@@ -181,8 +198,8 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
     }
 
     private fun getThresholdLevel(area: Float): Float {
-        val results = getScreenSizeOldApi(context)
-        val screenArea = (results.first) * (results.second)
+        val screenSizes = getScreenSizeOldApi(context)
+        val screenArea = (screenSizes.first) * (screenSizes.second)
         val percent = ((area / screenArea) / 3) * 100 // TODO: Optimize equation.
 
         for (areaThreshold in areaThresholds) {
@@ -194,7 +211,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
     }
 
     // Handle when TTS should speak and avoid speech flurry.
-    private fun speakWhenDetected(context: Context, result: ObjectDetection){
+    private fun speakWhenDetected(context: Context, result: ObjectDetection) {
         val currentLabel = result.category.label
         val currentDetectedArea = calculateCurrentBBArea(result)
         val currentSpeechQueue = TextToSpeechHelper.getSpeechQueue()
@@ -217,4 +234,133 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
             lastDetectedArea = currentDetectedArea
         }
     }
+
+    private fun getObjectPosition(detection: ObjectDetection): String {
+        val screenSizes = getScreenSizeOldApi(context)
+        val centerX = detection.boundingBox.centerX()
+
+        // FIX: Using a 30/40/30 split (Left/Ahead/Right) to make the side zones more responsive.
+        // This solves the issue of objects feeling "to the right" but being classified as "AHEAD."
+        val leftBoundary = screenSizes.first * 0.06
+        val rightBoundary = screenSizes.first * 0.12
+
+        val result = when {
+            centerX < leftBoundary -> "TO YOUR LEFT"
+            centerX > rightBoundary -> "TO YOUR RIGHT"
+            else -> "AHEAD"
+        }
+
+//        Log.d("GETOBJECTPOSITION", "LeftBoundary is $leftBoundary. RightBoundary is $rightBoundary. Width is ${screenSizes.first}. The center X is $centerX, current result is '$result'")
+        return ""
+    }
 }
+//
+//    private fun processAllDetectionsAndSpeak(context: Context?, stableDetections: List<StableDetection>){
+//        if (stableDetections.isEmpty()) {
+//            lastSpokenStatement = "" // Reset state if nothing is detected
+//            return
+//        }
+//
+//        // This calls generateAggregatedStatement(), which is the Semantic Aggregation step
+//        val finalStatement = generateAggregatedStatement(stableDetections)
+//
+//        // CORE TEMPORAL STABILIZATION CHECK:
+//        // Only speak if the new statement is NOT empty AND it is DIFFERENT from the last one.
+//        if (finalStatement.isNotEmpty() && finalStatement != lastSpokenStatement) {
+//            val currentSpeechQueue = TextToSpeechHelper.getSpeechQueue()
+//
+//            // Safety check: Clear the queue if too many speeches are pending
+//            if (currentSpeechQueue.size > speechQueueThreshold) TextToSpeechHelper.clearQueue()
+//
+//            // Speak the new narrative
+//            TextToSpeechHelper.queueSpeakLatest(context, finalStatement)
+//
+//            // UPDATE STATE: Save the new statement so it won't be repeated in the next frame
+//            lastSpokenStatement = finalStatement
+//
+//            // Vibrate on new, critical detection
+//            VibrationHelper.vibratePattern(context, VIBRATE_OBJECT_DETECTED)
+//        }
+//    }
+//
+//
+//    private fun groupDetectionsByProximity(stableDetections: List<StableDetection>): List<List<StableDetection>> {
+//        if (stableDetections.isEmpty()) return emptyList()
+//
+//        val groups = mutableListOf<MutableList<StableDetection>>()
+//        val processedIndices = mutableSetOf<Int>()
+//
+//        for (i in stableDetections.indices) {
+//            if (i in processedIndices) continue
+//
+//            val current = stableDetections[i]
+//            val currentGroup = mutableListOf(current)
+//            processedIndices.add(i)
+//
+//            for (j in stableDetections.indices) {
+//                if (i == j || j in processedIndices) continue
+//
+//                val neighbor = stableDetections[j]
+//
+//                // Check if the center of the bounding boxes are within a threshold
+//                val center1X = current.box.centerX()
+//                val center1Y = current.box.centerY()
+//                val center2X = neighbor.box.centerX()
+//                val center2Y = neighbor.box.centerY()
+//
+//                // Calculate Euclidean distance between centers
+//                val distance = kotlin.math.sqrt(
+//                    (center1X - center2X).pow(2) +
+//                            (center1Y - center2Y).pow(2)
+//                )
+//
+////                if (distance < PROXIMITY_PIXEL_THRESHOLD) {
+////                    currentGroup.add(neighbor)
+////                    processedIndices.add(j)
+////                }
+//            }
+//            groups.add(currentGroup)
+//        }
+//        return groups
+//    }
+//
+//    private fun generateAggregatedStatement(stableDetections: List<StableDetection>): String {
+//        if (stableDetections.isEmpty()) return ""
+//
+//        val groupedItems = groupDetectionsByProximity(stableDetections)
+//        val statements = mutableListOf<String>()
+//
+//        for (group in groupedItems) {
+//            val primary = group.first()
+//            val position = primary.position
+//            val proximity = primary.proximityThreshold
+//
+//            val proximityWord = when {
+//                proximity >= 35.0F -> "VERY CLOSE" // Using the 0.35 threshold from old logic
+//                proximity >= 10.0F -> "CLOSE"
+//                else -> ""
+//            }
+//
+//            if (group.size > 1) {
+//                // Semantic Aggregation: "Person and dog to your right"
+//                val secondaryNames = group.drop(1).joinToString(" and ") { it.className.lowercase() }
+//
+//                // Prioritize the nearest one in the group
+//                val primaryName = if (proximityWord.isNotEmpty()) "$proximityWord ${primary.className.uppercase()}" else primary.className.uppercase()
+//
+//                statements.add("$primaryName near $secondaryNames ${position}")
+//            } else {
+//                // Single Object: "Chair AHEAD"
+//                val statement = if (proximityWord.isNotEmpty()) {
+//                    "$proximityWord ${primary.className.uppercase()} ${position}"
+//                } else {
+//                    "${primary.className.uppercase()} ${position}"
+//                }
+//                statements.add(statement)
+//            }
+//        }
+//
+//        // Combine all statements into a single, cohesive narrative
+//        return "WARNING. ${statements.joinToString(". ")}."
+//    }
+//}
