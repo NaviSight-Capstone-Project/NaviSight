@@ -3,7 +3,9 @@ package edu.capstone.navisight.viu.ui.camera.managers
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import android.view.View
+import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import edu.capstone.navisight.R
 import edu.capstone.navisight.common.TextToSpeechHelper
@@ -26,21 +28,35 @@ class ScreensaverHandler (
         }
     }
 
-    fun doAutoScreensaver() {
-        idleHandler.removeCallbacks(idleRunnable)
+    init {
+        // PURE WHITE
+        cameraFragment.fragmentCameraBinding?.screensaverEyeAndPreviewLock?.setColorFilter(
+            ContextCompat.getColor(
+                cameraFragment.requireContext(),
+                android.R.color.white),
+            android.graphics.PorterDuff.Mode.SRC_IN)
+    }
+
+    fun startAutoScreenSaver() {
+        stopAutoScreenSaver()
         idleHandler.postDelayed(idleRunnable, idleTimeout)
     }
 
-    fun toggleScreenSaver() {
+    fun stopAutoScreenSaver(){
+        idleHandler.removeCallbacks(idleRunnable)
+    }
+
+    fun toggleScreenSaver(forcePreview:Boolean=false) {
         println("TOGGLED SCREENSAVER is screen saver on state: $isScreensaverActive")
         cameraFragment.fragmentCameraBinding?.let { binding ->
-            if (!isScreensaverActive) {
+            if (!isScreensaverActive && !forcePreview) {
                 TextToSpeechHelper.speak(cameraFragment.requireContext(),"Screensaving")
                 isScreensaverActive = true
                 currentBrightness = Settings.System.getInt(
                     cameraFragment.requireContext().contentResolver, Settings.System.SCREEN_BRIGHTNESS
                 ) / 255f
-                binding.screensaverEye.setVisibility(View.VISIBLE)
+                binding.screensaverEyeAndPreviewLock.setImageResource(R.drawable.ic_screensaver_eye)
+                binding.screensaverEyeAndPreviewLock.setVisibility(View.VISIBLE)
                 changeScreenBrightness(0.0F)
                 binding.previewModeOverlay.setBackgroundColor(
                     ContextCompat.getColor(
@@ -53,7 +69,15 @@ class ScreensaverHandler (
             } else {
                 TextToSpeechHelper.speak(cameraFragment.requireContext(),"Preview mode")
                 isScreensaverActive = false
-                binding.screensaverEye.setVisibility(View.INVISIBLE)
+                Log.d("HAHAHA", "oy working")
+                if (cameraFragment.isPreviewLocked) {
+                    Log.d("HAHAHA", "oy set na")
+                    binding.screensaverEyeAndPreviewLock.setImageResource(R.drawable.ic_lock)
+                    binding.screensaverEyeAndPreviewLock.setVisibility(View.VISIBLE)
+                } else {
+                    binding.screensaverEyeAndPreviewLock.setImageResource(R.drawable.ic_screensaver_eye)
+                    binding.screensaverEyeAndPreviewLock.setVisibility(View.INVISIBLE)
+                }
                 changeScreenBrightness(currentBrightness)
                 binding.previewModeOverlay.setBackgroundColor(0)
                 binding.tooltipTitle.setText(R.string.preview_mode_tooltip_title)

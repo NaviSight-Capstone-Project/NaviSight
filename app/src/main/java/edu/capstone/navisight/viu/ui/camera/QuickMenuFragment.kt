@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.DragEvent
 import android.view.View
+import android.widget.ImageView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import edu.capstone.navisight.R
@@ -38,6 +39,8 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
 
     // Map View IDs to their respective Views for easy access
     private lateinit var ballViews: Map<Int, View>
+
+    lateinit var screensaverLockView: ImageView
 
     // Init. Speech to Text
     private lateinit var speechToTextHelper: SpeechToTextHandler
@@ -97,6 +100,8 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        screensaverLockView = view.findViewById(R.id.ball_screensaver_lock)
+
         // Alert user that quick menu is active
         TextToSpeechHelper.speak(requireContext(),
             "Quick Menu activated. Say 'where am I' or 'time'.")
@@ -120,6 +125,7 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
             R.id.ball_flip_camera to view.findViewById(R.id.ball_flip_camera),
             R.id.ball_ocr to view.findViewById(R.id.ball_ocr),
             R.id.ball_bk_note to view.findViewById(R.id.ball_bk_note),
+            R.id.ball_screensaver_lock to view.findViewById(R.id.ball_screensaver_lock)
         )
 
         // Set the drag listener on the entire root view of the fragment
@@ -145,6 +151,7 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
             "ball_bk_note" -> return if (isVerbose)
                 "Take notes with your keyboard" else "Quick Notes"
             "ball_ocr" -> return if (isVerbose) "Use OCR" else "OCR"
+            "ball_screensaver_lock" -> return "Toggle Preview Mode Lock"
         }
         throw IllegalArgumentException(
             "viewId used is invalid. Choose a correct ID")

@@ -57,9 +57,9 @@ object TextToSpeechHelper : TextToSpeech.OnInitListener {
         }
     }
 
-    fun queueSpeakLatest(context: Context, text: String, customDelayMs: Long = 0L) {
+    fun queueSpeakLatest(context: Context?, text: String, customDelayMs: Long = 0L) {
         if (tts == null) {
-            tts = TextToSpeech(context.applicationContext, this)
+            tts = TextToSpeech(context?.applicationContext, this)
         }
         speechQueue.clear()
         speechQueue.add(text)

@@ -87,6 +87,8 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     lateinit var service: MainService
     lateinit var mainRepository : MainRepository
 
+    var isPreviewLocked = false
+
     // Init. camera system vars
     var imageCapture: ImageCapture? = null
     var camera: Camera? = null
@@ -105,7 +107,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
 
     private lateinit var emergencyManager : EmergencyManager
     private lateinit var batteryHandler: BatteryHandler
-    private lateinit var screensaverHandler : ScreensaverHandler
+    lateinit var screensaverHandler : ScreensaverHandler
     lateinit var cameraBindsHandler : CameraBindsHandler
     private lateinit var quickMenuHandler : QuickMenuHandler
     private lateinit var webRTCManager : WebRTCManager
@@ -154,11 +156,11 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         if (result.resultCode == AppCompatActivity.RESULT_OK) {
             Log.d(TAG, "CallActivity finished. Re-binding camera use cases.")
             cameraBindsHandler.setUpCamera()
-            screensaverHandler.doAutoScreensaver()
+            screensaverHandler.startAutoScreenSaver()
         } else {
             Log.d(TAG, "CallActivity finished with result code ${result.resultCode}. Re-binding camera use cases anyway.")
             cameraBindsHandler.setUpCamera()
-            screensaverHandler.doAutoScreensaver()
+            screensaverHandler.startAutoScreenSaver()
         }
     }
 
@@ -203,6 +205,9 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
                     .addToBackStack(null)
                     .commit()
                 Log.d(QUICK_MENU_TAG, "Executed: Braille Keyboard note app")
+            }
+            R.id.ball_screensaver_lock -> {
+                quickMenuHandler.lockPreviewMode()
             }
         }
     }
@@ -298,7 +303,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
                     toggleDetectionUiMode(false) // Tap outside bottom sheet to exit
                 } else {
                     screensaverHandler.toggleScreenSaver()
-                    screensaverHandler.doAutoScreensaver()
+                    screensaverHandler.startAutoScreenSaver()
                 }
             }
 
@@ -314,7 +319,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
 
             //  TOUCH LISTENER: Feeds the Gesture Detector
             setOnTouchListener { _, event ->
-                screensaverHandler.doAutoScreensaver() // Reset screensaver timer on any interaction
+                screensaverHandler.startAutoScreenSaver() // Reset screensaver timer on any interaction
 
                 // Pass event to GestureDetector (Handles Slide Left)
                 if (gestureDetector.onTouchEvent(event)) {
@@ -342,7 +347,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
             detectionControlsHandler.toggleBottomSheet(true)
             fragmentCameraBinding?.touchInterceptorView?.setOnLongClickListener(null)
         } else {
-            screensaverHandler.doAutoScreensaver()
+            screensaverHandler.startAutoScreenSaver()
             TextToSpeechHelper.speak(
                 requireContext(),
                 "Object detection settings closed")

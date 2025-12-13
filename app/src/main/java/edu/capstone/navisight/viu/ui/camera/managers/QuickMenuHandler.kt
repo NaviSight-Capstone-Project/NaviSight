@@ -115,4 +115,21 @@ class QuickMenuHandler (
         // Rebind the camera use cases with the new selector
         cameraFragment.cameraBindsHandler.bindCameraUseCases()
     }
+
+    fun lockPreviewMode(){
+        if (cameraFragment.isPreviewLocked) {
+            cameraFragment.isPreviewLocked = false
+            TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Preview mode is now unlocked")
+            cameraFragment.quickMenuFragment?.screensaverLockView?.setImageResource(R.drawable.ic_unlock)
+            cameraFragment.screensaverHandler.toggleScreenSaver(false)
+            cameraFragment.screensaverHandler.startAutoScreenSaver()
+        } else {
+            Log.d("HAHAHA", "test")
+            cameraFragment.isPreviewLocked = true
+            TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Preview Mode is now locked")
+            cameraFragment.quickMenuFragment?.screensaverLockView?.setImageResource(R.drawable.ic_lock)
+            cameraFragment.screensaverHandler.toggleScreenSaver(true)
+            cameraFragment.screensaverHandler.stopAutoScreenSaver()
+        }
+    }
 }
