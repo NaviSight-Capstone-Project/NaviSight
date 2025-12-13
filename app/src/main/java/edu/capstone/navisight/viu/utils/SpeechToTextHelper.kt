@@ -55,6 +55,11 @@ class SpeechToTextHelper(
     }
 
     fun cleanup() {
-        speechRecognizer.destroy()
+        try {
+            speechRecognizer.destroy()
+        } catch (e: IllegalArgumentException) {
+            Log.e("STT Helper",
+                "Error during destroy: Service not registered or already unbound.", e)
+        }
     }
 }
