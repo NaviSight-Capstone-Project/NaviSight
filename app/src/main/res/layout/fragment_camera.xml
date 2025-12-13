@@ -34,9 +34,7 @@
         android:layout_height="match_parent"
         android:layout_width="match_parent" />
 
-    <include
-        android:id="@+id/bottom_sheet_layout"
-        layout="@layout/info_bottom_sheet" />
+
 
     <LinearLayout
         android:id="@+id/preview_mode_overlay"
@@ -106,5 +104,9 @@
         android:contentDescription="@string/camera_accessibility_hint"
         android:background="@android:color/transparent"
         />
+    <include
+        android:id="@+id/bottom_sheet_layout"
+        android:visibility="gone"
+        layout="@layout/info_bottom_sheet" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

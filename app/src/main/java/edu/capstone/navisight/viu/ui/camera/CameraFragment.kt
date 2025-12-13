@@ -56,6 +56,7 @@ import kotlin.apply
 import edu.capstone.navisight.viu.ui.braillenote.BrailleNoteFragment
 import edu.capstone.navisight.viu.ui.camera.managers.BatteryHandler
 import edu.capstone.navisight.viu.ui.camera.managers.CameraBindsHandler
+import edu.capstone.navisight.viu.ui.camera.managers.DetectionControlsHandler
 import edu.capstone.navisight.viu.ui.camera.managers.EmergencyManager
 import edu.capstone.navisight.viu.ui.camera.managers.QuickMenuHandler
 import edu.capstone.navisight.viu.ui.camera.managers.ScreensaverHandler
@@ -102,6 +103,8 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     lateinit var cameraBindsHandler : CameraBindsHandler
     private lateinit var quickMenuHandler : QuickMenuHandler
     private lateinit var webRTCManager : WebRTCManager
+    private lateinit var detectionControls : DetectionControlsHandler
+    var isDetectionUiModeActive: Boolean = false
 
     // Init. screensaver vars
     private val idleHandler = Handler(Looper.getMainLooper())
@@ -240,7 +243,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
                 // Check for Swipe Up
                 if (e1 != null && e1.y - e2.y > SWIPE_THRESHOLD && abs(velocityY) > SWIPE_VELOCITY_THRESHOLD) {
                     Log.d(TAG, "Swipe Up Detected: Executing action.")
-
+                    toggleDetectionUiMode(true)
                     return true
                 }
                 return false
@@ -285,8 +288,12 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
             // CLICK LISTENER: Screensaver Toggle
             // Standard: 1 Tap | TalkBack: Double Tap
             setOnClickListener {
-                screensaverHandler.toggleScreenSaver()
-                screensaverHandler.doAutoScreensaver()
+                if (isDetectionUiModeActive) {
+                    toggleDetectionUiMode(false) // Tap outside bottom sheet to exit
+                } else {
+                    screensaverHandler.toggleScreenSaver()
+                    screensaverHandler.doAutoScreensaver()
+                }
             }
 
             // LONG CLICK LISTENER: Quick Menu
@@ -310,6 +317,34 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
 
                 // Let the event bubble up to trigger onClick or onLongClick if not a swipe
                 return@setOnTouchListener false
+            }
+        }
+    }
+
+    fun toggleDetectionUiMode(enable: Boolean) {
+        TextToSpeechHelper.speak(
+            requireContext(),
+            "Object detection settings opened")
+        if (!isAdded) return
+        if (enable == isDetectionUiModeActive) return // Avoid redundant toggles
+        isDetectionUiModeActive = enable
+
+        if (enable) {
+            fragmentCameraBinding?.previewModeOverlay?.visibility = View.INVISIBLE
+            detectionControls.toggleBottomSheet(true)
+            fragmentCameraBinding?.touchInterceptorView?.setOnLongClickListener(null)
+        } else {
+            TextToSpeechHelper.speak(
+                requireContext(),
+                "Object detection settings closed")
+            detectionControls.toggleBottomSheet(false) // Close
+            fragmentCameraBinding?.previewModeOverlay?.visibility = View.VISIBLE
+            fragmentCameraBinding?.touchInterceptorView?.setOnLongClickListener {
+                // If Volume Key is held, or Detection UI is active, do NOT open menu
+                if (isVolumeKeyPressed || isDetectionUiModeActive)
+                    return@setOnLongClickListener true
+                startQuickMenuDrag(it)
+                return@setOnLongClickListener true // Consumed
             }
         }
     }
@@ -459,8 +494,12 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         }
 
         screensaverHandler.toggleScreenSaver()
-        setupInputListeners() // NEW SETUP FUNCTION
+        setupInputListeners()
         quickMenuHandler.observeCaregiverUid()
+
+        // Init. detection controls
+        detectionControls = DetectionControlsHandler(this)
+        detectionControls.initControlsAndListeners()
 
         viewLifecycleOwner.lifecycleScope.launch {
             if (emergencyManager.checkIfEmergencyMode()) {
@@ -482,6 +521,8 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         imageWidth: Int
     ) {
         activity?.runOnUiThread {
+            fragmentCameraBinding?.bottomSheetLayout?.inferenceTimeVal?.text =
+                String.format("%d ms", inferenceTime)
             fragmentCameraBinding?.overlay?.setResults(
                 results ?: LinkedList(),
                 imageHeight,
