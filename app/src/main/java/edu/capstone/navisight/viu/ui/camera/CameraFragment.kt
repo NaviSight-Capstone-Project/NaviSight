@@ -338,10 +338,12 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         isDetectionUiModeActive = enable
 
         if (enable) {
+            screensaverHandler.resetScreensaverBrightness()
             fragmentCameraBinding?.previewModeOverlay?.visibility = View.INVISIBLE
             detectionControlsHandler.toggleBottomSheet(true)
             fragmentCameraBinding?.touchInterceptorView?.setOnLongClickListener(null)
         } else {
+            screensaverHandler.doAutoScreensaver()
             TextToSpeechHelper.speak(
                 requireContext(),
                 "Object detection settings closed")

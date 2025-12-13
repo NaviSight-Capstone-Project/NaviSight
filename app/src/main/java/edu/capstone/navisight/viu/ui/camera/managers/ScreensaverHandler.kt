@@ -66,7 +66,7 @@ class ScreensaverHandler (
         }
     }
 
-    private fun changeScreenBrightness(screenBrightnessValue: Float) {
+    fun changeScreenBrightness(screenBrightnessValue: Float) {
         val window = cameraFragment.requireActivity().window
         val layoutParams = window.attributes
         layoutParams.screenBrightness = screenBrightnessValue

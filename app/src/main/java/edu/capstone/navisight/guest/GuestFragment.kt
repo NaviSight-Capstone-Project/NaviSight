@@ -277,10 +277,11 @@ class GuestFragment :
 
         if (enable) {
             fragmentCameraBinding?.previewModeOverlay?.visibility = View.INVISIBLE
-
+            resetScreensaverBrightness()
             detectionControlsHandler.toggleBottomSheet(true)
             fragmentCameraBinding?.previewModeHitbox?.setOnLongClickListener(null)
         } else {
+            changeScreenBrightness(0.0F)
             TextToSpeechHelper.speak(
                 requireContext(),
                 "Object detection settings closed")
@@ -509,6 +510,10 @@ class GuestFragment :
                 TextToSpeechHelper.speak(context, "Preview active")
             }
         }
+    }
+
+    fun resetScreensaverBrightness(){
+        changeScreenBrightness(currentBrightness)
     }
 
     fun changeScreenBrightness(screenBrightnessValue: Float) {
