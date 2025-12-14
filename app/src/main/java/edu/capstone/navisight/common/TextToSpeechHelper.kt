@@ -28,7 +28,8 @@ object TextToSpeechHelper : TextToSpeech.OnInitListener {
     private val speechQueue: Queue<String> = LinkedList()
     private var isSpeaking = false
     private val handler = Handler(Looper.getMainLooper())
-
+    var isSilenced: Boolean = false
+        private set
 
     fun initialize(context: Context) {
         if (tts == null) {
@@ -38,13 +39,30 @@ object TextToSpeechHelper : TextToSpeech.OnInitListener {
         // If tts is already being initialized (not null), do nothing.
     }
 
+    fun toggleSilence(): Boolean {
+        isSilenced = !isSilenced
+
+        // If silencing, immediately stop any current speech
+        if (isSilenced) {
+            stop()
+        }
+        return isSilenced
+    }
+
     fun setRate(rate: Float) {
         if (isInitialized) {
             tts?.setSpeechRate(rate)
         }
     }
 
+    fun stop() {
+        tts?.stop()
+        speechQueue.clear()
+        isSpeaking = false
+    }
+
     fun speak(context: Context, text: String) {
+        if (isSilenced) return
         if (isInitialized) {
             // Speak immediately if initialized
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString())
@@ -118,6 +136,7 @@ object TextToSpeechHelper : TextToSpeech.OnInitListener {
     }
 
     fun queueSpeak(context: Context?, text: String) {
+        if (isSilenced) return
         if (tts == null) {
             tts = TextToSpeech(context?.applicationContext, this)
             speechQueue.add(text)

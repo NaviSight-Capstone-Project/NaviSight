@@ -203,6 +203,14 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         }
     }
 
+    fun turnTTSOn() {
+    }
+
+
+
+    fun turnTTSOff() {
+    }
+
     //////////////////////////////////////////////////
     // END OF INITIALIZATIONS
     //////////////////////////////////////////////////
@@ -249,7 +257,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
                 quickMenuHandler.lockPreviewMode()
             }
             R.id.ball_toggle_TTS_temporarily -> {
-
+                quickMenuHandler.toggleTTSTemporarily()
             }
             R.id.ball_automatic_flash -> {
                 quickMenuHandler.automaticFlash()

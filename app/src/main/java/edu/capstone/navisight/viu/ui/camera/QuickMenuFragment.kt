@@ -128,17 +128,15 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
         speechToTextHelper.initialize()
         speechToTextHelper.startListeningForCommand()
 
-        if (cameraFragment.isPreviewLocked) {
-            screensaverLockView.setImageResource(R.drawable.ic_lock)
-        } else {
-            screensaverLockView.setImageResource(R.drawable.ic_unlock)
-        }
+        val lockDrawableRes = if (cameraFragment.isPreviewLocked) R.drawable.ic_lock else R.drawable.ic_screensaver_eye
+        screensaverLockView.setImageResource(lockDrawableRes)
 
-        if (cameraFragment.isAutomaticFlashOn) {
-            automaticFlashView.setImageResource(R.drawable.ic_automatic_flash)
-        } else {
-            automaticFlashView.setImageResource(R.drawable.ic_automatic_flash_off)
-        }
+        // Set initial state for Automatic Flash
+        val flashDrawableRes = if (cameraFragment.isAutomaticFlashOn) R.drawable.ic_automatic_flash_off else R.drawable.ic_automatic_flash
+        automaticFlashView.setImageResource(flashDrawableRes)
+
+        val ttsDrawableRes = if (TextToSpeechHelper.isSilenced) R.drawable.ic_mute else R.drawable.ic_tts_active
+        ttsToggleView.setImageResource(ttsDrawableRes)
 
         ballViews = mapOf(
             R.id.ball_video_call to view.findViewById(R.id.ball_video_call),

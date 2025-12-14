@@ -155,4 +155,28 @@ class QuickMenuHandler (
             TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Automatic flashlight is on")
         }
     }
+
+    fun toggleTTSTemporarily(){
+        val isNowSilenced = TextToSpeechHelper.toggleSilence()
+
+        val message: String
+        val drawableRes: Int
+
+        if (isNowSilenced) {
+            message = "Text to speech is now silenced"
+            drawableRes = R.drawable.ic_mute // Assuming you have an OFF icon
+        } else {
+            message = "Text to speech is now resumed"
+            drawableRes = R.drawable.ic_tts_active // Assuming you have an ON icon
+        }
+
+        // Update the Quick Menu icon
+        cameraFragment.quickMenuFragment?.ttsToggleView?.setImageResource(drawableRes)
+
+        // Announce the change
+        TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), message)
+
+        // Optional: Also update the CameraFragment state if it's used elsewhere for UI
+        cameraFragment.isTTSSilenced = isNowSilenced
+    }
 }
