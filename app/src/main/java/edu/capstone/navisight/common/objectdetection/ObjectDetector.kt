@@ -3,6 +3,7 @@ package edu.capstone.navisight.common.objectdetection
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.SystemClock
+import edu.capstone.navisight.viu.detectors.DetectionResult
 import edu.capstone.navisight.viu.detectors.ObjectDetection
 import edu.capstone.navisight.viu.detectors.ObjectDetector
 import edu.capstone.navisight.viu.detectors.YoloDetector
@@ -87,6 +88,19 @@ class ObjectDetector(
             )
         }
 
+    }
+
+    fun detect(image: Bitmap, imageRotation: Int, isReturning : Boolean = true) : DetectionResult? {
+        if (objectDetector == null) {
+            setupObjectDetector()
+        }
+        val imageProcessor =
+            ImageProcessor.Builder()
+                .add(Rot90Op(-imageRotation / 90))
+                .build()
+        // Preprocess the image and convert it into a TensorImage for detection.
+        val tensorImage = imageProcessor.process(TensorImage.fromBitmap(image))
+        return objectDetector?.detect(tensorImage, imageRotation)
     }
 
     interface DetectorListener {

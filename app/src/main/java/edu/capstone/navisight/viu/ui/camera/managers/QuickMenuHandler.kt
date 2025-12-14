@@ -8,12 +8,14 @@ import android.widget.Toast
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.commit
 import androidx.lifecycle.lifecycleScope
 import edu.capstone.navisight.R
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.VibrationHelper
+import edu.capstone.navisight.common.objectdetection.DetectionPostProcessor
 import edu.capstone.navisight.viu.ui.camera.CameraFragment
 import edu.capstone.navisight.viu.ui.camera.QuickMenuFragment
 import kotlinx.coroutines.flow.collectLatest
@@ -89,6 +91,49 @@ class QuickMenuHandler (
                     Log.d(QUICK_MENU_TAG, msg)
                     TextToSpeechHelper.speak(cameraFragment.requireContext(), msg)
                     VibrationHelper.vibrate(cameraFragment.requireContext())
+                }
+            }
+        )
+    }
+
+    private fun captureAndProcessForDetection() {
+        val imageCapture = cameraFragment.imageCapture ?: run {
+            Log.e(QUICK_MENU_TAG, "ImageCapture use case not bound.")
+            TextToSpeechHelper.speak(cameraFragment.requireContext(), "Detection failed. Camera is not ready.")
+            return
+        }
+
+        // Announce that capture is starting
+        TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Capturing image for detection.")
+
+        // Use capture method that provides an ImageProxy (in-memory) instead of saving to file
+        imageCapture.takePicture(
+            ContextCompat.getMainExecutor(cameraFragment.requireContext()),
+            object : ImageCapture.OnImageCapturedCallback() {
+                override fun onError(exc: ImageCaptureException) {
+                    Log.e(QUICK_MENU_TAG, "Photo capture for detection failed: ${exc.message}", exc)
+                    TextToSpeechHelper.speak(cameraFragment.requireContext(), "Detection failed. Photo error.")
+                }
+
+                override fun onCaptureSuccess(image: ImageProxy) {
+                    // 1. Convert ImageProxy to Bitmap
+                    val bitmap = image.toBitmap()
+
+                    // 2. Perform Detection (using the returning detect overload)
+                    // ASSUMPTION: cameraFragment.objectDetector is accessible and of the correct type
+                    val detectionResult = cameraFragment.objectDetectorHelper?.detect(bitmap, image.imageInfo.rotationDegrees, isReturning = true) //
+
+                    // Must close the image to avoid resource leaks
+                    image.close()
+
+                    // 3. Post-Process (Generate Narrative and Overlay Bitmap)
+                    val postProcessor = DetectionPostProcessor(cameraFragment.requireContext())
+                    val (imageWithOverlay, narrative) = postProcessor.processDetectionResult(detectionResult)
+
+                    // 4. Announce Narrative
+                    TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), narrative)
+
+                    Log.d(QUICK_MENU_TAG, "Detection successful. Narrative: $narrative")
                 }
             }
         )
@@ -178,5 +223,17 @@ class QuickMenuHandler (
 
         // Optional: Also update the CameraFragment state if it's used elsewhere for UI
         cameraFragment.isTTSSilenced = isNowSilenced
+    }
+
+    fun forceDetection() {
+        // Check if the detector is ready.
+        if (cameraFragment.objectDetectorHelper == null) {
+            Log.e(QUICK_MENU_TAG, "ObjectDetector is null. Cannot force detection.")
+            TextToSpeechHelper.speak(cameraFragment.requireContext(), "Detector is not initialized. Cannot perform immediate detection.")
+            return
+        }
+
+        // Call the new helper function to capture, detect, process, and announce.
+        captureAndProcessForDetection()
     }
 }

@@ -263,7 +263,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
                 quickMenuHandler.automaticFlash()
             }
             R.id.ball_force_detect -> {
-
+                quickMenuHandler.forceDetection()
             }
         }
     }
