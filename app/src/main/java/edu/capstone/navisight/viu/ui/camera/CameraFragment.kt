@@ -51,7 +51,7 @@ import edu.capstone.navisight.common.Constants.VIU_LOCAL_SETTINGS
 import edu.capstone.navisight.databinding.FragmentCameraBinding
 import edu.capstone.navisight.viu.detectors.ObjectDetection
 import edu.capstone.navisight.viu.ui.profile.ProfileFragment
-import edu.capstone.navisight.common.objectdetection.ObjectDetectorHelper
+import edu.capstone.navisight.common.objectdetection.ObjectDetector
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.VibrationHelper
 import edu.capstone.navisight.common.webrtc.repository.MainRepository
@@ -83,7 +83,7 @@ private const val EMERGENCY_SYS_TAG = "EmergencySystem"
 
 class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     Fragment(R.layout.fragment_camera),
-    ObjectDetectorHelper.DetectorListener,  QuickMenuListener, SensorEventListener {
+    ObjectDetector.DetectorListener,  QuickMenuListener, SensorEventListener {
 
     // Init. battery receivers and related
     lateinit var sharedPreferences: SharedPreferences
@@ -114,7 +114,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     val fragmentCameraBinding get() = _fragmentCameraBinding
     val cameraReleaseHandler = Handler(Looper.getMainLooper())
     lateinit var cameraExecutor: ExecutorService
-    lateinit var objectDetectorHelper: ObjectDetectorHelper
+    lateinit var objectDetectorHelper: ObjectDetector
     var preview: Preview? = null
     var imageAnalyzer: ImageAnalysis? = null
     var cameraProvider: ProcessCameraProvider? = null
@@ -586,7 +586,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         val savedThreads = detectionSharedPreferences.getInt(PREF_THREADS, 2)
         val savedDelegate = detectionSharedPreferences.getInt(PREF_DELEGATE, 0)
 
-        objectDetectorHelper = ObjectDetectorHelper(
+        objectDetectorHelper = ObjectDetector(
             context = requireContext(),
             objectDetectorListener = this,
             threshold = savedThreshold,

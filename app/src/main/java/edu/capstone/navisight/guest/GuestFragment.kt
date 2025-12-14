@@ -52,7 +52,7 @@ import edu.capstone.navisight.common.Constants.PREF_THREADS
 import edu.capstone.navisight.common.Constants.PREF_THRESHOLD
 import edu.capstone.navisight.common.Constants.VIBRATE_SUCCESS
 import edu.capstone.navisight.viu.detectors.ObjectDetection
-import edu.capstone.navisight.common.objectdetection.ObjectDetectorHelper
+import edu.capstone.navisight.common.objectdetection.ObjectDetector
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.common.VibrationHelper
 import edu.capstone.navisight.databinding.FragmentGuestBinding
@@ -67,7 +67,7 @@ import kotlin.math.abs
 
 class GuestFragment :
     Fragment(R.layout.fragment_guest),
-    ObjectDetectorHelper.DetectorListener,
+    ObjectDetector.DetectorListener,
     GuestQuickMenuListener {
 
     private val TAG = "ObjectDetection"
@@ -81,7 +81,7 @@ class GuestFragment :
     private lateinit var detectionControlsHandler : GuestDetectionControlsHandler
     lateinit var guestDetectionSharedPreferences: SharedPreferences
 
-    lateinit var objectDetectorHelper: ObjectDetectorHelper
+    lateinit var objectDetectorHelper: ObjectDetector
     private lateinit var bitmapBuffer: Bitmap
     var preview: Preview? = null
     var imageAnalyzer: ImageAnalysis? = null
@@ -187,7 +187,7 @@ class GuestFragment :
         val savedDelegate = guestDetectionSharedPreferences.getInt(
             PREF_DELEGATE, 0)
 
-        objectDetectorHelper = ObjectDetectorHelper(
+        objectDetectorHelper = ObjectDetector(
             context = requireContext(),
             objectDetectorListener = this,
             threshold = savedThreshold,

@@ -25,7 +25,7 @@ import edu.capstone.navisight.common.VibrationHelper
 import kotlin.math.pow
 
 private const val PROXIMITY_PIXEL_THRESHOLD = 150
-private const val CONFIDENCE_THRESHOLD = 0.75f
+private const val CONFIDENCE_THRESHOLD = 0.8f
 private const val INDOOR_MODE = true
 private const val REPEAT_DELAY_MS = 10000L
 
@@ -172,12 +172,6 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
         val w = abs(boundingBox.top - boundingBox.bottom) // y1 - y2
         val a = l * w
         return a
-    }
-
-    private fun didBBAThresholdChanged(currentDetectedArea: Float): Boolean {
-        currentAreaThreshold = getThresholdLevel(currentDetectedArea)
-        val lastAreaThreshold = getThresholdLevel(lastDetectedArea)
-        return currentAreaThreshold != lastAreaThreshold
     }
 
     private fun getThresholdLevel(area: Float): Float {
