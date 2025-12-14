@@ -1,5 +1,6 @@
 package edu.capstone.navisight.viu.ui.camera
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipDescription
@@ -7,7 +8,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.Handler
@@ -29,6 +35,7 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.content.ContextCompat
 import androidx.core.view.GestureDetectorCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -76,7 +83,7 @@ private const val EMERGENCY_SYS_TAG = "EmergencySystem"
 
 class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     Fragment(R.layout.fragment_camera),
-    ObjectDetectorHelper.DetectorListener,  QuickMenuListener {
+    ObjectDetectorHelper.DetectorListener,  QuickMenuListener, SensorEventListener {
 
     // Init. battery receivers and related
     lateinit var sharedPreferences: SharedPreferences
@@ -90,6 +97,14 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     var isPreviewLocked = false
     var isTTSSilenced = false
     var isAutomaticFlashOn = false
+
+    // Auto flash
+    private lateinit var sensorManager: SensorManager
+    private var lightSensor: Sensor? = null
+    private val LIGHT_THRESHOLD = 5.0f // Example: in lux (5 lux is quite dim, like a dark room)
+
+    // Flag to ensure we only turn the flashlight on/off once per state change
+    private var isFlashlightActive = false
 
     // Init. camera system vars
     var imageCapture: ImageCapture? = null
@@ -163,6 +178,28 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
             Log.d(TAG, "CallActivity finished with result code ${result.resultCode}. Re-binding camera use cases anyway.")
             cameraBindsHandler.setUpCamera()
             screensaverHandler.startAutoScreenSaver()
+        }
+    }
+
+
+    fun turnFlashlightOn() {
+        // Check if the CameraX instance is ready and the torch is not already on
+        if (camera != null && !isFlashlightActive) {
+            // CameraX control to enable torch
+            camera?.cameraControl?.enableTorch(true)
+            isFlashlightActive = true
+            Log.d("FLASHLIGHT", "Flashlight ON via Ambient Light Sensor")
+        }
+    }
+
+
+    fun turnFlashlightOff() {
+        // Check if the CameraX instance is ready and the torch is currently on
+        if (camera != null && isFlashlightActive) {
+            // CameraX control to disable torch
+            camera?.cameraControl?.enableTorch(false)
+            isFlashlightActive = false
+            Log.d("FLASHLIGHT", "Flashlight OFF via Ambient Light Sensor")
         }
     }
 
@@ -446,6 +483,12 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
 
     override fun onPause() {
         super.onPause()
+
+        if (::sensorManager.isInitialized) {
+            sensorManager.unregisterListener(this)
+            Log.d("FLASHLIGHT", "Sensor Registration: Light sensor listener unregistered.") // LOG ADDED
+        }
+
         cameraReleaseHandler.removeCallbacksAndMessages(null)
         idleHandler.removeCallbacksAndMessages(null)
         // Removed old handlers cleanup
@@ -465,6 +508,17 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
                 cameraBindsHandler.setUpCamera()
             }
         }
+
+        if (::sensorManager.isInitialized && ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED) {
+            lightSensor?.let {
+                sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+                Log.d("FLASHLIGHT", "Sensor Registration: Light sensor listener registered.") // LOG ADDED
+            } ?: Log.d("FLASHLIGHT", "Sensor Registration: Light sensor is NULL.")
+        }
+
         batteryReceiver = batteryHandler.getBatteryReceiver()
         val intentFilter = IntentFilter().apply {
             addAction(Intent.ACTION_BATTERY_LOW)
@@ -493,6 +547,10 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     @SuppressLint("MissingPermission", "ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        sensorManager = requireActivity().getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
+        Log.d("FLASHLIGHT", "Sensor Setup: Initialized SensorManager. Light Sensor available: ${lightSensor != null}") // LOG ADDED
 
         sharedPreferences = requireContext().getSharedPreferences(
             SHARED_PREFERENCES_NAME,
@@ -583,5 +641,48 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         super.onDestroy()
         screensaverHandler.cleanupScreensaverHandler()
         webRTCManager.releaseMediaPlayer()
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        Log.d(
+            "FLASHLIGHT",
+            "HITTING ON SENSOR CHANGED"
+        )
+        if (event?.sensor?.type == Sensor.TYPE_LIGHT) {
+            val ambientLightLux = event.values[0]
+
+            // LOG MODIFIED: Logs the precise lux value, the current threshold,
+            // and the master state every time a reading is received.
+            Log.d(
+                "FLASHLIGHT",
+                "SENSOR LUX CHECK: Lux=$ambientLightLux | Threshold=$LIGHT_THRESHOLD | AutoFlashEnabled=$isAutomaticFlashOn"
+            )
+
+            // Only run the logic if the user has enabled automatic flash via Quick Menu
+            if (!isAutomaticFlashOn) {
+                turnFlashlightOff()
+                return
+            }
+
+            // Low Light: Below the threshold (turn ON flash)
+            if (ambientLightLux < LIGHT_THRESHOLD) {
+                Log.d(
+                    "FLASHLIGHT",
+                    "AUTO FLASH DECISION: Lux $ambientLightLux < $LIGHT_THRESHOLD. Attempting to turn ON flash."
+                )
+                turnFlashlightOn()
+            }
+            // Sufficient Light: Above the threshold (turn OFF flash)
+            else {
+                Log.d(
+                    "FLASHLIGHT",
+                    "AUTO FLASH DECISION: Lux $ambientLightLux >= $LIGHT_THRESHOLD. Attempting to turn OFF flash."
+                )
+                turnFlashlightOff()
+            }
+        }
+    }
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+        // Required SensorEventListener method, no implementation needed here
     }
 }

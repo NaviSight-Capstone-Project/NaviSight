@@ -21,7 +21,7 @@ class PermissionsHelper (private val mainActivity: AppCompatActivity) {
         Manifest.permission.VIBRATE,
         Manifest.permission.POST_NOTIFICATIONS,
         Manifest.permission.CALL_PHONE,
-        Manifest.permission.WRITE_EXTERNAL_STORAGE
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
     )
 
     init {

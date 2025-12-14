@@ -145,19 +145,13 @@ class QuickMenuHandler (
     fun automaticFlash(){
         if (cameraFragment.isAutomaticFlashOn) {
             cameraFragment.isAutomaticFlashOn = false
-            // TODO:
-
-            // *** FIXED: Reverted to original icon update on the existing fragment instance ***
             cameraFragment.quickMenuFragment?.automaticFlashView?.setImageResource(R.drawable.ic_automatic_flash_off)
-
             TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Automatic flashlight is off")
+            cameraFragment.turnFlashlightOff()
 
         } else {
             cameraFragment.isAutomaticFlashOn = true
-
-            // *** FIXED: Reverted to original icon update on the existing fragment instance ***
             cameraFragment.quickMenuFragment?.automaticFlashView?.setImageResource(R.drawable.ic_automatic_flash)
-
             TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Automatic flashlight is on")
         }
     }
