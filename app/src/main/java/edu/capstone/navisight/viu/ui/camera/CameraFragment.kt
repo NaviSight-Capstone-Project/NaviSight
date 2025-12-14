@@ -88,6 +88,8 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     lateinit var mainRepository : MainRepository
 
     var isPreviewLocked = false
+    var isTTSSilenced = false
+    var isAutomaticFlashOn = false
 
     // Init. camera system vars
     var imageCapture: ImageCapture? = null
@@ -208,6 +210,15 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
             }
             R.id.ball_screensaver_lock -> {
                 quickMenuHandler.lockPreviewMode()
+            }
+            R.id.ball_toggle_TTS_temporarily -> {
+
+            }
+            R.id.ball_automatic_flash -> {
+                quickMenuHandler.automaticFlash()
+            }
+            R.id.ball_force_detect -> {
+
             }
         }
     }

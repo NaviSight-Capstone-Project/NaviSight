@@ -123,7 +123,10 @@ class QuickMenuHandler (
             cameraFragment.screensaverHandler.toggleScreenSaver(false)
             cameraFragment.fragmentCameraBinding?.screensaverEyeAndPreviewLock?.setImageResource(R.drawable.ic_screensaver_eye)
             TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Preview mode is now unlocked")
+
+            // *** FIXED: Reverted to original icon update on the existing fragment instance ***
             cameraFragment.quickMenuFragment?.screensaverLockView?.setImageResource(R.drawable.ic_unlock)
+
             cameraFragment.screensaverHandler.startAutoScreenSaver()
         } else {
             cameraFragment.screensaverHandler.toggleScreenSaver(true)
@@ -131,8 +134,31 @@ class QuickMenuHandler (
             cameraFragment.fragmentCameraBinding?.screensaverEyeAndPreviewLock?.setImageResource(R.drawable.ic_lock)
             cameraFragment.fragmentCameraBinding?.screensaverEyeAndPreviewLock?.setVisibility(View.VISIBLE)
             TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Preview Mode is now locked")
+
+            // *** FIXED: Reverted to original icon update on the existing fragment instance ***
             cameraFragment.quickMenuFragment?.screensaverLockView?.setImageResource(R.drawable.ic_lock)
+
             cameraFragment.screensaverHandler.stopAutoScreenSaver()
+        }
+    }
+
+    fun automaticFlash(){
+        if (cameraFragment.isAutomaticFlashOn) {
+            cameraFragment.isAutomaticFlashOn = false
+            // TODO:
+
+            // *** FIXED: Reverted to original icon update on the existing fragment instance ***
+            cameraFragment.quickMenuFragment?.automaticFlashView?.setImageResource(R.drawable.ic_automatic_flash_off)
+
+            TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Automatic flashlight is off")
+
+        } else {
+            cameraFragment.isAutomaticFlashOn = true
+
+            // *** FIXED: Reverted to original icon update on the existing fragment instance ***
+            cameraFragment.quickMenuFragment?.automaticFlashView?.setImageResource(R.drawable.ic_automatic_flash)
+
+            TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Automatic flashlight is on")
         }
     }
 }

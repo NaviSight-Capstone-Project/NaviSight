@@ -41,6 +41,10 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
     private lateinit var ballViews: Map<Int, View>
 
     lateinit var screensaverLockView: ImageView
+    lateinit var automaticFlashView: ImageView
+    lateinit var ttsToggleView: ImageView
+
+    private lateinit var cameraFragment: CameraFragment
 
     // Init. Speech to Text
     private lateinit var speechToTextHelper: SpeechToTextHandler
@@ -90,6 +94,10 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
         // Ensure the hosting fragment/activity implements the listener
         dragListener = parentFragment as? QuickMenuListener
             ?: throw IllegalStateException("Parent must implement QuickMenuListener")
+
+        // *** ADDED: Get a reference to the parent CameraFragment ***
+        cameraFragment = parentFragment as? CameraFragment
+            ?: throw IllegalStateException("Parent fragment must be CameraFragment")
     }
 
     override fun onDestroyView() {
@@ -101,6 +109,8 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
         super.onViewCreated(view, savedInstanceState)
 
         screensaverLockView = view.findViewById(R.id.ball_screensaver_lock)
+        automaticFlashView = view.findViewById(R.id.ball_automatic_flash)
+        ttsToggleView = view.findViewById(R.id.ball_toggle_TTS_temporarily)
 
         // Alert user that quick menu is active
         TextToSpeechHelper.speak(requireContext(),
@@ -118,6 +128,18 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
         speechToTextHelper.initialize()
         speechToTextHelper.startListeningForCommand()
 
+        if (cameraFragment.isPreviewLocked) {
+            screensaverLockView.setImageResource(R.drawable.ic_lock)
+        } else {
+            screensaverLockView.setImageResource(R.drawable.ic_unlock)
+        }
+
+        if (cameraFragment.isAutomaticFlashOn) {
+            automaticFlashView.setImageResource(R.drawable.ic_automatic_flash)
+        } else {
+            automaticFlashView.setImageResource(R.drawable.ic_automatic_flash_off)
+        }
+
         ballViews = mapOf(
             R.id.ball_video_call to view.findViewById(R.id.ball_video_call),
             R.id.ball_audio_call to view.findViewById(R.id.ball_audio_call),
@@ -125,7 +147,10 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
             R.id.ball_flip_camera to view.findViewById(R.id.ball_flip_camera),
             R.id.ball_ocr to view.findViewById(R.id.ball_ocr),
             R.id.ball_bk_note to view.findViewById(R.id.ball_bk_note),
-            R.id.ball_screensaver_lock to view.findViewById(R.id.ball_screensaver_lock)
+            R.id.ball_screensaver_lock to view.findViewById(R.id.ball_screensaver_lock),
+            R.id.ball_automatic_flash to view.findViewById(R.id.ball_automatic_flash),
+            R.id.ball_force_detect to view.findViewById(R.id.ball_force_detect),
+            R.id.ball_toggle_TTS_temporarily to view.findViewById(R.id.ball_toggle_TTS_temporarily),
         )
 
         // Set the drag listener on the entire root view of the fragment
@@ -152,6 +177,9 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
                 "Take notes with your keyboard" else "Quick Notes"
             "ball_ocr" -> return if (isVerbose) "Use OCR" else "OCR"
             "ball_screensaver_lock" -> return "Toggle Preview Mode Lock"
+            "ball_automatic_flash" -> return "Toggle automatic flashlight"
+            "ball_force_detect" -> return "Detect immediately"
+            "ball_toggle_TTS_temporarily" -> return "Toggle TTS Sound"
         }
         throw IllegalArgumentException(
             "viewId used is invalid. Choose a correct ID")
