@@ -199,7 +199,6 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         }
     }
 
-
     fun turnFlashlightOff() {
         // Check if the CameraX instance is ready and the torch is currently on
         if (camera != null && isFlashlightActive) {
@@ -208,14 +207,6 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
             isFlashlightActive = false
             Log.d("FLASHLIGHT", "Flashlight OFF via Ambient Light Sensor")
         }
-    }
-
-    fun turnTTSOn() {
-    }
-
-
-
-    fun turnTTSOff() {
     }
 
     //////////////////////////////////////////////////
@@ -250,6 +241,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
                     .addToBackStack(null)
                     .commit()
                 Log.d(QUICK_MENU_TAG, "Executed: OCR")
+                onQuickMenuDismissed() // force quit
             }
             R.id.ball_bk_note -> {
                 requireActivity().supportFragmentManager.beginTransaction()
@@ -259,6 +251,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
                     .addToBackStack(null)
                     .commit()
                 Log.d(QUICK_MENU_TAG, "Executed: Braille Keyboard note app")
+                onQuickMenuDismissed() // force quit
             }
             R.id.ball_screensaver_lock -> {
                 quickMenuHandler.lockPreviewMode()

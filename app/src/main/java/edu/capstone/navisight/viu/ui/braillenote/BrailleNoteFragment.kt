@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.viu.data.local.AppDatabase
 import edu.capstone.navisight.viu.data.repository.NoteRepository
 import edu.capstone.navisight.viu.domain.braileUseCase.GetNotesUseCase
@@ -52,6 +53,7 @@ class BrailleNoteFragment : Fragment() {
                                 viewModel = viewModel,
                                 onNavigateToSaved = { isReadingMode = true },
                                 onNavigateBack = {
+                                    TextToSpeechHelper.speak(context, "Returning back to camera. Please wait.")
                                     parentFragmentManager.popBackStack()
                                 }
                             )

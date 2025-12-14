@@ -98,43 +98,6 @@ object TextToSpeechHelper : TextToSpeech.OnInitListener {
         speechQueue.clear()  // Clear all items in the queue
     }
 
-    // TODO: Not used. May incorporate in future distance detection algorithms.
-    fun queueSpeakWithDelay(context: Context, text: String, customDelayMs: Long) {
-        if (tts == null) {
-            tts = TextToSpeech(context.applicationContext, this)
-            speechQueue.add(text)
-        } else {
-            speechQueue.add(text)
-            if (isInitialized && !isSpeaking) {
-                // Schedule the next speech with custom delay
-                handler.postDelayed({
-                    speakNextInQueue()
-                }, customDelayMs)
-            }
-        }
-    }
-
-    // TODO: Not used. May incorporate in future distance detection algorithms.
-    private fun removeConsecutiveDuplicates() {
-        if (speechQueue.isEmpty()) return
-
-        val iterator = speechQueue.iterator()
-        var last: String? = null
-        val tempQueue: Queue<String> = LinkedList()
-
-        while (iterator.hasNext()) {
-            val current = iterator.next()
-            if (last == null || current != last) {
-                tempQueue.add(current)
-                last = current
-            }
-        }
-
-        // Clear and refill the original queue with the filtered items
-        speechQueue.clear()
-        speechQueue.addAll(tempQueue)
-    }
-
     fun queueSpeak(context: Context?, text: String) {
         if (isSilenced) return
         if (tts == null) {
@@ -165,6 +128,7 @@ object TextToSpeechHelper : TextToSpeech.OnInitListener {
     }
 
     private fun speakNextInQueue() {
+        if (isSilenced) return
         removeAllDuplicates()
         if (speechQueue.isNotEmpty()) {
             val nextText = speechQueue.poll()
