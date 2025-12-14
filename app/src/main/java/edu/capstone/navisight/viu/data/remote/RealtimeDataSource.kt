@@ -64,8 +64,28 @@ class RealtimeDataSource {
         try { userRef.updateChildren(updateMap).await() } catch (e: Exception) { }
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////
+    suspend fun getUserLastLocation(): ViuLocation? {
+        val user = auth.currentUser ?: return null
+        val ref = db.child(user.uid).child("location") // Path: viu_location/{uid}/location
+
+        return try {
+            val snapshot: DataSnapshot = ref.get().await()
+
+            // Map the data manually since ViuLocation might not perfectly match the RTDB structure
+            val latitude = snapshot.child("latitude").getValue(Double::class.java)
+            val longitude = snapshot.child("longitude").getValue(Double::class.java)
+            val timestamp = snapshot.child("timestamp").getValue(Long::class.java)
+
+            if (latitude != null && longitude != null && timestamp != null) {
+                ViuLocation(latitude, longitude, timestamp)
+            } else {
+                null // Location data is incomplete
+            }
+        } catch (e: Exception) {
+            Log.e("RealtimeDataSource", "Error retrieving last location: ${e.message}")
+            null
+        }
+    }
 
     fun setUserEmergencyActivated() {
         val user = auth.currentUser ?: return

@@ -47,6 +47,7 @@ import coil.compose.rememberAsyncImagePainter
 import edu.capstone.navisight.R
 import edu.capstone.navisight.auth.util.LegalDocuments
 import edu.capstone.navisight.common.Constants
+import edu.capstone.navisight.common.ConverterHelpers.convertMillisToDate
 import edu.capstone.navisight.common.VibrationHelper
 import java.util.*
 
@@ -62,11 +63,6 @@ fun isAgeValid(birthMillis: Long): Boolean {
         age--
     }
     return age in 18..60
-}
-
-fun convertMillisToDate(millis: Long): String {
-    val formatter = java.text.SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
-    return formatter.format(Date(millis))
 }
 
 @Composable

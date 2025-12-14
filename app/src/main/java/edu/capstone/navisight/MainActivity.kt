@@ -28,6 +28,7 @@ import edu.capstone.navisight.common.Constants.GLOBAL_LOCAL_SETTINGS
 import edu.capstone.navisight.common.Constants.USER_TYPE_CAREGIVER
 import edu.capstone.navisight.common.Constants.USER_TYPE_KEY
 import edu.capstone.navisight.common.Constants.USER_TYPE_VIU
+import edu.capstone.navisight.common.EmailSender
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.disclaimer.DisclaimerFragment
 import edu.capstone.navisight.viu.ViuHomeFragment
@@ -36,6 +37,8 @@ import edu.capstone.navisight.common.webrtc.repository.MainRepository
 import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.service.MainServiceActions
 import edu.capstone.navisight.common.webrtc.service.MainServiceRepository
+import edu.capstone.navisight.viu.model.Caregiver
+import edu.capstone.navisight.viu.model.Viu
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 

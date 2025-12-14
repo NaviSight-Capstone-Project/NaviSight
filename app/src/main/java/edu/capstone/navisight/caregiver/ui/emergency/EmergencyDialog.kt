@@ -16,8 +16,7 @@ fun EmergencyAlertDialog(
     message: String,
     responses: List<Pair<String, androidx.compose.ui.graphics.Color>>,
     onResponseSelected: (String) -> Unit,
-    timestamp: Long,
-    lastLocation: String
+    timestamp: Long
 ) {
     Dialog(
         onDismissRequest = onDismissRequest,

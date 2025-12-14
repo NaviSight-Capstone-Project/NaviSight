@@ -201,8 +201,7 @@ class CaregiverHomeFragment : Fragment(),
                             // This is where the button's functionality is added:
                             emergencyViewModel.handleEmergencyResponse(response, emergencySignal)
                         },
-                        timestamp = emergencySignal.timestamp,
-                        lastLocation = emergencySignal.lastLocation
+                        timestamp = emergencySignal.timestamp
                     )
                 }
             }
