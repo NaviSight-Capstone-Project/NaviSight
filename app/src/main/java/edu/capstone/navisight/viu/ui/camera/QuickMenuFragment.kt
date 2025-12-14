@@ -41,7 +41,6 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
     private lateinit var ballViews: Map<Int, View>
 
     lateinit var screensaverLockView: ImageView
-    lateinit var automaticFlashView: ImageView
     lateinit var ttsToggleView: ImageView
 
     private lateinit var cameraFragment: CameraFragment
@@ -109,7 +108,6 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
         super.onViewCreated(view, savedInstanceState)
 
         screensaverLockView = view.findViewById(R.id.ball_screensaver_lock)
-        automaticFlashView = view.findViewById(R.id.ball_automatic_flash)
         ttsToggleView = view.findViewById(R.id.ball_toggle_TTS_temporarily)
 
         // Alert user that quick menu is active
@@ -131,9 +129,7 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
         val lockDrawableRes = if (cameraFragment.isPreviewLocked) R.drawable.ic_lock else R.drawable.ic_screensaver_eye
         screensaverLockView.setImageResource(lockDrawableRes)
 
-        // Set initial state for Automatic Flash
-        val flashDrawableRes = if (cameraFragment.isAutomaticFlashOn) R.drawable.ic_automatic_flash_off else R.drawable.ic_automatic_flash
-        automaticFlashView.setImageResource(flashDrawableRes)
+
 
         val ttsDrawableRes = if (TextToSpeechHelper.isSilenced) R.drawable.ic_mute else R.drawable.ic_tts_active
         ttsToggleView.setImageResource(ttsDrawableRes)
@@ -146,8 +142,6 @@ class QuickMenuFragment : Fragment(R.layout.dialog_quick_menu) {
             R.id.ball_ocr to view.findViewById(R.id.ball_ocr),
             R.id.ball_bk_note to view.findViewById(R.id.ball_bk_note),
             R.id.ball_screensaver_lock to view.findViewById(R.id.ball_screensaver_lock),
-            R.id.ball_automatic_flash to view.findViewById(R.id.ball_automatic_flash),
-            R.id.ball_force_detect to view.findViewById(R.id.ball_force_detect),
             R.id.ball_toggle_TTS_temporarily to view.findViewById(R.id.ball_toggle_TTS_temporarily),
         )
 

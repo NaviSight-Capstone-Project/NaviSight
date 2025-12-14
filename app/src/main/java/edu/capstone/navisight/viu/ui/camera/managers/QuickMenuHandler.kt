@@ -96,49 +96,6 @@ class QuickMenuHandler (
         )
     }
 
-    private fun captureAndProcessForDetection() {
-        val imageCapture = cameraFragment.imageCapture ?: run {
-            Log.e(QUICK_MENU_TAG, "ImageCapture use case not bound.")
-            TextToSpeechHelper.speak(cameraFragment.requireContext(), "Detection failed. Camera is not ready.")
-            return
-        }
-
-        // Announce that capture is starting
-        TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Capturing image for detection.")
-
-        // Use capture method that provides an ImageProxy (in-memory) instead of saving to file
-        imageCapture.takePicture(
-            ContextCompat.getMainExecutor(cameraFragment.requireContext()),
-            object : ImageCapture.OnImageCapturedCallback() {
-                override fun onError(exc: ImageCaptureException) {
-                    Log.e(QUICK_MENU_TAG, "Photo capture for detection failed: ${exc.message}", exc)
-                    TextToSpeechHelper.speak(cameraFragment.requireContext(), "Detection failed. Photo error.")
-                }
-
-                override fun onCaptureSuccess(image: ImageProxy) {
-                    // 1. Convert ImageProxy to Bitmap
-                    val bitmap = image.toBitmap()
-
-                    // 2. Perform Detection (using the returning detect overload)
-                    // ASSUMPTION: cameraFragment.objectDetector is accessible and of the correct type
-                    val detectionResult = cameraFragment.objectDetectorHelper?.detect(bitmap, image.imageInfo.rotationDegrees, isReturning = true) //
-
-                    // Must close the image to avoid resource leaks
-                    image.close()
-
-                    // 3. Post-Process (Generate Narrative and Overlay Bitmap)
-                    val postProcessor = DetectionPostProcessor(cameraFragment.requireContext())
-                    val (imageWithOverlay, narrative) = postProcessor.processDetectionResult(detectionResult)
-
-                    // 4. Announce Narrative
-                    TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), narrative)
-
-                    Log.d(QUICK_MENU_TAG, "Detection successful. Narrative: $narrative")
-                }
-            }
-        )
-    }
-
     fun switchCamera() {
         if (cameraFragment.cameraProvider == null) {
             Log.e(QUICK_MENU_TAG, "Cannot switch camera: CameraProvider is null.")
@@ -168,10 +125,7 @@ class QuickMenuHandler (
             cameraFragment.screensaverHandler.toggleScreenSaver(false)
             cameraFragment.fragmentCameraBinding?.screensaverEyeAndPreviewLock?.setImageResource(R.drawable.ic_screensaver_eye)
             TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Preview mode is now unlocked")
-
-            // *** FIXED: Reverted to original icon update on the existing fragment instance ***
             cameraFragment.quickMenuFragment?.screensaverLockView?.setImageResource(R.drawable.ic_unlock)
-
             cameraFragment.screensaverHandler.startAutoScreenSaver()
         } else {
             cameraFragment.screensaverHandler.toggleScreenSaver(true)
@@ -179,25 +133,8 @@ class QuickMenuHandler (
             cameraFragment.fragmentCameraBinding?.screensaverEyeAndPreviewLock?.setImageResource(R.drawable.ic_lock)
             cameraFragment.fragmentCameraBinding?.screensaverEyeAndPreviewLock?.setVisibility(View.VISIBLE)
             TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Preview Mode is now locked")
-
-            // *** FIXED: Reverted to original icon update on the existing fragment instance ***
             cameraFragment.quickMenuFragment?.screensaverLockView?.setImageResource(R.drawable.ic_lock)
-
             cameraFragment.screensaverHandler.stopAutoScreenSaver()
-        }
-    }
-
-    fun automaticFlash(){
-        if (cameraFragment.isAutomaticFlashOn) {
-            cameraFragment.isAutomaticFlashOn = false
-            cameraFragment.quickMenuFragment?.automaticFlashView?.setImageResource(R.drawable.ic_automatic_flash_off)
-            TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Automatic flashlight is off")
-            cameraFragment.turnFlashlightOff()
-
-        } else {
-            cameraFragment.isAutomaticFlashOn = true
-            cameraFragment.quickMenuFragment?.automaticFlashView?.setImageResource(R.drawable.ic_automatic_flash)
-            TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Automatic flashlight is on")
         }
     }
 
@@ -223,17 +160,5 @@ class QuickMenuHandler (
 
         // Optional: Also update the CameraFragment state if it's used elsewhere for UI
         cameraFragment.isTTSSilenced = isNowSilenced
-    }
-
-    fun forceDetection() {
-        // Check if the detector is ready.
-        if (cameraFragment.objectDetectorHelper == null) {
-            Log.e(QUICK_MENU_TAG, "ObjectDetector is null. Cannot force detection.")
-            TextToSpeechHelper.speak(cameraFragment.requireContext(), "Detector is not initialized. Cannot perform immediate detection.")
-            return
-        }
-
-        // Call the new helper function to capture, detect, process, and announce.
-        captureAndProcessForDetection()
     }
 }

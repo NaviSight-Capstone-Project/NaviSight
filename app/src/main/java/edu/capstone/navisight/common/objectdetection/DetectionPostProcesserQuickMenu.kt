@@ -79,7 +79,7 @@ class DetectionPostProcessor(private val context: Context) {
             val image = detectionResult?.image?.let { bitmap ->
                 bitmap.copy(bitmap.config ?: Bitmap.Config.ARGB_8888, true)
             } ?: Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
-            return Pair(image, "No objects detected or detection failed.")
+            return Pair(image, "No objects detected. Try again?")
         }
 
         val originalBitmap = detectionResult.image

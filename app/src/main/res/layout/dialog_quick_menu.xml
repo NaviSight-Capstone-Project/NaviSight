@@ -19,25 +19,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <LinearLayout
-            android:layout_marginBottom="30dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <ImageView
-                android:id="@+id/ball_toggle_TTS_temporarily"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:background="@drawable/quick_menu_action_ball"
-                android:padding="20dp"
-                android:src="@drawable/ic_tts_active"
-                app:tint="@color/royal_purple"
-                android:contentDescription="Quick action #2"
-                app:backgroundTint="@color/light_purple"/>
-        </LinearLayout>
-
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -144,28 +125,29 @@
             android:gravity="center_vertical"
             android:layout_marginBottom="16dp">
 
-            <ImageView
-                android:id="@+id/ball_automatic_flash"
-                android:layout_width="100dp"
-                android:layout_height="100dp"
-                android:background="@drawable/quick_menu_action_ball"
-                android:padding="20dp"
-                android:src="@drawable/ic_automatic_flash"
-                app:tint="@color/green"
-                android:layout_marginEnd="25dp"
-                android:contentDescription="Quick action #2"
-                app:backgroundTint="@color/light_green"/>
 
             <ImageView
-                android:id="@+id/ball_force_detect"
+                android:id="@+id/ball_toggle_TTS_temporarily"
                 android:layout_width="100dp"
                 android:layout_height="100dp"
                 android:background="@drawable/quick_menu_action_ball"
                 android:padding="20dp"
-                android:src="@drawable/ic_force_detect"
-                app:tint="@color/white"
-                android:contentDescription="Quick action #3"
-                app:backgroundTint="@color/royal_purple"/>
+                android:src="@drawable/ic_tts_active"
+                app:tint="@color/light_orange"
+                android:layout_marginEnd="25dp"
+                android:contentDescription="Quick action #2"
+                app:backgroundTint="@color/peach"/>
+
+            <ImageView
+                android:id="@+id/ball_screensaver_lock"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:background="@drawable/quick_menu_action_ball"
+                android:padding="20dp"
+                android:src="@drawable/ic_unlock"
+                app:tint="@color/royal_purple"
+                android:contentDescription="Quick action #2"
+                app:backgroundTint="@color/light_purple"/>
         </LinearLayout>
 
         <LinearLayout
@@ -175,16 +157,7 @@
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <ImageView
-                android:id="@+id/ball_screensaver_lock"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:background="@drawable/quick_menu_action_ball"
-                android:padding="20dp"
-                android:src="@drawable/ic_unlock"
-                app:tint="@color/royal_purple"
-                android:contentDescription="Quick action #2"
-                app:backgroundTint="@color/light_purple"/>
+
         </LinearLayout>
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

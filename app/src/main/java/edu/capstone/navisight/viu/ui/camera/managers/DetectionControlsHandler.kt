@@ -166,8 +166,10 @@ class DetectionControlsHandler (
             val slideUp = AnimationUtils.loadAnimation(context, R.anim.slide_in_bottom)
             bottomSheet.startAnimation(slideUp)
             bottomSheet.visibility = View.VISIBLE
+            cameraFragment.forceDetectionView.visibility = View.VISIBLE
         } else {
             val slideDown = AnimationUtils.loadAnimation(context, R.anim.slide_out_bottom)
+            cameraFragment.forceDetectionView.visibility = View.GONE
             bottomSheet.startAnimation(slideDown)
             // Use postDelayed to hide after the animation finishes
             slideDown.setAnimationListener(object : android.view.animation.Animation.AnimationListener {

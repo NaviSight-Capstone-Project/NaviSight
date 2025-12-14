@@ -25,6 +25,7 @@ import android.view.MotionEvent
 import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -69,6 +70,7 @@ import edu.capstone.navisight.viu.ui.camera.managers.BatteryHandler
 import edu.capstone.navisight.viu.ui.camera.managers.CameraBindsHandler
 import edu.capstone.navisight.viu.ui.camera.managers.DetectionControlsHandler
 import edu.capstone.navisight.viu.ui.camera.managers.EmergencyManager
+import edu.capstone.navisight.viu.ui.camera.managers.ForceDetectionHandler
 import edu.capstone.navisight.viu.ui.camera.managers.QuickMenuHandler
 import edu.capstone.navisight.viu.ui.camera.managers.ScreensaverHandler
 import edu.capstone.navisight.viu.ui.camera.managers.WebRTCManager
@@ -89,6 +91,10 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     lateinit var sharedPreferences: SharedPreferences
     private lateinit var batteryReceiver: BatteryStateReceiver
     var batteryAlert: AlertDialog? = null
+
+    lateinit var automaticFlashView: ImageView
+    lateinit var forceDetectionView: ImageView
+    var isAutomaticFlashViewOn = true
 
     // Init. WebRTC and pop-up call and quick menu action vars
     lateinit var service: MainService
@@ -123,6 +129,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     lateinit var detectionSharedPreferences: SharedPreferences
 
     private lateinit var emergencyManager : EmergencyManager
+    private lateinit var forceDetectionHandler: ForceDetectionHandler
     private lateinit var batteryHandler: BatteryHandler
     lateinit var screensaverHandler : ScreensaverHandler
     lateinit var cameraBindsHandler : CameraBindsHandler
@@ -259,12 +266,6 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
             R.id.ball_toggle_TTS_temporarily -> {
                 quickMenuHandler.toggleTTSTemporarily()
             }
-            R.id.ball_automatic_flash -> {
-                quickMenuHandler.automaticFlash()
-            }
-            R.id.ball_force_detect -> {
-                quickMenuHandler.forceDetection()
-            }
         }
     }
 
@@ -275,6 +276,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
             }
         }
         quickMenuFragment = null
+        toggleAutomaticFlashView()
         fragmentCameraBinding?.quickMenuContainer?.visibility = View.GONE
 
         // Ensure input is still listening
@@ -368,7 +370,6 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
             setOnLongClickListener {
                 // If Volume Key is held, do NOT open menu (Priority to Emergency)
                 if (isVolumeKeyPressed) return@setOnLongClickListener true
-
                 startQuickMenuDrag(it)
                 return@setOnLongClickListener true // Consumed
             }
@@ -449,6 +450,8 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         context?.let { safeContext ->
             // Show the drag fragment (the drop targets)
             quickMenuHandler.showQuickMenuFragment()
+
+            toggleAutomaticFlashView()
 
             fragmentCameraBinding?.quickMenuContainer?.visibility = View.VISIBLE
 
@@ -576,6 +579,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         webRTCManager = WebRTCManager(this)
         emergencyManager = EmergencyManager(this, webRTCManager, realTimeViewModel)
         quickMenuHandler = QuickMenuHandler(this)
+        forceDetectionHandler = ForceDetectionHandler(this)
 
         webRTCManager.connectMainServiceListener()
         service = MainService.getInstance()
@@ -585,6 +589,17 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         val savedMaxResults = detectionSharedPreferences.getInt(PREF_MAX_RESULTS, 3)
         val savedThreads = detectionSharedPreferences.getInt(PREF_THREADS, 2)
         val savedDelegate = detectionSharedPreferences.getInt(PREF_DELEGATE, 0)
+
+        forceDetectionView = view.findViewById(R.id.ball_force_detect)
+        forceDetectionView.setOnClickListener {
+            forceDetectionHandler.forceDetection()
+        }
+
+        // state for Automatic Flash
+        automaticFlashView = view.findViewById(R.id.ball_automatic_flash)
+        automaticFlashView.setOnClickListener {
+            toggleAutomaticFlash()
+        }
 
         objectDetectorHelper = ObjectDetector(
             context = requireContext(),
@@ -619,6 +634,30 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         super.onConfigurationChanged(newConfig)
         imageAnalyzer?.targetRotation =
             fragmentCameraBinding?.viewFinder?.display?.rotation ?: Surface.ROTATION_0
+    }
+
+    fun toggleAutomaticFlashView(){
+        if (isAutomaticFlashViewOn) {
+            isAutomaticFlashViewOn = false
+            automaticFlashView.visibility = View.GONE
+        } else {
+            isAutomaticFlashViewOn = true
+            automaticFlashView.visibility = View.VISIBLE
+        }
+    }
+
+
+    fun toggleAutomaticFlash(){
+        if (isAutomaticFlashOn) {
+            isAutomaticFlashOn = false
+            automaticFlashView.setImageResource(R.drawable.ic_automatic_flash)
+            TextToSpeechHelper.speak(requireContext(), "Automatic flashlight is off")
+            turnFlashlightOff()
+        } else {
+            isAutomaticFlashOn = true
+            automaticFlashView.setImageResource(R.drawable.ic_automatic_flash_off)
+            TextToSpeechHelper.speak(requireContext(), "Automatic flashlight is on")
+        }
     }
 
     override fun onResults(

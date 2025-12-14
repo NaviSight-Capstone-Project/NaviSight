@@ -105,6 +105,34 @@
         android:background="@android:color/transparent"
         />
 
+    <ImageView
+        android:id="@+id/ball_force_detect"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:background="@drawable/quick_menu_action_ball"
+        android:padding="15dp"
+        android:src="@drawable/ic_force_detect"
+        app:tint="@color/white"
+        android:contentDescription="Quick action #3"
+        app:backgroundTint="@color/royal_purple"
+        android:layout_marginTop="50dp"
+        android:layout_marginStart="25dp"
+        android:layout_gravity="top|start"
+        android:visibility="gone"/>
+
+    <ImageView
+        android:id="@+id/ball_automatic_flash"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:background="@drawable/quick_menu_action_ball"
+        android:padding="15dp"
+        android:src="@drawable/ic_automatic_flash"
+        app:tint="@color/green"
+        android:layout_marginEnd="25dp"
+        android:layout_marginTop="50dp"  android:contentDescription="Quick action #2"
+        app:backgroundTint="@color/light_green"
+        android:layout_gravity="top|end" />
+
     <include
         android:id="@+id/bottom_sheet_layout"
         android:visibility="gone"
