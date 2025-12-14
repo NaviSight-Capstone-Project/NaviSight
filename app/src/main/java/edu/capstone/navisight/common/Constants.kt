@@ -8,6 +8,13 @@ data class HapticEvent(
     val isVibration: Boolean // true for vibration, false for pause
 )
 
+// Flash and auto flash
+enum class FlashMode {
+    AUTOMATIC,
+    MANUAL_ON,
+    OFF
+}
+
 object Constants {
 
     // Shared Preferences
@@ -54,6 +61,8 @@ object Constants {
         HapticEvent(durationMs = 40L, isVibration = false),
         HapticEvent(durationMs = 60L, isVibration = true)
     )
+
+
 
     // Object Detection
     val OUTDOOR_ITEMS = listOf(

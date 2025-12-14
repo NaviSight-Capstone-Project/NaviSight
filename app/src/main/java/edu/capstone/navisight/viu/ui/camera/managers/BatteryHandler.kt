@@ -8,7 +8,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import edu.capstone.navisight.R
+import edu.capstone.navisight.common.Constants
 import edu.capstone.navisight.common.Constants.SP_IS_USER_WARNED_OF_LOWBAT
+import edu.capstone.navisight.common.FlashMode
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.viu.ViuHomeViewModel
 import edu.capstone.navisight.viu.ui.camera.CameraFragment
@@ -29,8 +31,16 @@ class BatteryHandler (
     }
 
     override fun onBatteryLow() {
+        cameraFragment.activity?.runOnUiThread {
+            cameraFragment.turnFlashlightOff()
+            // Also update the UI state to reflect the forced OFF state
+            if (cameraFragment.currentFlashMode != FlashMode.OFF) {
+                cameraFragment.currentFlashMode = FlashMode.OFF
+                cameraFragment.automaticFlashView.setImageResource(R.drawable.ic_automatic_flash_off)
+            }
+        }
         showLowBatteryAlert()
-        saveBatteryWarnFlag()
+        saveBatteryWarnFlag() // Important
     }
 
     override fun onBatteryOkay() {
@@ -115,9 +125,7 @@ class BatteryHandler (
         } else {
             Log.d(BATTERY_HANDLER_TAG, "Initial battery check found battery at $batteryPct%. Status is OK.")
             cameraFragment.activity?.runOnUiThread {
-                if (cameraFragment.batteryAlert?.isShowing == true) {
-                    onBatteryOkay()
-                }
+                onBatteryOkay()
             }
         }
     }

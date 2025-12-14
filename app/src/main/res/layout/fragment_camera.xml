@@ -34,8 +34,6 @@
         android:layout_height="match_parent"
         android:layout_width="match_parent" />
 
-
-
     <LinearLayout
         android:id="@+id/preview_mode_overlay"
         android:layout_width="match_parent"
@@ -46,10 +44,12 @@
         android:importantForAccessibility="no"
         android:background="@android:color/transparent" >
         <LinearLayout
+            android:id="@+id/icon_and_tooltips"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:layout_gravity="center"
+            android:layout_marginTop="225dp"
             >
             <ImageView
                 android:id="@+id/screensaver_eye_and_preview_lock"
@@ -81,7 +81,26 @@
                 android:gravity="center"
                 android:textColor="@color/preview_mode_tooltip_color"
                 android:text="@string/preview_mode_tooltip_2" />
+
+
         </LinearLayout>
+        <ImageView
+            android:id="@+id/tts_status_icon"
+            android:visibility="invisible"
+            android:layout_width="match_parent"
+            android:layout_height="80sp"
+            android:layout_marginTop="150dp"
+            android:src="@drawable/ic_mute"
+            android:tint="@color/white"
+            tools:ignore="UseAppTint" />
+        <TextView
+            android:id="@+id/tts_status_description"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:visibility="invisible"
+            android:textColor="@color/preview_mode_tooltip_color"
+            android:text="In-app Text-to-Speech disabled. Re-enable on quick menu." />
     </LinearLayout>
 
     <FrameLayout
@@ -129,7 +148,8 @@
         android:src="@drawable/ic_automatic_flash"
         app:tint="@color/green"
         android:layout_marginEnd="25dp"
-        android:layout_marginTop="50dp"  android:contentDescription="Quick action #2"
+        android:layout_marginTop="50dp"
+        android:contentDescription="Quick action #2"
         app:backgroundTint="@color/light_green"
         android:layout_gravity="top|end" />
 

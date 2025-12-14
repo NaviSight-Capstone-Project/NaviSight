@@ -43,12 +43,14 @@ import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
 import androidx.lifecycle.lifecycleScope
 import edu.capstone.navisight.R
+import edu.capstone.navisight.common.Constants
 import edu.capstone.navisight.common.Constants.PREF_DELEGATE
 import edu.capstone.navisight.common.Constants.PREF_MAX_RESULTS
 import edu.capstone.navisight.common.Constants.PREF_THREADS
 import edu.capstone.navisight.common.Constants.PREF_THRESHOLD
 import edu.capstone.navisight.common.Constants.VIBRATE_SUCCESS
 import edu.capstone.navisight.common.Constants.VIU_LOCAL_SETTINGS
+import edu.capstone.navisight.common.FlashMode
 import edu.capstone.navisight.databinding.FragmentCameraBinding
 import edu.capstone.navisight.viu.detectors.ObjectDetection
 import edu.capstone.navisight.viu.ui.profile.ProfileFragment
@@ -101,13 +103,15 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
     lateinit var mainRepository : MainRepository
 
     var isPreviewLocked = false
+
+    // for TTS toggle
     var isTTSSilenced = false
-    var isAutomaticFlashOn = false
 
     // Auto flash
+    var currentFlashMode: FlashMode = FlashMode.AUTOMATIC
     private lateinit var sensorManager: SensorManager
     private var lightSensor: Sensor? = null
-    private val LIGHT_THRESHOLD = 5.0f // Example: in lux (5 lux is quite dim, like a dark room)
+    private val LIGHT_THRESHOLD = 10.0f // Example: in lux (5 lux is quite dim, like a dark room)
 
     // Flag to ensure we only turn the flashlight on/off once per state change
     private var isFlashlightActive = false
@@ -190,12 +194,23 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
 
 
     fun turnFlashlightOn() {
+        val isLowBattery = sharedPreferences.getBoolean(
+            Constants.SP_IS_USER_WARNED_OF_LOWBAT,
+            false
+        )
+
         // Check if the CameraX instance is ready and the torch is not already on
         if (camera != null && !isFlashlightActive) {
+
+            // Block manual ON if low battery, but allow AUTO to turn off (later in onSensorChanged)
+            if (currentFlashMode == FlashMode.MANUAL_ON && isLowBattery) {
+                TextToSpeechHelper.speak(requireContext(), "Cannot turn on flashlight. Battery is too low.")
+                return
+            }
             // CameraX control to enable torch
             camera?.cameraControl?.enableTorch(true)
             isFlashlightActive = true
-            Log.d("FLASHLIGHT", "Flashlight ON via Ambient Light Sensor")
+            Log.d("FLASHLIGHT", "Flashlight ON. Mode: $currentFlashMode, LowBat: $isLowBattery")
         }
     }
 
@@ -536,6 +551,7 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         fragmentCameraBinding?.touchInterceptorView?.requestFocus()
 
         screensaverHandler.toggleScreenSaver(true)
+        screensaverHandler.startAutoScreenSaver()
 
         // For emergency mode statuses. This thing is pretty slow to startup and needs to recheck
         // the RTDB. Could also serve na rin as a redundant checker for high-stakes cases
@@ -622,6 +638,8 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
                 emergencyManager.launchEmergencyMode()
             }
         }
+
+        batteryHandler.checkInitialBatteryStatus()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -642,15 +660,51 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
 
 
     fun toggleAutomaticFlash(){
-        if (isAutomaticFlashOn) {
-            isAutomaticFlashOn = false
-            automaticFlashView.setImageResource(R.drawable.ic_automatic_flash)
-            TextToSpeechHelper.speak(requireContext(), "Automatic flashlight is off")
-            turnFlashlightOff()
-        } else {
-            isAutomaticFlashOn = true
-            automaticFlashView.setImageResource(R.drawable.ic_automatic_flash_off)
-            TextToSpeechHelper.speak(requireContext(), "Automatic flashlight is on")
+        val isLowBattery = sharedPreferences.getBoolean(
+            Constants.SP_IS_USER_WARNED_OF_LOWBAT,
+            false
+        )
+        Log.d("AJAJA", isLowBattery.toString())
+
+        // Determine the next intended mode
+        val nextMode = when (currentFlashMode) {
+            FlashMode.OFF -> FlashMode.AUTOMATIC
+            FlashMode.AUTOMATIC -> FlashMode.MANUAL_ON
+            FlashMode.MANUAL_ON -> FlashMode.OFF
+        }
+
+        // Block activation if low battery
+        if (isLowBattery && (nextMode == FlashMode.AUTOMATIC || nextMode == FlashMode.MANUAL_ON)) {
+            TextToSpeechHelper.speak(requireContext(), "Cannot activate flashlight. Battery is too low.")
+            if (currentFlashMode != FlashMode.OFF) {
+                currentFlashMode = FlashMode.OFF
+                automaticFlashView.setImageResource(R.drawable.ic_automatic_flash_off)
+                turnFlashlightOff()
+            }
+            return
+        }
+
+        // Apply the intended mode (only if not blocked)
+        currentFlashMode = nextMode
+
+        when (currentFlashMode) {
+            FlashMode.AUTOMATIC -> {
+                // Use the regular auto flash icon
+                automaticFlashView.setImageResource(R.drawable.ic_automatic_flash)
+                TextToSpeechHelper.speak(requireContext(), "Automatic flashlight is on")
+                // The sensor will take care of turning it on/off based on light
+            }
+            FlashMode.MANUAL_ON -> {
+                automaticFlashView.setImageResource(R.drawable.ic_flash_on)
+                TextToSpeechHelper.speak(requireContext(), "Flashlight is on")
+                turnFlashlightOn()
+            }
+            FlashMode.OFF -> {
+                // Use the regular off/muted icon
+                automaticFlashView.setImageResource(R.drawable.ic_automatic_flash_off)
+                TextToSpeechHelper.speak(requireContext(), "Flashlight is off")
+                turnFlashlightOff() // Ensure it is off
+            }
         }
     }
 
@@ -684,46 +738,40 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         webRTCManager.releaseMediaPlayer()
     }
 
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+    }
+
     override fun onSensorChanged(event: SensorEvent?) {
-        Log.d(
-            "FLASHLIGHT",
-            "HITTING ON SENSOR CHANGED"
-        )
         if (event?.sensor?.type == Sensor.TYPE_LIGHT) {
             val ambientLightLux = event.values[0]
 
-            // LOG MODIFIED: Logs the precise lux value, the current threshold,
-            // and the master state every time a reading is received.
-            Log.d(
-                "FLASHLIGHT",
-                "SENSOR LUX CHECK: Lux=$ambientLightLux | Threshold=$LIGHT_THRESHOLD | AutoFlashEnabled=$isAutomaticFlashOn"
+            val isLowBattery = sharedPreferences.getBoolean(
+                Constants.SP_IS_USER_WARNED_OF_LOWBAT,
+                false
             )
 
-            // Only run the logic if the user has enabled automatic flash via Quick Menu
-            if (!isAutomaticFlashOn) {
-                turnFlashlightOff()
+            // Flashlight is off and exit the sensor logic
+            if (isLowBattery) {
+                if (isFlashlightActive) {
+                    turnFlashlightOff() // Forced OFF
+                }
+                return
+            }
+
+            //  AUTOMATIC (and battery is OK)
+            if (currentFlashMode != FlashMode.AUTOMATIC) {
                 return
             }
 
             // Low Light: Below the threshold (turn ON flash)
             if (ambientLightLux < LIGHT_THRESHOLD) {
-                Log.d(
-                    "FLASHLIGHT",
-                    "AUTO FLASH DECISION: Lux $ambientLightLux < $LIGHT_THRESHOLD. Attempting to turn ON flash."
-                )
-                turnFlashlightOn()
+                turnFlashlightOn() // This will now only turn ON if isLowBattery is false
             }
+
             // Sufficient Light: Above the threshold (turn OFF flash)
             else {
-                Log.d(
-                    "FLASHLIGHT",
-                    "AUTO FLASH DECISION: Lux $ambientLightLux >= $LIGHT_THRESHOLD. Attempting to turn OFF flash."
-                )
                 turnFlashlightOff()
             }
         }
-    }
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        // Required SensorEventListener method, no implementation needed here
     }
 }

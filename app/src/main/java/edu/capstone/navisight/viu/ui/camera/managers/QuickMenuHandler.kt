@@ -124,6 +124,9 @@ class QuickMenuHandler (
             cameraFragment.isPreviewLocked = false
             cameraFragment.screensaverHandler.toggleScreenSaver(false)
             cameraFragment.fragmentCameraBinding?.screensaverEyeAndPreviewLock?.setImageResource(R.drawable.ic_screensaver_eye)
+            cameraFragment.fragmentCameraBinding?.tooltipDescription1?.visibility = View.VISIBLE
+            cameraFragment.fragmentCameraBinding?.tooltipDescription1?.text = cameraFragment.requireContext().getText(R.string.preview_mode_tooltip_1)
+            cameraFragment.fragmentCameraBinding?.tooltipDescription2?.visibility = View.VISIBLE
             TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Preview mode is now unlocked")
             cameraFragment.quickMenuFragment?.screensaverLockView?.setImageResource(R.drawable.ic_unlock)
             cameraFragment.screensaverHandler.startAutoScreenSaver()
@@ -132,6 +135,8 @@ class QuickMenuHandler (
             cameraFragment.isPreviewLocked = true
             cameraFragment.fragmentCameraBinding?.screensaverEyeAndPreviewLock?.setImageResource(R.drawable.ic_lock)
             cameraFragment.fragmentCameraBinding?.screensaverEyeAndPreviewLock?.setVisibility(View.VISIBLE)
+            cameraFragment.fragmentCameraBinding?.tooltipDescription1?.text = "Please unlock via the quick menu to begin screen saving again."
+            cameraFragment.fragmentCameraBinding?.tooltipDescription2?.visibility = View.GONE
             TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), "Preview Mode is now locked")
             cameraFragment.quickMenuFragment?.screensaverLockView?.setImageResource(R.drawable.ic_lock)
             cameraFragment.screensaverHandler.stopAutoScreenSaver()
@@ -146,10 +151,14 @@ class QuickMenuHandler (
 
         if (isNowSilenced) {
             message = "Text to speech is now silenced"
-            drawableRes = R.drawable.ic_mute // Assuming you have an OFF icon
+            drawableRes = R.drawable.ic_mute
+            cameraFragment.fragmentCameraBinding?.ttsStatusIcon?.visibility = View.VISIBLE
+            cameraFragment.fragmentCameraBinding?.ttsStatusDescription?.visibility = View.VISIBLE
         } else {
             message = "Text to speech is now resumed"
-            drawableRes = R.drawable.ic_tts_active // Assuming you have an ON icon
+            drawableRes = R.drawable.ic_tts_active
+            cameraFragment.fragmentCameraBinding?.ttsStatusIcon?.visibility = View.INVISIBLE
+            cameraFragment.fragmentCameraBinding?.ttsStatusDescription?.visibility = View.INVISIBLE
         }
 
         // Update the Quick Menu icon
