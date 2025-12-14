@@ -10,12 +10,17 @@ import androidx.core.content.ContextCompat
 import edu.capstone.navisight.R
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.viu.ui.camera.CameraFragment
+import java.util.LinkedList
 
 class ScreensaverHandler (
     private val cameraFragment : CameraFragment
 ) {
 
     // Init. screensaver vars
+    private val screensaverStateHistory = LinkedList<Boolean>().apply {
+        add(false) // Initial state 1
+        add(false) // Initial state 2
+    }
     private var isScreensaverActive = false
     private var currentBrightness = 0.0F // Default.
     private val idleTimeout = 10_000L
@@ -47,7 +52,7 @@ class ScreensaverHandler (
     }
 
     fun toggleScreenSaver(forcePreview:Boolean=false) {
-        println("TOGGLED SCREENSAVER is screen saver on state: $isScreensaverActive")
+         println("TOGGLED SCREENSAVER is screen saver on state: $isScreensaverActive")
         cameraFragment.fragmentCameraBinding?.let { binding ->
             if (!cameraFragment.isPreviewLocked) {
                 if (!isScreensaverActive && !forcePreview) {

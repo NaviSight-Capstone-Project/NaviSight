@@ -535,6 +535,8 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
         // Ensure touch interceptor has focus for Volume Keys
         fragmentCameraBinding?.touchInterceptorView?.requestFocus()
 
+        screensaverHandler.toggleScreenSaver(true)
+
         // For emergency mode statuses. This thing is pretty slow to startup and needs to recheck
         // the RTDB. Could also serve na rin as a redundant checker for high-stakes cases
         // TODO: Remove this if found a better way
@@ -607,7 +609,6 @@ class CameraFragment (private val realTimeViewModel : ViuHomeViewModel):
             cameraBindsHandler.setUpCamera()
         }
 
-        screensaverHandler.toggleScreenSaver()
         setupInputListeners()
         quickMenuHandler.observeCaregiverUid()
 
