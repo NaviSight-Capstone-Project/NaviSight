@@ -14,6 +14,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -62,7 +64,7 @@ fun LoginScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
 
-    // ACCESSBILITY MANAGER
+    // ACCESSIBILITY MANAGER
     // We use this to manually announce events to TalkBack
     val accessibilityManager = remember {
         context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
@@ -76,7 +78,6 @@ fun LoginScreen(
             accessibilityManager.sendAccessibilityEvent(event)
         }
     }
-
 
     // INIT VOICE HANDLER
     val voiceHandler = remember { VoiceHandler(context) }
@@ -157,6 +158,33 @@ fun LoginScreen(
     var passwordFocused by remember { mutableStateOf(false) }
     val anyFieldFocused = emailFocused || passwordFocused
 
+    // Interaction Sources for handling vibration without blocking click events
+    val emailInteractionSource = remember { MutableInteractionSource() }
+    val passwordInteractionSource = remember { MutableInteractionSource() }
+
+    // Listen to interactions to trigger vibration
+    LaunchedEffect(emailInteractionSource) {
+        emailInteractionSource.interactions.collect { interaction ->
+            if (interaction is PressInteraction.Release) {
+                VibrationHelper.vibratePattern(
+                    context,
+                    listOf(HapticEvent(Constants.VIBRATE_BUTTON_TAP.inWholeMilliseconds, isVibration = true))
+                )
+            }
+        }
+    }
+
+    LaunchedEffect(passwordInteractionSource) {
+        passwordInteractionSource.interactions.collect { interaction ->
+            if (interaction is PressInteraction.Release) {
+                VibrationHelper.vibratePattern(
+                    context,
+                    listOf(HapticEvent(Constants.VIBRATE_BUTTON_TAP.inWholeMilliseconds, isVibration = true))
+                )
+            }
+        }
+    }
+
     val errorState by viewModel.error.collectAsState()
     val captchaState by viewModel.captchaState.collectAsState()
     val showCaptcha by viewModel.showCaptchaDialog.collectAsState()
@@ -226,33 +254,28 @@ fun LoginScreen(
 
             // Email Field
             OutlinedTextField(
-                value = email, onValueChange = { email = it },
+                value = email,
+                onValueChange = { email = it },
                 placeholder = { Text("Email", color = Color.Gray) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_email), null) },
-                singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color.Transparent, unfocusedBorderColor = Color.Transparent),
-                modifier = Modifier.fillMaxWidth().onFocusChanged { emailFocused = it.isFocused }
+                interactionSource = emailInteractionSource,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { emailFocused = it.isFocused }
                     .background(Color.White, RoundedCornerShape(16.dp))
                     .border(1.5.dp, if (emailFocused || activeInputStage == InputStage.EMAIL) Color(0xFF6041EC) else Color(0xFFE0E0E0), RoundedCornerShape(16.dp))
                     .semantics { contentDescription = "Email Input Field. Current value: ${if(email.isEmpty()) "Empty" else email}"}
-                    .clickable {
-                        VibrationHelper.vibratePattern(
-                            context,
-                            listOf(
-                                HapticEvent(
-                                    Constants.VIBRATE_BUTTON_TAP.inWholeMilliseconds,
-                                    isVibration = true
-                                )
-                            )
-                        )
-                    }
             )
             Spacer(Modifier.height(20.dp))
 
             // Password Field
             OutlinedTextField(
-                value = password, onValueChange = { password = it },
+                value = password,
+                onValueChange = { password = it },
                 placeholder = { Text("Password", color = Color.Gray) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_pass), null) },
                 trailingIcon = {
@@ -262,24 +285,17 @@ fun LoginScreen(
                     }
                 },
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { viewModel.login(email, password) }),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color.Transparent, unfocusedBorderColor = Color.Transparent),
-                modifier = Modifier.fillMaxWidth().onFocusChanged { passwordFocused = it.isFocused }
+                interactionSource = passwordInteractionSource,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { passwordFocused = it.isFocused }
                     .background(Color.White, RoundedCornerShape(16.dp))
                     .border(1.5.dp, if (passwordFocused || activeInputStage == InputStage.PASSWORD) Color(0xFF6041EC) else Color(0xFFE0E0E0), RoundedCornerShape(16.dp))
-                    .clickable {
-                        VibrationHelper.vibratePattern(
-                            context,
-                            listOf(
-                                HapticEvent(
-                                    Constants.VIBRATE_BUTTON_TAP.inWholeMilliseconds,
-                                    isVibration = true
-                                )
-                            )
-                        )
-                    }
             )
             Spacer(Modifier.height(28.dp))
 
