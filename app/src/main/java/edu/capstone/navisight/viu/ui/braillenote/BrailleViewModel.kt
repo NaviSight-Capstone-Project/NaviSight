@@ -3,6 +3,7 @@ package edu.capstone.navisight.viu.ui.braillenote
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import edu.capstone.navisight.viu.domain.braileUseCase.DeleteNoteUseCase
 import edu.capstone.navisight.viu.domain.braileUseCase.GetNotesUseCase
 import edu.capstone.navisight.viu.domain.braileUseCase.SaveNoteUseCase
 import edu.capstone.navisight.viu.model.Note
@@ -12,7 +13,8 @@ import kotlinx.coroutines.launch
 
 class BrailleViewModel(
     private val getNotesUseCase: GetNotesUseCase,
-    private val saveNoteUseCase: SaveNoteUseCase
+    private val saveNoteUseCase: SaveNoteUseCase,
+    private val deleteNoteUseCase: DeleteNoteUseCase
 ) : ViewModel() {
 
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
@@ -42,16 +44,23 @@ class BrailleViewModel(
             saveNoteUseCase(newNote)
         }
     }
+
+    fun deleteNote(note: Note) {
+        viewModelScope.launch {
+            deleteNoteUseCase(note)
+        }
+    }
 }
 
 class BrailleViewModelFactory(
     private val getNotesUseCase: GetNotesUseCase,
-    private val saveNoteUseCase: SaveNoteUseCase
+    private val saveNoteUseCase: SaveNoteUseCase,
+    private val deleteNoteUseCase: DeleteNoteUseCase
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(BrailleViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return BrailleViewModel(getNotesUseCase, saveNoteUseCase) as T
+            return BrailleViewModel(getNotesUseCase, saveNoteUseCase, deleteNoteUseCase) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
@@ -166,10 +167,32 @@ fun SavedNotesScreen(
                             },
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(text = note.getFormattedDate(), style = MaterialTheme.typography.labelSmall)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = note.content, style = MaterialTheme.typography.bodyLarge)
+                        // ROW: Content on the left, Delete button on the right
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = note.getFormattedDate(), style = MaterialTheme.typography.labelSmall)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(text = note.content, style = MaterialTheme.typography.bodyLarge)
+                            }
+
+                            // DELETE BUTTON
+                            IconButton(
+                                onClick = {
+                                    viewModel.deleteNote(note)
+                                    tts?.speak("Note Deleted", TextToSpeech.QUEUE_FLUSH, null, null)
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete Note",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
                     }
                 }

@@ -17,6 +17,7 @@ import androidx.lifecycle.ViewModelProvider
 import edu.capstone.navisight.common.TextToSpeechHelper
 import edu.capstone.navisight.viu.data.local.AppDatabase
 import edu.capstone.navisight.viu.data.repository.NoteRepository
+import edu.capstone.navisight.viu.domain.braileUseCase.DeleteNoteUseCase
 import edu.capstone.navisight.viu.domain.braileUseCase.GetNotesUseCase
 import edu.capstone.navisight.viu.domain.braileUseCase.SaveNoteUseCase
 
@@ -26,12 +27,17 @@ class BrailleNoteFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        // 1. Database & Repository
         val database = AppDatabase.getDatabase(requireContext())
         val repository = NoteRepository(database.noteDao())
+
+        // 2. UseCases
         val getNotesUseCase = GetNotesUseCase(repository)
         val saveNoteUseCase = SaveNoteUseCase(repository)
+        val deleteNoteUseCase = DeleteNoteUseCase(repository)
 
-        val factory = BrailleViewModelFactory(getNotesUseCase, saveNoteUseCase)
+        // 3. ViewModel Factory
+        val factory = BrailleViewModelFactory(getNotesUseCase, saveNoteUseCase, deleteNoteUseCase)
         val viewModel = ViewModelProvider(this, factory)[BrailleViewModel::class.java]
 
         return ComposeView(requireContext()).apply {
