@@ -120,8 +120,7 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
                 lastLocationLongitude = viuLocation?.longitude.toString(),
                 lastLocationLatitude = viuLocation?.latitude.toString(),
                 lastLocationTimestamp = timestamp,
-                attachments = emptyList(),
-                testEmail="rafaeljtenido@gmail.com"
+                attachments = attachments
             )
         }
 
