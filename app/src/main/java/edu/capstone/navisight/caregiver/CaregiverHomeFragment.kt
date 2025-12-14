@@ -172,7 +172,6 @@ class CaregiverHomeFragment : Fragment(),
         emergencyHostView?.addView(composeOverlayView)
 
         composeOverlayView.setContent {
-            // For some reason gumagana ito hahahaahahahahahahahahha
             MaterialTheme {
                 val signal by emergencyViewModel.emergencySignal.collectAsState()
 
