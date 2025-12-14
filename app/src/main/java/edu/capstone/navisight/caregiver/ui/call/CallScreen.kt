@@ -386,36 +386,36 @@ fun CallScreen(
             }
 
             // Screen Share
-            if (isVideoCall) {
-                IconButton(onClick = {
-                    if (!isScreenCasting) {
-                        AlertDialog.Builder(context)
-                            .setTitle("Screen Casting")
-                            .setMessage("Start casting your screen?")
-                            .setPositiveButton("Yes") { dialog, _ ->
-                                val mgr = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE)
-                                        as MediaProjectionManager
-                                val intent = mgr.createScreenCaptureIntent()
-                                requestScreenCaptureLauncher.launch(intent)
-                                dialog.dismiss()
-                            }
-                            .setNegativeButton("No") { dialog, _ -> dialog.dismiss() }
-                            .show()
-                    } else {
-                        isScreenCasting = false
-                        serviceRepository.toggleScreenShare(false)
-                    }
-                }) {
-                    Icon(
-                        painter = rememberAsyncImagePainter(
-                            if (isScreenCasting) R.drawable.ic_stop_screen_share
-                            else R.drawable.ic_screen_share
-                        ),
-                        contentDescription = "Screen Share",
-                        tint = Color.White
-                    )
-                }
-            }
+//            if (isVideoCall) {
+//                IconButton(onClick = {
+//                    if (!isScreenCasting) {
+//                        AlertDialog.Builder(context)
+//                            .setTitle("Screen Casting")
+//                            .setMessage("Start casting your screen?")
+//                            .setPositiveButton("Yes") { dialog, _ ->
+//                                val mgr = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE)
+//                                        as MediaProjectionManager
+//                                val intent = mgr.createScreenCaptureIntent()
+//                                requestScreenCaptureLauncher.launch(intent)
+//                                dialog.dismiss()
+//                            }
+//                            .setNegativeButton("No") { dialog, _ -> dialog.dismiss() }
+//                            .show()
+//                    } else {
+//                        isScreenCasting = false
+//                        serviceRepository.toggleScreenShare(false)
+//                    }
+//                }) {
+//                    Icon(
+//                        painter = rememberAsyncImagePainter(
+//                            if (isScreenCasting) R.drawable.ic_stop_screen_share
+//                            else R.drawable.ic_screen_share
+//                        ),
+//                        contentDescription = "Screen Share",
+//                        tint = Color.White
+//                    )
+//                }
+//            }
             // End call
             IconButton(
                 onClick = {
