@@ -184,8 +184,7 @@ class CaregiverHomeFragment : Fragment(),
                         listOf(
                             Pair(EMERGENCY_OPTION_TURN_OFF_VCV, GreenResponse),
                             Pair(EMERGENCY_OPTION_TURN_OFF_ACV, GreenResponse),
-                            Pair(EMERGENCY_OPTION_TURN_OFF, OrangeResponse),
-                            Pair(EMERGENCY_OPTION_DISMISS, RedAlert)
+                            Pair(EMERGENCY_OPTION_TURN_OFF, RedResponse)
                         )
                     }
 

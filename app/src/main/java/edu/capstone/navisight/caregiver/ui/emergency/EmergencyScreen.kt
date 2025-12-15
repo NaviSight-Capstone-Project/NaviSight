@@ -23,8 +23,8 @@ import java.util.Locale
 
 // Colors
 val RedAlert = Color(0xFFE53935)
+val RedResponse = Color(0xFFE53935)
 val GreenResponse = Color(0xFF4CAF50)
-val OrangeResponse = Color(0xFFFF9800)
 val DefaultText = Color(0xFF333333) // Dark text for readability
 
 fun formatTimestamp(timestamp: Long): String {
