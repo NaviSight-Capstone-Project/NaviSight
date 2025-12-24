@@ -31,6 +31,7 @@ import edu.capstone.navisight.viu.ViuHomeViewModel
 import edu.capstone.navisight.viu.data.remote.RealtimeDataSource
 import edu.capstone.navisight.viu.data.remote.ViuDataSource
 import edu.capstone.navisight.viu.model.ViuLocation
+import edu.capstone.navisight.viu.utils.SMSHelper
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -106,13 +107,14 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
                 }
             }
 
-            // FETCH DATA AND SEND EMAIL
+            // FETCH DATA
             val viuProfile = viuRemoteDataSource.getCurrentViuProfile()
             val caregiver = viuRemoteDataSource.getRegisteredCaregiver()
 
             val viuLocation : ViuLocation? = realtimeDataSource.getUserLastLocation()
             val timestamp = viuLocation?.timestamp ?: 0L
 
+            // SEND EMERGENCY EMAIL
             EmailSender.sendEmergencyEmail(
                 context = appScopeContext,
                 viu = viuProfile,
@@ -122,6 +124,15 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
                 lastLocationTimestamp = timestamp,
                 attachments = attachments
             )
+
+            // SEND EMERGENCY SMS
+            SMSHelper.sendEmergencySMS(
+                context = appScopeContext,
+                viu = viuProfile,
+                caregiver = caregiver,
+                lastLocationLongitude = viuLocation?.longitude.toString(),
+                lastLocationLatitude = viuLocation?.latitude.toString(),
+                lastLocationTimestamp = timestamp)
         }
 
         setContent {
