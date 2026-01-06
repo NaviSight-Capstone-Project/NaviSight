@@ -15,6 +15,14 @@ object ConverterHelpers {
         return formatter.format(Date(millis))
     }
 
+    fun convertMillisToTime(millis: Long): String {
+        val pattern ="hh:mm a"
+        val formatter = SimpleDateFormat(pattern, Locale.ENGLISH).apply {
+            timeZone = TimeZone.getTimeZone("Asia/Manila")
+        }
+        return formatter.format(Date(millis))
+    }
+
     fun convertMillisToDetailedDateTime(millis: Long): String {
         val pattern = "MMM. dd, yyyy 'at' hh:mm a zzz"
         val formatter = SimpleDateFormat(pattern, Locale.ENGLISH).apply {

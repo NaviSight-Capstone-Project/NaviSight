@@ -343,7 +343,7 @@ fun LoginScreen(
 
             Row(Modifier.padding(top = 60.dp), horizontalArrangement = Arrangement.Center) {
                 Text("New User? ", color = Color(0xFF4A4A4A), fontSize = 14.sp)
-                Text("Sign Here", color = Color(0xFF6041EC), fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { onSignUp() })
+                Text("Sign Up Here", color = Color(0xFF6041EC), fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { onSignUp() })
             }
         }
 
