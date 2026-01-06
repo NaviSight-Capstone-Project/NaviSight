@@ -16,7 +16,7 @@ private const val TAG = "SMSHelper"
 object SMSHelper {
     fun sendSMSDirectly(context: Context, phoneNumber: String, message: String) {
         val formattedNumber = if (phoneNumber.startsWith("+63")) {
-            phoneNumber.replaceFirst("+63", "09")
+            phoneNumber.replaceFirst("+63", "0")
         } else {
             phoneNumber
         }
