@@ -55,7 +55,8 @@ object SMSHelper {
                          caregiver : Caregiver,
                          lastLocationLongitude : String,
                          lastLocationLatitude : String,
-                         lastLocationTimestamp : Long) {
+                         lastLocationTimestamp : Long,
+                         batteryLevel : Int) {
 
         val latDouble = lastLocationLatitude.toDoubleOrNull() ?: 0.0
         val latDirection = if (latDouble >= 0) "N" else "S"
@@ -70,9 +71,11 @@ object SMSHelper {
            VIU EMERGENCY - NAVISIGHT
            ${viu.firstName} ${viu.lastName} needs help as of $timeString
            Last Location: $formattedLatitude $formattedLongitude
+           Battery level: $batteryLevel%
        """.trimIndent()
 
         // SEND TO DIFFERENT SMS
+        Log.e(TAG, message)
         sendSMSDirectly(context, caregiverPhoneNumber, message)
 //        sendSMSDirectly(context, "Police", message)
 //        sendSMSDirectly(context, "Emergency hotline", message)

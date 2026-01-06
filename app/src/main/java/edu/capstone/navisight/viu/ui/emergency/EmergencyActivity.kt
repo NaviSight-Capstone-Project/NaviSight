@@ -46,6 +46,11 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
     private lateinit var emergencyStatusListener: EmergencyStatusListener
     private var realtimeDataSource = RealtimeDataSource()
 
+    private fun getBatteryPercentage(context: Context): Int {
+        val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
+        return batteryManager.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+    }
+
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -113,6 +118,7 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
 
             val viuLocation : ViuLocation? = realtimeDataSource.getUserLastLocation()
             val timestamp = viuLocation?.timestamp ?: 0L
+            val batteryLevel = getBatteryPercentage(appScopeContext)
 
             // SEND EMERGENCY EMAIL
             EmailSender.sendEmergencyEmail(
@@ -132,7 +138,8 @@ class EmergencyActivity : ComponentActivity(), MainService.EndAndDeniedCallListe
                 caregiver = caregiver,
                 lastLocationLongitude = viuLocation?.longitude.toString(),
                 lastLocationLatitude = viuLocation?.latitude.toString(),
-                lastLocationTimestamp = timestamp)
+                lastLocationTimestamp = timestamp,
+                batteryLevel = batteryLevel)
         }
 
         setContent {
