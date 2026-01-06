@@ -423,7 +423,7 @@ fun StepViuPersonal(
 
         GradientButton(text = "Next", onClick = {
             VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
-            onNext}, enabled = isValid)
+            onNext()}, enabled = isValid)
     }
 }
 
@@ -451,7 +451,7 @@ fun StepViuAvatar(imageUri: android.net.Uri?, onAddPhoto: () -> Unit, onNext: ()
         GradientButton(text = if (imageUri == null) "Skip" else "Next", onClick = {
 
             VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
-            onNext})
+            onNext()})
     }
 }
 
@@ -524,7 +524,7 @@ fun StepViuLegal(
         GradientButton(
             text = "Agree & Continue",
             onClick = {VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
-                onNext},
+                onNext()},
             enabled = termsAccepted && privacyAccepted
         )
     }
@@ -583,7 +583,7 @@ fun StepViuAccount(
 
         val isValid = isEmailValid && isCaregiverEmailValid && isPassValid && isRePassValid && !isLoading
         GradientButton(text = "Create Account", onClick = {VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
-            onSignup}, isLoading = isLoading, enabled = isValid)
+            onSignup()}, isLoading = isLoading, enabled = isValid)
     }
 }
 
