@@ -15,6 +15,4 @@ data class Caregiver(
     var address: String = "",
     var birthday: Timestamp = Timestamp.now(),
     var sex: String = ""
-
-    //wag na lang pakealaman yung order para di nakakasakit ng ulo idebug
 )

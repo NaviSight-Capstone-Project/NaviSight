@@ -185,7 +185,7 @@ class NotificationViewModel(
             _isLoading.value = true
             when (val result = transferPrimaryUseCase.approveRequest(request)) {
                 is RequestStatus.Success -> {
-                    _message.value = "You are now the Primary Caregiver."
+                    _message.value = "You are now the Primary Companion."
                 }
                 is RequestStatus.Error -> {
                     _errorMessage.value = result.message

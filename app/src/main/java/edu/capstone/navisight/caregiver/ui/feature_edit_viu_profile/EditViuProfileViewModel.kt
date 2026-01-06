@@ -182,7 +182,7 @@ class EditViuProfileViewModel(
     // Image Upload
     fun uploadProfileImage(imageUri: Uri) {
         if (!_canEdit.value) {
-            _error.value = "Only the Primary Caregiver can change the photo."
+            _error.value = "Only the Primary Companion can change the photo."
             return
         }
         viewModelScope.launch {
@@ -270,7 +270,7 @@ class EditViuProfileViewModel(
         birthday: String, sex: String, phone: String, address: String, status: String
     ) {
         if (!_canEdit.value) {
-            _saveError.value = "Only the Primary Caregiver can edit this profile."
+            _saveError.value = "Only the Primary Companion can edit this profile."
             return
         }
         _saveError.value = null
@@ -434,7 +434,7 @@ class EditViuProfileViewModel(
     // Delete Flow
     fun startDeleteFlow() {
         if (!_canEdit.value) {
-            _deleteError.value = "Only the Primary Caregiver can delete this profile."
+            _deleteError.value = "Only the Primary Companion can delete this profile."
             return
         }
         _deleteFlowState.value = DeleteFlowState.PENDING_PASSWORD
@@ -494,7 +494,7 @@ class EditViuProfileViewModel(
 
     fun requestEmailChange(context: Context, newEmail: String) {
         if (!_canEdit.value) {
-            _securityError.value = "Only the Primary Caregiver can change security settings."
+            _securityError.value = "Only the Primary Companion can change security settings."
             return
         }
         _securityError.value = null
@@ -722,7 +722,7 @@ class EditViuProfileViewModel(
 
     fun startUnpairFlow() {
         if (_canEdit.value) { // Safety check: Primary cannot do this
-            _unpairError.value = "Primary caregivers cannot unpair. Use Transfer instead."
+            _unpairError.value = "Primary companions cannot unpair. Use Transfer instead."
             return
         }
         _passwordRetryCount.value = 0

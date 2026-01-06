@@ -132,11 +132,11 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
                                    },
                         onVideoCall = {
                             targetCaregiverUid?.let { uid -> viewModel.videoCall(uid) }
-                                ?: Toast.makeText(context, "No caregiver linked.", Toast.LENGTH_SHORT).show()
+                                ?: Toast.makeText(context, "No companion linked.", Toast.LENGTH_SHORT).show()
                         },
                         onAudioCall = {
                             targetCaregiverUid?.let { uid -> viewModel.audioCall(uid) }
-                                ?: Toast.makeText(context, "No caregiver linked.", Toast.LENGTH_SHORT).show()
+                                ?: Toast.makeText(context, "No companion linked.", Toast.LENGTH_SHORT).show()
                         },
                         onScanDocument = { showReader = true }, // Trigger reader view
                         onBackClick = {
@@ -253,7 +253,7 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
         activity?.runOnUiThread {
             if (callRequestDialog?.isShowing == true) {
                 callRequestDialog?.dismiss()
-                showToastMessageThenTTS("Caregiver aborted their call.")
+                showToastMessageThenTTS("Companion aborted their call.")
                 releaseMediaPlayer()
             }
         }
@@ -268,7 +268,7 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
         activity?.runOnUiThread {
             if (callRequestDialog?.isShowing == true) {
                 callRequestDialog?.dismiss()
-                Toast.makeText(context, "You've missed your caregiver's call!", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "You've missed your companion's call!", Toast.LENGTH_LONG).show()
                 releaseMediaPlayer()
             }
         }
@@ -290,7 +290,7 @@ class ProfileFragment (private val realTimeViewModel : ViuHomeViewModel) : Fragm
             val declineButton = customLayout.findViewById<AppCompatImageButton>(R.id.btnDecline)
 
             messageTitle.text = if (isVideoCall) "Incoming Video Call" else "Incoming Audio Call"
-            caregiverTitle.text = "Your caregiver is calling you!"
+            caregiverTitle.text = "Your companion is calling you!"
 
             callRequestDialog = AlertDialog.Builder(requireActivity())
                 .setView(customLayout)

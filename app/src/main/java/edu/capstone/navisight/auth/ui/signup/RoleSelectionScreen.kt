@@ -110,7 +110,7 @@ fun RoleSelectionScreen(
                 horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 RoleSelectionCard(
-                    text = "Caregiver",
+                    text = "Companion",
                     imageRes = R.drawable.avatar_caregiver,
                     textColor = textColor,
                     onClick = onCaregiverClicked,

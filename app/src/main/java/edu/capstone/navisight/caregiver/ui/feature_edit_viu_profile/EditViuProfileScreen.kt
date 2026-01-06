@@ -174,7 +174,7 @@ fun EditViuProfileScreen(
     if (saveFlowState == SaveFlowState.PENDING_PASSWORD) {
         PasswordEntryDialog(
             title = "Enter Your Password",
-            description = "Please enter your caregiver password to confirm changes.",
+            description = "Please enter your companion password to confirm changes.",
             isLoading = (saveFlowState == SaveFlowState.SAVING),
             onDismiss = { viewModel.resetSaveFlow() },
             onConfirm = { password -> viewModel.reauthenticateAndSendOtp(password, context) }

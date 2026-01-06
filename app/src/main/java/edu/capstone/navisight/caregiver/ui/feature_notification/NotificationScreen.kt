@@ -485,7 +485,7 @@ private fun RequestRow(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = "Requesting To Be Secondary Caregiver",
+                    text = "Requesting To Be Secondary Companion",
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     color = Color(0xFFB544F1)

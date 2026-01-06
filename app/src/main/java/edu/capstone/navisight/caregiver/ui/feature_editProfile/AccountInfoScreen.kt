@@ -324,7 +324,7 @@ fun AccountInfoScreen(
         topBar = {
             Box(modifier = Modifier.fillMaxWidth().background(gradientBrush)) {
                 TopAppBar(
-                    title = { Text("Edit Caregiver Profile", color = Color.White) },
+                    title = { Text("Edit Companion Profile", color = Color.White) },
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)

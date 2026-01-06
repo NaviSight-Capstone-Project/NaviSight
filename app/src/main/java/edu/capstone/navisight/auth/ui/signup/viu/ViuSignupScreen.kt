@@ -558,7 +558,7 @@ fun StepViuAccount(
         OutlinedTextField(email, { onUpdate(it, caregiverEmail, pass, rePass) }, label = { Text("Your Email *") }, isError = !isEmailValid && email.isNotEmpty(), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), singleLine = true)
         Spacer(Modifier.height(8.dp))
 
-        OutlinedTextField(caregiverEmail, { onUpdate(email, it, pass, rePass) }, label = { Text("Caregiver's Email *") }, isError = !isCaregiverEmailValid && caregiverEmail.isNotEmpty(), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), singleLine = true)
+        OutlinedTextField(caregiverEmail, { onUpdate(email, it, pass, rePass) }, label = { Text("Companion's Email *") }, isError = !isCaregiverEmailValid && caregiverEmail.isNotEmpty(), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), singleLine = true)
         Spacer(Modifier.height(8.dp))
 
         OutlinedTextField(pass, { onUpdate(email, caregiverEmail, it, rePass) }, label = { Text("Password *") }, isError = !isPassValid && pass.isNotEmpty(), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), visualTransformation = if (passVis) VisualTransformation.None else PasswordVisualTransformation(), trailingIcon = { IconButton({ passVis = !passVis }) { Icon(if (passVis) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, null) } }, singleLine = true)
@@ -659,7 +659,7 @@ fun ViuOtpScreen(
             Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Verify Email", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6641EC))
                 Spacer(Modifier.height(8.dp))
-                Text("Enter the 6-digit code sent to the Caregiver's email.", textAlign = TextAlign.Center, color = Color(0xFF4A4A4A), fontSize = 14.sp)
+                Text("Enter the 6-digit code sent to the Companion's email.", textAlign = TextAlign.Center, color = Color(0xFF4A4A4A), fontSize = 14.sp)
                 Spacer(Modifier.height(16.dp))
 
                 OutlinedTextField(
@@ -686,7 +686,7 @@ fun ViuOtpScreen(
                         if (otpValue.length == 6 && caregiverUid != null) {
                             viewModel.verifyOtp(uid, caregiverUid, otpValue)
                         } else {
-                            Toast.makeText(context, "Caregiver ID missing or OTP incomplete", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Companion ID missing or OTP incomplete", Toast.LENGTH_SHORT).show()
                         }
                     },
                     isLoading = uiState.isLoading,

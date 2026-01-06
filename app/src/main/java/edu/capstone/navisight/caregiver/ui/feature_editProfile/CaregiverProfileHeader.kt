@@ -114,7 +114,7 @@ internal fun CaregiverProfileHeader(
 
         Text(
             // Handle null profile case for name display
-            text = caregiverData?.let { "${it.firstName} ${it.middleName?.takeIf { m -> m.isNotEmpty() }?.let { m -> "$m " } ?: ""}${it.lastName}" } ?: "Caregiver",
+            text = caregiverData?.let { "${it.firstName} ${it.middleName?.takeIf { m -> m.isNotEmpty() }?.let { m -> "$m " } ?: ""}${it.lastName}" } ?: "Companion",
             style = MaterialTheme.typography.headlineSmall.copy(
                 fontWeight = FontWeight.Bold,
                 color = Color.White

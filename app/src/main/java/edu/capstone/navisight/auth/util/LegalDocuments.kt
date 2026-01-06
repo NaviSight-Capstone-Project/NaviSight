@@ -10,7 +10,7 @@ Last Updated: December 2025
 
 2. Separation of Privacy Policy Your use of the App is also governed by our Privacy Policy, which is a separate document outlining how we collect, use, and store your personal data and location information. By agreeing to these Terms, you acknowledge that you have reviewed the Privacy Policy.
 
-3. Nature of Services (Assistive Tool Only) NaviSight is strictly a supplementary tool designed to assist Caregivers in monitoring the approximate location of associated Visually Impaired individuals .
+3. Nature of Services (Assistive Tool Only) NaviSight is strictly a supplementary tool designed to assist Companions in monitoring the approximate location of associated Visually Impaired individuals .
 
 NO GUARANTEE OF SAFETY: The App is NOT a substitute for direct human supervision, physical care, or professional medical monitoring.
 
@@ -26,7 +26,7 @@ LATENCY: Notifications regarding the Viu's movements or geofence breaches may be
 
 VIU SAFETY DURING NAVIGATION: We are not liable for any accidents, falls, collisions, traffic incidents, or physical harm that occurs to the Visually Impaired Individual  while using the App for navigation or while being tracked. The Visually Impaired Individual uses the navigation features at their own risk.
 
-CAREGIVER RELIANCE: We are not liable for any distress, loss, or harm resulting from the Caregiver's reliance on the App's location data. This includes instances where the App fails to report the Visually Impaired Individual's location, reports it broadly, or fails to send a geofence alert.
+COMPANION RELIANCE: We are not liable for any distress, loss, or harm resulting from the Companion's reliance on the App's location data. This includes instances where the App fails to report the Visually Impaired Individual's location, reports it broadly, or fails to send a geofence alert.
 
 BY USING THE APP, YOU ASSUME FULL RESPONSIBILITY FOR THE SAFETY AND SUPERVISION OF THE INDIVIDUAL BEING TRACKED.
 
@@ -48,17 +48,17 @@ Personal Information: When you create an account, we collect your name, email ad
 
 Location Data (Background Tracking):
 
-For "Viu" (User) Accounts: NaviSight collects precise location data (GPS, Wi-Fi, Cellular) even when the app is closed or not in use. This is strictly required to enable the "Real-time Monitoring" and "Geofencing Alerts" features for the linked Caregiver.
+For "Viu" (User) Accounts: NaviSight collects precise location data (GPS, Wi-Fi, Cellular) even when the app is closed or not in use. This is strictly required to enable the "Real-time Monitoring" and "Geofencing Alerts" features for the linked Companion.
 
-For Caregiver Accounts: We may collect your location to calculate the distance between you and the Viu.
+For Companion Accounts: We may collect your location to calculate the distance between you and the Viu.
 
-Camera & Images: We require camera access solely for scanning QR codes to pair a Caregiver with a Viu. We do not store or transmit raw video or images from your camera.
+Camera & Images: We require camera access solely for scanning QR codes to pair a Companion with a Viu. We do not store or transmit raw video or images from your camera.
 
-Device Information: We collect data about your device model, OS version, and battery level to inform the Caregiver of the Viu’s device status.
+Device Information: We collect data about your device model, OS version, and battery level to inform the Companion of the Viu’s device status.
 
 3. How We Use Your Data We use your data strictly for the following purposes:
 
-To visualize the Viu's location on the Caregiver’s map.
+To visualize the Viu's location on the Companion’s map.
 
 To send push notifications (e.g., "Viu has left the safe zone").
 
@@ -74,7 +74,7 @@ Security: We implement industry-standard encryption to protect your data during 
 
 5. Data Sharing and Disclosure We do not sell, trade, or rent your personal identification information to others.
 
-Caregiver Sharing: Location data is shared only with the specific Caregiver account linked to the Viu via the unique QR pairing code.
+Companion Sharing: Location data is shared only with the specific Companion account linked to the Viu via the unique QR pairing code.
 
 Legal Requirements: We may disclose your information if required to do so by law or in response to valid requests by public authorities (e.g., a court order).
 

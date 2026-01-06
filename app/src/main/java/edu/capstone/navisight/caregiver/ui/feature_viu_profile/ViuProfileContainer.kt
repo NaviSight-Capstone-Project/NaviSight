@@ -113,7 +113,7 @@ fun ViuProfileContainer(
 
                 if (!canEdit) {
                     Box(modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF3E0)).padding(8.dp), contentAlignment = Alignment.Center) {
-                        Text("View Only Mode (Secondary Caregiver)", color = Color(0xFFE65100), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                        Text("View Only Mode (Secondary Companion)", color = Color(0xFFE65100), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                     }
                 }
 
@@ -165,7 +165,7 @@ fun ViuProfileContainer(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Select a secondary caregiver to transfer rights to. You will lose edit access once accepted.",
+                        text = "Select a secondary companion to transfer rights to. You will lose edit access once accepted.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.Gray
                     )
@@ -174,7 +174,7 @@ fun ViuProfileContainer(
 
                     if (transferCandidates.isEmpty()) {
                         Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                            Text("No other caregivers found.", color = Color.Gray)
+                            Text("No other companions found.", color = Color.Gray)
                         }
                     } else {
                         LazyColumn(modifier = Modifier.weight(1f)) {

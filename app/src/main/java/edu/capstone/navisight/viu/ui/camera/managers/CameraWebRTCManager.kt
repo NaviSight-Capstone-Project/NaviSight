@@ -40,7 +40,7 @@ class WebRTCManager(
         val targetUid = cameraFragment.caregiverUid // Get the UID from the observed StateFlow
 
         if (targetUid.isNullOrEmpty()) {
-            Toast.makeText(cameraFragment.requireContext(), "Caregiver not found. Cannot start call.", Toast.LENGTH_LONG).show()
+            Toast.makeText(cameraFragment.requireContext(), "Companion not found. Cannot start call.", Toast.LENGTH_LONG).show()
             Log.e("CallSignal", "Caregiver UID is null or empty.")
             return
         }
@@ -90,7 +90,7 @@ class WebRTCManager(
                 // Show a toast message to the user
                 Toast.makeText(
                     cameraFragment.context,
-                    "Caregiver aborted their call.",
+                    "Companion aborted their call.",
                     Toast.LENGTH_LONG
                 ).show()
 
@@ -112,7 +112,7 @@ class WebRTCManager(
                 // Show a toast message to the user
                 Toast.makeText(
                     cameraFragment.context,
-                    "You've missed your caregiver's call!",
+                    "You've missed your companion's call!",
                     Toast.LENGTH_LONG
                 ).show()
 

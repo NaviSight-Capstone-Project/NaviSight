@@ -195,7 +195,7 @@ fun CallScreen(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Calling Caregiver",
+                        text = "Calling Companion",
                         color = Color.White,
                         style = MaterialTheme.typography.headlineLarge,
                         textAlign = TextAlign.Center
@@ -203,7 +203,7 @@ fun CallScreen(
                     Spacer(modifier = Modifier.size(12.dp))
                     AsyncImage(
                         model = imageUrl ?: R.drawable.default_profile,
-                        contentDescription = "Caregiver Profile Image",
+                        contentDescription = "Companion Profile Image",
                         modifier = Modifier
                             .size(120.dp)
                             .clip(CircleShape),
@@ -243,7 +243,7 @@ fun CallScreen(
                     Spacer(modifier = Modifier.size(12.dp))
                     AsyncImage(
                         model = imageUrl ?: R.drawable.default_profile,
-                        contentDescription = "Caregiver Profile Image",
+                        contentDescription = "Companion Profile Image",
                         modifier = Modifier
                             .size(120.dp)
                             .clip(CircleShape),
@@ -252,7 +252,7 @@ fun CallScreen(
                     Spacer(modifier = Modifier.size(12.dp))
                     // Caregiver Label
                     Text(
-                        text = "Caregiver",
+                        text = "Companion",
                         color = Color.White,
                         style = TextStyle(
                             fontSize = 24.sp,
@@ -301,7 +301,7 @@ fun CallScreen(
                     modifier = Modifier.padding(horizontal = 10.dp)
                 )
                 Text(
-                    text = "In call with ${caregiverRecord?.firstName?: "your Caregiver"} ",
+                    text = "In call with ${caregiverRecord?.firstName?: "your Companion"} ",
                     color = Color.White,
                     style = MaterialTheme.typography.headlineSmall,
                     textAlign = TextAlign.Center

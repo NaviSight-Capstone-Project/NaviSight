@@ -150,7 +150,7 @@ fun ProfileContent(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "The pairing is one caregiver to one VIU. If the current caregiver approves, you will be in charge of this VIU.",
+                    text = "The pairing is one companion to one VIU. If the current companion approves, you will be in charge of this VIU.",
                     color = Color.Gray,
                     fontSize = 11.sp
                 )

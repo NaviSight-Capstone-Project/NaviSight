@@ -94,7 +94,7 @@ fun CaregiverSignupScreen(
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Image(painter = painterResource(R.drawable.ic_logo), contentDescription = "Logo", modifier = Modifier.size(160.dp, 80.dp))
             Spacer(Modifier.height(8.dp))
-            Text("Caregiver Signup", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4A4A4A))
+            Text("Companion Signup", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4A4A4A))
             Spacer(Modifier.height(16.dp))
 
             // Use weight to prevent card from being too tall if content is small, but allow it to shrink

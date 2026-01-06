@@ -44,12 +44,12 @@ class CallActivity : ComponentActivity(), MainService.EndAndDeniedCallListener {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == BR_ACTION_MISSED_CALL) {
                 serviceRepository.showToastOnServiceRepoThreadAndTTS(
-                    "Your caregiver missed your call. Try again?")
+                    "Your companion missed your call. Try again?")
                 stopAndCleanUp()
             }
             if (intent?.action == BR_ACTION_DENIED_CALL) {
                 serviceRepository.showToastOnServiceRepoThreadAndTTS(
-                    "Your caregiver declined your call. Try again?")
+                    "Your companion declined your call. Try again?")
                 stopAndCleanUp()
             }
             if (intent?.action == BR_CONNECTION_FAILURE) {

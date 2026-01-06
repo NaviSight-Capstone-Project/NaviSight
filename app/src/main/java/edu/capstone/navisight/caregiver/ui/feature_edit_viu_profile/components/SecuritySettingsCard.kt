@@ -63,7 +63,7 @@ fun SecuritySettingsCard(
 
             Text("Change VIU Contact Email", style = MaterialTheme.typography.titleSmall)
             Text(
-                "Current: $viuEmail\nAn OTP will be sent to *your* (the caregiver's) email for verification.",
+                "Current: $viuEmail\nAn OTP will be sent to your companion's email for verification.",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
             )
