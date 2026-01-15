@@ -173,16 +173,8 @@ object EmailSender {
                 setFrom(InternetAddress(senderEmail, "NaviSight Support"))
                 setRecipients(Message.RecipientType.TO, InternetAddress.parse(to))
                 setSubject(subject)
-                setText(
-                    """
-                    Hello,
-
-                    $body
-
-                    Thanks,
-                    NaviSight Team
-                    """.trimIndent()
-                )
+                val htmlContent = generateVerificationHtml(subject, body)
+                setContent(htmlContent, "text/html; charset=UTF-8")
             }
 
             Transport.send(message)
@@ -198,6 +190,159 @@ object EmailSender {
             Log.e(TAG, "General error: ${e.message}", e)
             throw e
         }
+    }
+
+
+    private fun generateVerificationHtml(subject: String, body: String): String {
+        val primaryColor = "#6A1B9A"      // NaviSight Purple
+        val secondaryColor = "#F3E5F5"    // Very Light Purple
+        val softBlack = "#212121"
+        val softGrey = "#757575"
+        val white = "#FFFFFF"
+
+        val baseStyle = "font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: $softBlack; background-color: $white;"
+
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+        </head>
+        <body style="$baseStyle margin: 0; padding: 0;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: auto; border: 1px solid #eeeeee;">
+                <tr>
+                    <td style="padding: 20px 30px;">
+                        <div style="text-align: center; background-color: $primaryColor; color: $white; padding: 15px; border-radius: 8px 8px 0 0; margin-bottom: 20px;">
+                            <h2 style="margin: 0; font-size: 20px; letter-spacing: 0.5px;">
+                                $subject
+                            </h2>
+                        </div>
+                        
+                        <p style="font-size: 16px;">
+                            Hello,
+                        </p>
+                        
+                        <p style="font-size: 16px;">
+                            To proceed with your request on <strong>NaviSight</strong>, please use the verification details provided below:
+                        </p>
+                        
+                        <div style="background-color: $secondaryColor; padding: 30px; border-radius: 8px; margin: 25px 0; border: 1px dashed $primaryColor; text-align: center;">
+                            <span style="font-size: 14px; color: $softGrey; text-transform: uppercase; letter-spacing: 1px;">Your Verification Detail</span>
+                            <h2 style="color: $primaryColor; margin: 10px 0 0 0; font-size: 28px; letter-spacing: 4px;">
+                                ${body.replace(Regex(".*: "), "")}
+                            </h2>
+                        </div>
+                        
+                        <p style="font-size: 14px; color: $softGrey;">
+                            $body
+                        </p>
+                        
+                        <p style="font-size: 14px;">
+                            If you did not request this, please ignore this email or contact support if you have concerns about your account security.
+                        </p>
+                        
+                        <hr style="border: 0; border-top: 1px solid #eeeeee; margin: 30px 0;">
+
+                        <p style="font-size: 13px; color: $softGrey; text-align: center;">
+                            Thank you for using NaviSight.<br>
+                            <strong>The NaviSight Team</strong>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """.trimIndent()
+    }
+
+
+    suspend fun sendSupportConfirmationEmail(
+        context: Context,
+        to: String,
+        userMessage: String
+    ) = sendFriendlySystemEmail(
+        context,
+        to,
+        "Support Request Received",
+        "We've received your inquiry: \"$userMessage\". Our team will review it and get back to you shortly."
+    )
+
+
+    suspend fun sendReportConfirmationEmail(
+        context: Context,
+        to: String,
+        userIssue: String
+    ) = sendFriendlySystemEmail(
+        context,
+        to,
+        "Problem Report Submitted",
+        "Thank you for reporting this issue: \"$userIssue\". Our technical team has been notified and is working on a fix."
+    )
+
+    // Private helper to avoid code duplication for system notifications
+    private suspend fun sendFriendlySystemEmail(
+        context: Context,
+        to: String,
+        subject: String,
+        bodyText: String
+    ) = withContext(Dispatchers.IO) {
+        try {
+            if (senderEmail == null || senderPassword == null) loadCredentials(context)
+
+            val props = Properties().apply {
+                put("mail.smtp.auth", "true")
+                put("mail.smtp.starttls.enable", "true")
+                put("mail.smtp.host", "smtp.gmail.com")
+                put("mail.smtp.port", "587")
+            }
+
+            val session = Session.getInstance(props, object : Authenticator() {
+                override fun getPasswordAuthentication() = PasswordAuthentication(senderEmail, senderPassword)
+            })
+
+            val message = MimeMessage(session).apply {
+                setFrom(InternetAddress(senderEmail, "NaviSight Support"))
+                setRecipients(Message.RecipientType.TO, InternetAddress.parse(to))
+                setSubject(subject)
+                setContent(generateFriendlyHtml(subject, bodyText), "text/html; charset=UTF-8")
+            }
+
+            Transport.send(message)
+            Log.i("EmailSender", "System email sent to $to")
+        } catch (e: Exception) {
+            Log.e("EmailSender", "Failed to send system email", e)
+            throw e
+        }
+    }
+
+    private fun generateFriendlyHtml(title: String, message: String): String {
+        val primaryColor = "#6A1B9A" // NaviSight Purple
+        val secondaryColor = "#F3E5F5"
+        return """
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: sans-serif; color: #212121; background-color: #ffffff; margin: 0; padding: 0;">
+            <table width="100%" style="max-width: 600px; margin: auto; border: 1px solid #eeeeee;">
+                <tr>
+                    <td style="padding: 20px;">
+                        <div style="background-color: $primaryColor; color: white; padding: 15px; border-radius: 8px; text-align: center;">
+                            <h2 style="margin: 0;">$title</h2>
+                        </div>
+                        <p style="margin-top: 20px; font-size: 16px; line-height: 1.5;">Hello,</p>
+                        <div style="background-color: $secondaryColor; padding: 20px; border-radius: 8px; border-left: 4px solid $primaryColor;">
+                            <p style="margin: 0; font-style: italic;">$message</p>
+                        </div>
+                        <p style="font-size: 14px; color: #757575; margin-top: 20px;">
+                            Thank you for being part of NaviSight. We are here to help.
+                        </p>
+                        <hr style="border: 0; border-top: 1px solid #eeeeee; margin: 20px 0;">
+                        <p style="text-align: center; font-size: 12px; color: #9e9e9e;">The NaviSight Team</p>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """.trimIndent()
     }
 
 

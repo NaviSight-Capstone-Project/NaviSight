@@ -35,6 +35,8 @@ import coil.compose.AsyncImage
 import edu.capstone.navisight.R
 import edu.capstone.navisight.auth.util.LegalDocuments
 import edu.capstone.navisight.caregiver.model.Caregiver
+import edu.capstone.navisight.common.EmailSender
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
@@ -471,6 +473,11 @@ fun HelpCenterDialog(onDismiss: () -> Unit) {
 
 @Composable
 fun SupportInboxDialog(onDismiss: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var messageText by remember { mutableStateOf("") }
+    var isSending by remember { mutableStateOf(false) }
+
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
@@ -501,12 +508,13 @@ fun SupportInboxDialog(onDismiss: () -> Unit) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = "",
-                    onValueChange = {},
+                    value = messageText,
+                    onValueChange = { messageText = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(120.dp),
                     placeholder = { Text("Type your message here...") },
+                    enabled = !isSending,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFF6041EC),
                         unfocusedBorderColor = Color.LightGray
@@ -516,11 +524,31 @@ fun SupportInboxDialog(onDismiss: () -> Unit) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
-                    onClick = onDismiss,
+                    onClick = {
+                        if (messageText.isNotBlank()) {
+                            isSending = true
+                            coroutineScope.launch {
+                                try {
+                                    // Call the dedicated Support function
+                                    EmailSender.sendSupportConfirmationEmail(
+                                        context = context,
+                                        to = "sampleuser@example.com", // CHANGE ME FOR HARDCODED.
+                                        userMessage = messageText
+                                    )
+                                    android.widget.Toast.makeText(context, "Message Sent!", android.widget.Toast.LENGTH_SHORT).show()
+                                    onDismiss()
+                                } catch (e: Exception) {
+                                    isSending = false
+                                }
+                            }
+                        }
+                    },
+                    enabled = !isSending && messageText.isNotBlank(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6041EC)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Send Message", color = Color.White)
+                    if (isSending) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
+                    else Text("Send Message", color = Color.White)
                 }
             }
         }
@@ -529,6 +557,11 @@ fun SupportInboxDialog(onDismiss: () -> Unit) {
 
 @Composable
 fun ReportProblemDialog(onDismiss: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var issueText by remember { mutableStateOf("") }
+    var isSending by remember { mutableStateOf(false) }
+
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
@@ -559,12 +592,13 @@ fun ReportProblemDialog(onDismiss: () -> Unit) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = "",
-                    onValueChange = {},
+                    value = issueText,
+                    onValueChange = { issueText = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(120.dp),
                     placeholder = { Text("e.g. App crashes when I...") },
+                    enabled = !isSending,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFFD32F2F),
                         unfocusedBorderColor = Color.LightGray
@@ -574,11 +608,31 @@ fun ReportProblemDialog(onDismiss: () -> Unit) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
-                    onClick = onDismiss,
+                    onClick = {
+                        if (issueText.isNotBlank()) {
+                            isSending = true
+                            coroutineScope.launch {
+                                try {
+                                    // Call the dedicated Report function
+                                    EmailSender.sendReportConfirmationEmail(
+                                        context = context,
+                                        to = "sampleuser@example.com", // CHANGE ME FOR HARDCODED.
+                                        userIssue = issueText
+                                    )
+                                    android.widget.Toast.makeText(context, "Report Submitted!", android.widget.Toast.LENGTH_SHORT).show()
+                                    onDismiss()
+                                } catch (e: Exception) {
+                                    isSending = false
+                                }
+                            }
+                        }
+                    },
+                    enabled = !isSending && issueText.isNotBlank(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Submit Report", color = Color.White)
+                    if (isSending) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
+                    else Text("Submit Report", color = Color.White)
                 }
             }
         }
