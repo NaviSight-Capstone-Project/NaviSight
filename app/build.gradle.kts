@@ -28,12 +28,6 @@ android {
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField(
-            "String",
-            "MAPTILER_API_KEY",
-            properties.getProperty("MAPTILER_API_KEY", "\"\"")
-        )
-
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         }

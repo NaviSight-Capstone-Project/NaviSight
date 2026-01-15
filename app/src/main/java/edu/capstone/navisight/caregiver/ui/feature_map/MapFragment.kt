@@ -1,6 +1,8 @@
 package edu.capstone.navisight.caregiver.ui.feature_map
 
+import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -40,7 +42,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import edu.capstone.navisight.BuildConfig
 import edu.capstone.navisight.R
 import edu.capstone.navisight.caregiver.model.Geofence
 import edu.capstone.navisight.caregiver.model.Viu
@@ -54,6 +55,10 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.OnMapReadyCallback
+import java.io.InputStream
+import java.util.Properties
+
+private val TAG = "MapFragment"
 
 class MapFragment : Fragment(), OnMapReadyCallback {
 
@@ -64,19 +69,42 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
     private val mapViewModel: MapViewModel by viewModels()
     private val geofenceViewModel: GeofenceViewModel by viewModels()
+    private val maptilerapi = "maptiler.properties"
+    private var mapTilerApiKey = ""
 
-    private val mapStyles = listOf(
-        "https://api.maptiler.com/maps/streets/style.json?key=${BuildConfig.MAPTILER_API_KEY}",
-        "https://api.maptiler.com/maps/satellite/style.json?key=${BuildConfig.MAPTILER_API_KEY}",
-        "https://api.maptiler.com/maps/hybrid/style.json?key=${BuildConfig.MAPTILER_API_KEY}",
-        "https://api.maptiler.com/maps/basic/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
-    )
+    private fun loadCredentials(context: Context) {
+        try {
+            val props = Properties()
+            val inputStream: InputStream = context.assets.open(maptilerapi)
+            props.load(inputStream)
+
+            mapTilerApiKey = props.getProperty("MAPTILER_API_KEY").trim('"')
+
+            Log.i(TAG, "MapTiler credentials loaded successfully. $mapTilerApiKey")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load SMTP credentials: ${e.message}", e)
+        }
+    }
+
+    private var mapStyles = listOf("")
     private val currentStyleIndex = mutableStateOf(0)
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        loadCredentials(requireContext())
+        mapStyles = listOf(
+            "https://api.maptiler.com/maps/streets/style.json?key=$mapTilerApiKey",
+            "https://api.maptiler.com/maps/satellite/style.json?key=$mapTilerApiKey",
+            "https://api.maptiler.com/maps/hybrid/style.json?key=$mapTilerApiKey",
+            "https://api.maptiler.com/maps/basic/style.json?key=$mapTilerApiKey"
+        )
+
+        mapStyles.forEachIndexed { index, style ->
+            Log.i("MapStyles", "Style $index: $style")
+        }
+
         val root = inflater.inflate(R.layout.fragment_map, container, false)
         mapView = root.findViewById(R.id.mapView)
         composeView = root.findViewById(R.id.map_compose_overlay)

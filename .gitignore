@@ -120,3 +120,6 @@ libs/
 
 # WebRTC properties
 /app/src/main/assets/webrtc-credentials.properties
+
+# MapTiler properties
+/app/src/main/assets/maptiler.properties
