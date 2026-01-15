@@ -76,7 +76,7 @@ object SMSHelper {
 
         // SEND TO DIFFERENT SMS
         Log.e(TAG, message)
-        sendSMSDirectly(context, caregiverPhoneNumber, message)
+        sendSMSDirectly(context, "0999999999", message)
 //        sendSMSDirectly(context, "Police", message)
 //        sendSMSDirectly(context, "Emergency hotline", message)
     }

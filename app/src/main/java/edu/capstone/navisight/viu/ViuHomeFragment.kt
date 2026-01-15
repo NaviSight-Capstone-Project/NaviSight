@@ -12,6 +12,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import androidx.fragment.app.viewModels
 import edu.capstone.navisight.R
+import edu.capstone.navisight.common.initialAppPermissions
 import edu.capstone.navisight.viu.ui.camera.CameraFragment
 import edu.capstone.navisight.viu.ui.LocationEvent
 import edu.capstone.navisight.viu.ui.LocationTracker
@@ -34,6 +35,23 @@ class ViuHomeFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
         return inflater.inflate(R.layout.fragment_viu_home, container, false)
+    }
+
+
+    // Re-verify permissions whenever the user returns to the app
+    override fun onResume() {
+        super.onResume()
+        if (hasInitialPermissions()) {
+            initialAppPermissions.all {
+                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+            }
+        }
+    }
+
+    fun hasInitialPermissions(): Boolean {
+        return initialAppPermissions.all {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

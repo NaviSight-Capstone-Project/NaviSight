@@ -47,6 +47,7 @@ private const val IS_DISCLAIMER_AGREED_SP_NAME = "IsDisclaimerAgreed"
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var permissionsHandler : PermissionsHelper
     private lateinit var auth: FirebaseAuth
     private lateinit var getUserCollectionUseCase: GetUserCollectionUseCase
     private lateinit var mainServiceRepository: MainServiceRepository
@@ -70,8 +71,8 @@ class MainActivity : AppCompatActivity() {
         auth = FirebaseAuth.getInstance()
 
         // Setup all permissions using this helper, begin if set properly
-        val permissionHandler = PermissionsHelper(this)
-        permissionHandler.checkAndRequestInitialPermissions()
+        permissionsHandler = PermissionsHelper(this)
+        permissionsHandler.checkAndRequestInitialPermissions()
 
         // Start
         beginAppFlow()

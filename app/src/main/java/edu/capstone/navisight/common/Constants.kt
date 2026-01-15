@@ -1,5 +1,6 @@
 package edu.capstone.navisight.common
 
+import android.Manifest
 import kotlin.time.Duration.Companion.milliseconds
 
 
@@ -14,6 +15,18 @@ enum class FlashMode {
     MANUAL_ON,
     OFF
 }
+
+val initialAppPermissions = arrayOf(
+    Manifest.permission.CAMERA,
+    Manifest.permission.ACCESS_FINE_LOCATION,
+    Manifest.permission.ACCESS_COARSE_LOCATION,
+    Manifest.permission.RECORD_AUDIO,
+    Manifest.permission.VIBRATE,
+    Manifest.permission.POST_NOTIFICATIONS,
+    Manifest.permission.CALL_PHONE,
+    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+    Manifest.permission.SEND_SMS
+)
 
 object Constants {
 

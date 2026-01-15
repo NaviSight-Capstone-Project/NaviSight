@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
@@ -22,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -49,6 +51,7 @@ import edu.capstone.navisight.caregiver.ui.feature_settings.SettingsFragment
 import edu.capstone.navisight.caregiver.ui.feature_stream.StreamFragment
 import edu.capstone.navisight.caregiver.ui.navigation.BottomNavigationBar
 import edu.capstone.navisight.common.VibrationHelper
+import edu.capstone.navisight.common.initialAppPermissions
 import edu.capstone.navisight.common.webrtc.model.DataModel
 import edu.capstone.navisight.common.webrtc.model.DataModelType
 import edu.capstone.navisight.common.webrtc.repository.MainRepository
@@ -100,6 +103,12 @@ class CaregiverHomeFragment : Fragment(),
                 Log.d("EmergencyReceiver", "Broadcast received: PUSH for new alert from $viuName.")
                 emergencyViewModel.activateEmergency(signal)
             }
+        }
+    }
+
+    fun hasInitialPermissions(): Boolean {
+        return initialAppPermissions.all {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
         }
     }
 
@@ -283,6 +292,11 @@ class CaregiverHomeFragment : Fragment(),
         super.onResume()
         pendingDeniedCallMessage?.let { message ->
             pendingDeniedCallMessage = null
+        }
+        if (hasInitialPermissions()) {
+            initialAppPermissions.all {
+                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+            }
         }
     }
 

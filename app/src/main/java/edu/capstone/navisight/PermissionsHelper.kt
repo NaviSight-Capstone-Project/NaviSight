@@ -6,24 +6,14 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
+import edu.capstone.navisight.common.initialAppPermissions
 
 class PermissionsHelper (private val mainActivity: AppCompatActivity) {
     private lateinit var initialPermissionsLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var backgroundLocationPermissionLauncher: ActivityResultLauncher<String>
     private var context = mainActivity.applicationContext
     private val tag = "PermissionsHelper"
-
-    private val initialPermissions = arrayOf(
-        Manifest.permission.CAMERA,
-        Manifest.permission.ACCESS_FINE_LOCATION,
-        Manifest.permission.ACCESS_COARSE_LOCATION,
-        Manifest.permission.RECORD_AUDIO,
-        Manifest.permission.VIBRATE,
-        Manifest.permission.POST_NOTIFICATIONS,
-        Manifest.permission.CALL_PHONE,
-        Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        Manifest.permission.SEND_SMS
-    )
 
     init {
         registerLaunchers()
@@ -40,7 +30,7 @@ class PermissionsHelper (private val mainActivity: AppCompatActivity) {
     }
 
     fun checkAndRequestInitialPermissions() {
-        val permissionsToRequest = initialPermissions.filter {
+        val permissionsToRequest = initialAppPermissions.filter {
             ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
         }.toTypedArray()
         if (permissionsToRequest.isNotEmpty()) {
