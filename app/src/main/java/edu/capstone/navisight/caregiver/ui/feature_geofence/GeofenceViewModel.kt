@@ -1,5 +1,6 @@
 package edu.capstone.navisight.caregiver.ui.feature_geofence
 
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import edu.capstone.navisight.caregiver.model.Geofence
@@ -20,7 +21,7 @@ class GeofenceViewModel(
 
     private val _geofences = MutableStateFlow<List<Geofence>>(emptyList())
     val geofences: StateFlow<List<Geofence>> = _geofences
-
+    private val MAX_GEOFENCES = 3
 
     private var geofenceJob: Job? = null
 
@@ -46,7 +47,12 @@ class GeofenceViewModel(
         name: String,
         location: GeoPoint,
         radius: Double
-    ) {
+    ) : Boolean {
+
+        if (_geofences.value.size >= MAX_GEOFENCES) {
+            return false
+        }
+
         viewModelScope.launch {
             val newGeofence = Geofence(
                 viuUid = viuUid,
@@ -56,6 +62,7 @@ class GeofenceViewModel(
             )
             addGeofenceUseCase(newGeofence)
         }
+        return true
     }
 
     fun deleteGeofence(geofenceId: String) {

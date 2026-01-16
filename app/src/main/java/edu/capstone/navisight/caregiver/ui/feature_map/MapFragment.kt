@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -189,7 +190,12 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                         if (isPrimary) {
                             selectedViu?.uid?.let { viuUid ->
                                 val geoPoint = com.google.firebase.firestore.GeoPoint(location.latitude, location.longitude)
-                                geofenceViewModel.addGeofence(viuUid, name, geoPoint, radius)
+                                if (!geofenceViewModel.addGeofence(viuUid, name, geoPoint, radius)) {
+                                    Toast.makeText(
+                                        context,
+                                        "Limit reached! Please delete a geofence to add a new one.",
+                                        Toast.LENGTH_LONG).show()
+                                }
                             }
                         }
                         mapViewModel.dismissAddGeofenceDialog()
