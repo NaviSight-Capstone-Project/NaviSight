@@ -293,8 +293,8 @@ fun EditViuProfileScreen(
         OutlinedTextField(
             value = phone,
             onValueChange = { if (it.all { c -> c.isDigit() } && it.length <= 11) { phone = it; viewModel.clearSaveError() } },
-            label = { Text("Phone Number") },
-            readOnly = !canEdit, modifier = Modifier.fillMaxWidth(),
+            label = { Text("Phone Number (Uneditable)") },
+            readOnly = true, modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
             colors = customTextFieldColors, shape = RoundedCornerShape(12.dp)
         )
