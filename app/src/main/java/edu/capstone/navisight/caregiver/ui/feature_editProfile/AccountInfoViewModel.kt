@@ -194,7 +194,7 @@ class AccountInfoViewModel(
                     is OtpResult.ResendOtpResult.Success -> _uiEvent.send("Password OTP Resent. Please check your email.")
                     is OtpResult.ResendOtpResult.FailureCooldown -> _uiEvent.send("Please wait 5 minutes to resend password OTP.")
                     is OtpResult.ResendOtpResult.FailureGeneric -> _uiEvent.send("Please wait 1 minute to resend password OTP.") // More specific message
-                    is OtpResult.ResendOtpResult.FailureEmailAlreadyInUse -> _uiEvent.send("An unexpected error occurred.")
+                    is OtpResult.ResendOtpResult.FailureEmailAlreadyInUse -> _uiEvent.send("Email is already used. Please try a different email.")
                 }
             } catch (e: Exception) {
                 _uiEvent.send("Error resending password OTP: ${e.message}")
