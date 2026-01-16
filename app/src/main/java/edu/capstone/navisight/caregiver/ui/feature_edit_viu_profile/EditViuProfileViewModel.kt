@@ -268,6 +268,20 @@ class EditViuProfileViewModel(
         return null
     }
 
+    fun isValidName(name: String) = name.isNotBlank() && !name.any { it.isDigit() }
+    fun isValidPhone(phone: String) = phone.isNotBlank() && phone.isDigitsOnly() && phone.length in 10..13
+    fun isValidBirthday(birthday: String): Boolean {
+        if (birthday.isBlank()) return false
+        return try {
+            val birthDate = dateFormatter.parse(birthday) ?: return false
+            val today = Calendar.getInstance()
+            val birthCal = Calendar.getInstance().apply { time = birthDate }
+            var age = today.get(Calendar.YEAR) - birthCal.get(Calendar.YEAR)
+            if (today.get(Calendar.DAY_OF_YEAR) < birthCal.get(Calendar.DAY_OF_YEAR)) age--
+            age in 18..60
+        } catch (e: Exception) { false }
+    }
+
     // Save Flow (Edit Profile)
     fun startSaveFlow(
         firstName: String, middleName: String, lastName: String,
@@ -278,6 +292,11 @@ class EditViuProfileViewModel(
             return
         }
         _saveError.value = null
+
+        // Check for blanks on required
+        if (firstName.isBlank()) { _saveError.value = "First name is required"; return }
+        if (lastName.isBlank()) { _saveError.value = "Last name is required"; return }
+        if (address.isBlank()) { _saveError.value = "Address is required"; return }
 
         val firstNameError = validateName(firstName, "First Name")
         if (firstNameError != null) { _saveError.value = firstNameError; return }

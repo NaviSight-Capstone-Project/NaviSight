@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -83,6 +84,14 @@ fun EditViuProfileScreen(
     val gradientBrush = Brush.horizontalGradient(colors = listOf(Color(0xFFB644F1), Color(0xFF6041EC)))
 
     var loadedViuUid by remember { mutableStateOf<String?>(null) }
+
+    val isFormValid = remember(firstName, lastName, birthday, sex, phone) {
+        viewModel.isValidName(firstName) &&
+                viewModel.isValidName(lastName) &&
+                viewModel.isValidBirthday(birthday) &&
+                sex.isNotBlank() &&
+                viewModel.isValidPhone(phone)
+    }
 
     LaunchedEffect(viu) {
         if (viu != null && loadedViuUid != viu?.uid) {
@@ -234,8 +243,16 @@ fun EditViuProfileScreen(
         // Name Fields
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
-                value = firstName, onValueChange = { firstName = it; viewModel.clearSaveError() },
-                label = { Text("First Name") }, readOnly = !canEdit, modifier = Modifier.weight(1f),
+                value = firstName,
+                onValueChange = { firstName = it },
+                label = { Text("First Name") },
+                readOnly = !canEdit, modifier = Modifier.weight(1f),
+                isError = firstName.isBlank(), // Turns the box red if empty
+                supportingText = {
+                    if (firstName.isBlank()) {
+                        Text("Cannot be empty", color = MaterialTheme.colorScheme.error)
+                    }
+                },
                 colors = customTextFieldColors, shape = RoundedCornerShape(12.dp)
             )
             OutlinedTextField(
@@ -244,8 +261,16 @@ fun EditViuProfileScreen(
                 colors = customTextFieldColors, shape = RoundedCornerShape(12.dp)
             )
             OutlinedTextField(
-                value = lastName, onValueChange = { lastName = it; viewModel.clearSaveError() },
-                label = { Text("Last Name") }, readOnly = !canEdit, modifier = Modifier.weight(1f),
+                value = lastName,
+                onValueChange = { lastName = it },
+                label = { Text("Last Name") },
+                readOnly = !canEdit, modifier = Modifier.weight(1f),
+                isError = lastName.isBlank(), // Turns the box red if empty
+                supportingText = {
+                    if (lastName.isBlank()) {
+                        Text("Cannot be empty", color = MaterialTheme.colorScheme.error)
+                    }
+                },
                 colors = customTextFieldColors, shape = RoundedCornerShape(12.dp)
             )
         }
@@ -301,10 +326,18 @@ fun EditViuProfileScreen(
         )
 
         OutlinedTextField(
-            value = address, onValueChange = { address = it },
+            value = address,
+            onValueChange = { address = it },
             label = { Text("Address") }, readOnly = !canEdit, modifier = Modifier.fillMaxWidth(),
-            colors = customTextFieldColors, shape = RoundedCornerShape(12.dp)
+            colors = customTextFieldColors, shape = RoundedCornerShape(12.dp),
+            isError = address.isBlank(), // Turns the box red if empty
+            supportingText = {
+                if (address.isBlank()) {
+                    Text("This field cannot be empty", color = MaterialTheme.colorScheme.error)
+                }
+            }
         )
+
         ExposedDropdownMenuBox(
             expanded = isStatusDropdownExpanded && canEdit,
             onExpandedChange = { if (canEdit) isStatusDropdownExpanded = !isStatusDropdownExpanded },
@@ -338,18 +371,38 @@ fun EditViuProfileScreen(
             } ?: false
 
             Button(
-                onClick = { viewModel.startSaveFlow(firstName, middleName, lastName, birthday, sex, phone, address, status) },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                onClick = {
+                    viewModel.startSaveFlow(firstName, middleName, lastName, birthday, sex, phone, address, status)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                enabled = hasChanges && !isLoading && saveFlowState == SaveFlowState.IDLE,
-                contentPadding = PaddingValues()
+                // Disable if no changes OR if the form is invalid
+                enabled = hasChanges && isFormValid && !isLoading && saveFlowState == SaveFlowState.IDLE,
+                contentPadding = PaddingValues(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent
+                )
             ) {
                 Box(
-                    modifier = Modifier.background(brush = gradientBrush, shape = RoundedCornerShape(12.dp)).fillMaxSize(),
+                    modifier = Modifier
+                        .background(
+                            brush = if (hasChanges && isFormValid) gradientBrush else SolidColor(
+                                Color.LightGray
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("SAVE CHANGES", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "SAVE CHANGES",
+                        color = if (hasChanges && isFormValid) Color.White else Color.Gray, // Darker text when disabled
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
