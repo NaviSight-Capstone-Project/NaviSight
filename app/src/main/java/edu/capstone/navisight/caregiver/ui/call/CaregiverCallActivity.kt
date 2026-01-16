@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.MediaPlayer
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.util.Log
@@ -14,6 +15,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.mutableStateOf
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import edu.capstone.navisight.R
 import edu.capstone.navisight.caregiver.data.remote.ViuDataSource
 import edu.capstone.navisight.common.Constants.BR_ACTION_DENIED_CALL
 import edu.capstone.navisight.common.Constants.BR_ACTION_MISSED_CALL
@@ -37,6 +39,25 @@ class CaregiverCallActivity : ComponentActivity(), MainService.EndAndDeniedCallL
 
     private var isConnectionFailed = mutableStateOf(false)
     private var failureMessage = mutableStateOf("Connection failed. Try again.") // Default message
+    private var mediaPlayer: MediaPlayer? = null
+
+    private fun playCallingSound() {
+        Log.d("Calling", "Playing sound")
+        if (mediaPlayer == null) {
+            // Ensure you have a 'calling_tone.mp3' in res/raw
+            mediaPlayer = MediaPlayer.create(this, R.raw.calling_tone).apply {
+                isLooping = true
+                start()
+            }
+            Log.d("Calling", "looped")
+        }
+    }
+
+    private fun stopCallingSound() {
+        mediaPlayer?.stop()
+        mediaPlayer?.release()
+        mediaPlayer = null
+    }
 
     private val finishReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -64,11 +85,13 @@ class CaregiverCallActivity : ComponentActivity(), MainService.EndAndDeniedCallL
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == BR_CONNECTION_ESTABLISHED) {
                 isConnectedState.value = true
+                stopCallingSound()
             }
         }
     }
 
     private fun stopAndCleanUp(){
+        stopCallingSound()
         serviceRepository.sendEndOrAbortCall()
         MainService.remoteSurfaceView?.release()
         MainService.remoteSurfaceView = null
@@ -101,6 +124,10 @@ class CaregiverCallActivity : ComponentActivity(), MainService.EndAndDeniedCallL
         target = intent.getStringExtra("target")
         isVideoCall = intent.getBooleanExtra("isVideoCall", true)
         isCaller = intent.getBooleanExtra("isCaller", true)
+
+        if (isCaller) {
+            playCallingSound()
+        }
 
         setContent {
             CallScreen(
@@ -163,6 +190,7 @@ class CaregiverCallActivity : ComponentActivity(), MainService.EndAndDeniedCallL
 
     override fun onDestroy() {
         super.onDestroy()
+        stopCallingSound()
         if (MainService.endAndDeniedCallListener == this) {
             MainService.endAndDeniedCallListener = null
         }

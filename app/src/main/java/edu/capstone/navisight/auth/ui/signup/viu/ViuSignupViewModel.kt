@@ -11,6 +11,7 @@ import edu.capstone.navisight.auth.domain.VerifyViuSignupOtpUseCase
 import edu.capstone.navisight.auth.domain.usecase.AcceptLegalDocumentsUseCase
 import edu.capstone.navisight.auth.util.LegalDocuments
 import edu.capstone.navisight.auth.model.OtpResult
+import edu.capstone.navisight.common.TextToSpeechHelper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -146,7 +147,7 @@ class ViuSignupViewModel : ViewModel() {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         verificationSuccess = true,
-                        successMessage = "Verification successful! Please log in."
+                        successMessage = "Verification successful!"
                     )
                     stopResendTimer()
                 }

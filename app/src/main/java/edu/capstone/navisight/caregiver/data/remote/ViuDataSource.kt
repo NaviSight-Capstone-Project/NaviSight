@@ -166,7 +166,7 @@ class ViuDataSource(
 
     suspend fun deleteViuAndRelationship(viuUid: String): Result<Unit> {
         val caregiverUid = auth.currentUser?.uid
-            ?: return Result.failure(Exception("Caregiver not signed in"))
+            ?: return Result.failure(Exception("Companion not signed in"))
 
         return try {
             val relationshipQuery = relationshipsCollection
@@ -205,7 +205,7 @@ class ViuDataSource(
     ): Result<ResendOtpResult> {
         return try {
             val caregiverEmail = auth.currentUser?.email
-                ?: return Result.failure(Exception("Caregiver not signed in"))
+                ?: return Result.failure(Exception("Companion not signed in"))
 
             // Check OTP Cooldown
             if (otpDataSource.isCooldownActive(viuUid, OtpDataSource.OtpType.VIU_EMAIL_CHANGE)) {
@@ -257,8 +257,8 @@ class ViuDataSource(
 
     suspend fun reauthenticateCaregiver(password: String): Result<Unit> {
         return try {
-            val user = auth.currentUser ?: return Result.failure(Exception("Caregiver not logged in"))
-            val email = user.email ?: return Result.failure(Exception("Caregiver email not found"))
+            val user = auth.currentUser ?: return Result.failure(Exception("Companion not logged in"))
+            val email = user.email ?: return Result.failure(Exception("Companion email not found"))
             val credential = EmailAuthProvider.getCredential(email, password)
             user.reauthenticate(credential).await()
             Result.success(Unit)
@@ -269,8 +269,8 @@ class ViuDataSource(
 
     suspend fun sendVerificationOtpToCaregiver(context: Context): Result<ResendOtpResult> {
         return try {
-            val caregiver = auth.currentUser ?: return Result.failure(Exception("Caregiver not logged in"))
-            val caregiverEmail = caregiver.email ?: return Result.failure(Exception("Caregiver email not found"))
+            val caregiver = auth.currentUser ?: return Result.failure(Exception("Companion not logged in"))
+            val caregiverEmail = caregiver.email ?: return Result.failure(Exception("Companion email not found"))
             val caregiverUid = caregiver.uid
 
             if (otpDataSource.isCooldownActive(caregiverUid, OtpDataSource.OtpType.VIU_PROFILE_UPDATE)) {
@@ -296,7 +296,7 @@ class ViuDataSource(
 
     suspend fun verifyCaregiverOtp(enteredOtp: String): Result<OtpVerificationResult> {
         return try {
-            val caregiverUid = auth.currentUser?.uid ?: return Result.failure(Exception("Caregiver not logged in"))
+            val caregiverUid = auth.currentUser?.uid ?: return Result.failure(Exception("Companion not logged in"))
 
             val verificationResult = otpDataSource.verifyOtp(
                 uid = caregiverUid,
@@ -330,7 +330,7 @@ class ViuDataSource(
 
     suspend fun checkIfPrimaryCaregiver(viuUid: String): Result<Boolean> {
         val caregiverUid = auth.currentUser?.uid
-            ?: return Result.failure(Exception("Caregiver not signed in"))
+            ?: return Result.failure(Exception("Companion not signed in"))
 
         return try {
             val querySnapshot = relationshipsCollection
