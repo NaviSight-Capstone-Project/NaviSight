@@ -87,23 +87,20 @@ internal fun ChangeEmailDialog(onConfirm: (String, String) -> Unit, onDismiss: (
     var newEmail by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Change Email") },
+        title = { Text("Update Email", fontWeight = FontWeight.Bold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Enter your new email and current password.", style = MaterialTheme.typography.bodySmall)
+
                 OutlinedTextField(
                     value = newEmail,
-                    onValueChange = {
-                        newEmail = it
-                        error = if (!android.util.Patterns.EMAIL_ADDRESS.matcher(it).matches())
-                            "Invalid email format"
-                        else null
-                    },
+                    onValueChange = { newEmail = it },
                     label = { Text("New Email") },
-                    isError = error != null,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
                     singleLine = true
                 )
 
@@ -114,26 +111,29 @@ internal fun ChangeEmailDialog(onConfirm: (String, String) -> Unit, onDismiss: (
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(
-                                if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = null
-                            )
+                            Icon(if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility, null)
                         }
                     },
-                    singleLine = true
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
                 )
-
-                if (error != null)
-                    Text(error!!, color = Color.Red, fontSize = MaterialTheme.typography.labelSmall.fontSize)
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                if (newEmail.isNotBlank() && password.isNotBlank() && error == null)
-                    onConfirm(newEmail, password)
-            }) { Text("Update") }
+            Button(
+                onClick = { onConfirm(newEmail, password) },
+                enabled = newEmail.isNotBlank() && password.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A5AE0)), // Brand Purple
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Update")
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.Gray)
+            }
+        }
     )
 }
 
@@ -141,52 +141,56 @@ internal fun ChangeEmailDialog(onConfirm: (String, String) -> Unit, onDismiss: (
 internal fun ChangePasswordDialog(onConfirm: (String, String) -> Unit, onDismiss: () -> Unit) {
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Change Password") },
-        text = {
+        title = {
             Column {
+                Text("Change Password", fontWeight = FontWeight.Bold)
+                Text(
+                    text = "Set a new secure password for your account. You will need your old password to proceed.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = currentPassword,
                     onValueChange = { currentPassword = it },
                     label = { Text("Current Password") },
                     visualTransformation = PasswordVisualTransformation(),
-                    singleLine = true
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
                 )
-                Spacer(Modifier.height(8.dp))
+
                 OutlinedTextField(
                     value = newPassword,
                     onValueChange = { newPassword = it },
                     label = { Text("New Password") },
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(
-                                imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = null
-                            )
-                        }
-                    },
-                    isError = error != null,
-                    singleLine = true
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
                 )
-                if (error != null) Text(error!!, color = Color.Red, fontSize = MaterialTheme.typography.labelSmall.fontSize)
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                if (newPassword.length < 8 || !newPassword.any { it.isDigit() }) {
-                    error = "Min 8 chars, at least 1 number"
-                } else {
-                    error = null
-                    onConfirm(currentPassword, newPassword)
-                }
-            }) { Text("Update") }
+            Button(
+                onClick = { onConfirm(currentPassword, newPassword) },
+                enabled = currentPassword.isNotBlank() && newPassword.length >= 6,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A5AE0)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Update")
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.Gray)
+            }
+        }
     )
 }
 

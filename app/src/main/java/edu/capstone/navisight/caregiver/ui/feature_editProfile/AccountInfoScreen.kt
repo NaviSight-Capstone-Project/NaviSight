@@ -1,6 +1,7 @@
 package edu.capstone.navisight.caregiver.ui.feature_editProfile
 
 import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,16 +12,20 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import edu.capstone.navisight.caregiver.model.Caregiver
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
@@ -102,6 +107,15 @@ fun AccountInfoScreen(
                     selectedBirthdayTimestamp != it.birthday ||
                     address != (it.address ?: "")
         } ?: false
+    }
+
+    // Check for input validation
+    val isFormValid = remember(firstName, lastName, phone, selectedBirthdayTimestamp, address) {
+        firstName.isNotBlank() &&
+                lastName.isNotBlank() &&
+                phone.isNotBlank() &&
+                selectedBirthdayTimestamp != null &&
+                address.isNotBlank()
     }
 
     // Colors
@@ -324,7 +338,7 @@ fun AccountInfoScreen(
         topBar = {
             Box(modifier = Modifier.fillMaxWidth().background(gradientBrush)) {
                 TopAppBar(
-                    title = { Text("Edit Companion Profile", color = Color.White) },
+                    title = { Text("Edit Your Companion Profile", color = Color.White) },
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
@@ -342,7 +356,7 @@ fun AccountInfoScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = 100.dp),
+                    .padding(bottom = 60.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 CaregiverProfileHeader(
@@ -363,70 +377,244 @@ fun AccountInfoScreen(
                 ) {
                     Text("Personal Information", style = MaterialTheme.typography.titleLarge, color = sectionHeaderColor, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp).align(Alignment.CenterHorizontally))
 
-                    Text("Name", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
+                    Text("Name", color = fieldLabelColor)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(value = firstName, onValueChange = { if (it.all { ch -> ch.isLetter() || ch.isWhitespace() }) firstName = it }, label = { Text("First Name") }, modifier = Modifier.weight(1f), singleLine = true, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp))
-                        OutlinedTextField(value = middleName, onValueChange = { if (it.all { ch -> ch.isLetter() || ch.isWhitespace() }) middleName = it }, label = { Text("Middle") }, modifier = Modifier.weight(1f), singleLine = true, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp))
-                        OutlinedTextField(value = lastName, onValueChange = { if (it.all { ch -> ch.isLetter() || ch.isWhitespace() }) lastName = it }, label = { Text("Last Name") }, modifier = Modifier.weight(1f), singleLine = true, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp))
+
+                        // First Name
+                        OutlinedTextField(
+                            value = firstName,
+                            onValueChange = {
+                                if (it.all { ch -> ch.isLetter() || ch.isWhitespace() }) firstName =
+                                    it
+                            },
+                            label = { Text("First Name") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            isError = firstName.isBlank(),
+                            supportingText = {
+                                if (firstName.isBlank()) Text(
+                                    "Required",
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            },
+                            colors = customTextFieldColors,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        // MIDDLE NAME
+                        OutlinedTextField(
+                            value = middleName,
+                            onValueChange = {
+                                if (it.all { ch -> ch.isLetter() || ch.isWhitespace() }) middleName =
+                                    it
+                            },
+                            label = { Text("Middle") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            colors = customTextFieldColors,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        // LAST NAME
+                        OutlinedTextField(
+                            value = lastName,
+                            onValueChange = {
+                                if (it.all { ch -> ch.isLetter() || ch.isWhitespace() }) lastName =
+                                    it
+                            },
+                            label = { Text("Last Name") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            isError = lastName.isBlank(),
+                            supportingText = {
+                                if (lastName.isBlank()) Text(
+                                    "Required",
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            },
+                            colors = customTextFieldColors,
+                            shape = RoundedCornerShape(12.dp)
+                        )
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Birthday", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
+                        Column(modifier = Modifier.weight(1.3f)) {
+                            Text(
+                                text = "Birthday",
+                                color = fieldLabelColor,
+                                modifier = Modifier.padding(bottom = 4.dp),
+                                style = MaterialTheme.typography.bodySmall
+                            )
                             OutlinedTextField(
-                                value = birthdayText, onValueChange = {}, label = { Text("Select Date") }, readOnly = true, isError = birthdayError != null,
-                                colors = customTextFieldColors, shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true },
-                                trailingIcon = { Icon(Icons.Default.DateRange, "Select Date", tint = unfocusedColor.copy(alpha = 0.7f), modifier = Modifier.clickable { showDatePicker = true }) },
-                                supportingText = { if (birthdayError != null) Text(birthdayError!!, color = MaterialTheme.colorScheme.error) }
+                                value = birthdayText,
+                                onValueChange = {},
+                                label = { Text("Select Date") },
+                                readOnly = true,
+                                isError = birthdayError != null,
+                                colors = customTextFieldColors,
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showDatePicker = true },
+                                trailingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.DateRange,
+                                        contentDescription = "Select Date",
+                                        tint = unfocusedColor.copy(alpha = 0.7f),
+                                        modifier = Modifier.clickable { showDatePicker = true }
+                                    )
+                                },
+                                supportingText = {
+                                    if (birthdayError != null) {
+                                        Text(birthdayError!!, color = MaterialTheme.colorScheme.error)
+                                    }
+                                }
                             )
                         }
-                        Column(Modifier.weight(1f)) {
-                            Text("Phone Number", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
+
+                        // PHONE NUMBER
+                        Column(modifier = Modifier.weight(0.7f)) {
+                            Text(
+                                text = "Phone Number",
+                                color = fieldLabelColor,
+                                modifier = Modifier.padding(bottom = 4.dp),
+                                style = MaterialTheme.typography.bodySmall
+                            )
                             OutlinedTextField(
-                                value = phone, onValueChange = {
-                                    if (it.all { c -> c.isDigit() }) phone = it
-                                    phoneError = if (phone.isNotBlank() && !phone.matches(Regex("^09\\d{9}$"))) "Must be 11 digits starting with 09" else null
+                                value = phone,
+                                onValueChange = { input ->
+                                    // Restrict to 11 digits only for PH standards
+                                    if (input.all { it.isDigit() } && input.length <= 11) {
+                                        phone = input
+                                    }
                                 },
-                                label = { Text("09XXXXXXXXX") }, isError = phoneError != null, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth(),
-                                supportingText = { if (phoneError != null) Text(phoneError!!, color = MaterialTheme.colorScheme.error) }
+                                label = { Text("09XXXXXXXXX") },
+                                isError = phoneError != null,
+                                colors = customTextFieldColors,
+                                shape = RoundedCornerShape(12.dp),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                supportingText = {
+                                    if (phoneError != null) {
+                                        Text(phoneError!!, color = MaterialTheme.colorScheme.error)
+                                    }
+                                }
                             )
                         }
                     }
 
-                    Text("Address", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
-                    OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Address") }, modifier = Modifier.fillMaxWidth(), singleLine = true, colors = customTextFieldColors, shape = RoundedCornerShape(12.dp))
-
-                    Text("Email", color = fieldLabelColor, modifier = Modifier.padding(bottom = 4.dp))
+                    Text("Location", color = fieldLabelColor)
+                    OutlinedTextField(
+                        value = address,
+                        onValueChange = { address = it },
+                        label = { Text("Home Address") },
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = address.isBlank(),
+                        supportingText = { if (address.isBlank()) Text("Address is required", color = MaterialTheme.colorScheme.error) },
+                        colors = customTextFieldColors,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    Text("Authentication & Contact", color = fieldLabelColor)
                     OutlinedTextField(value = profile?.email ?: "", onValueChange = {}, label = { Text("Email (Cannot Change Here)") }, readOnly = true, modifier = Modifier.fillMaxWidth(), colors = customTextFieldColors, shape = RoundedCornerShape(12.dp))
 
                     Button(
-                        onClick = {
-                            phoneError = if (phone.isNotBlank() && !phone.matches(Regex("^09\\d{9}$"))) "Must be 11 digits starting with 09" else null
-                            birthdayError = if (birthdayText.isNotBlank() && !isAgeValid(selectedBirthdayTimestamp)) "Must be 18-60 years old" else if (birthdayText.isBlank()) "Birthday is required" else null
-                            if (phoneError == null && birthdayError == null && hasChanges) {
-                                showReauthDialog = true
-                            }
-                        },
-                        enabled = !isSaving && hasChanges,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, disabledContainerColor = Color.Transparent),
+                        onClick = { showReauthDialog = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
                         shape = RoundedCornerShape(12.dp),
+                        // Disable if no changes OR if the form is invalid
+                        enabled = hasChanges && isFormValid && !isSaving,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent,
+                            disabledContainerColor = Color.Transparent
+                        ),
                         contentPadding = PaddingValues()
                     ) {
                         Box(
-                            modifier = Modifier.background(if (hasChanges && !isSaving) gradientBrush else disabledBrush, RoundedCornerShape(12.dp)).fillMaxSize(),
+                            modifier = Modifier
+                                .background(
+                                    // Use the gradient only if enabled, otherwise Solid Grey
+                                    brush = if (hasChanges && isFormValid) gradientBrush else SolidColor(
+                                        Color.LightGray
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(if (isSaving) "Saving..." else "Save Changes", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "SAVE CHANGES",
+                                color = if (hasChanges && isFormValid) Color.White else Color.Gray,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
                 Spacer(Modifier.height(16.dp))
-                TextButton(onClick = { showPasswordDialog = true }) { Text("Change Password", color = Color.Black) }
-                TextButton(onClick = { showEmailDialog = true }) { Text("Change Email", color = Color.Black) }
-                Spacer(Modifier.height(24.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .background(
+                            color = Color(0xFF4A3BA0),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .padding(16.dp) // Inner padding
+                ) {
+                    Text(
+                        text = "Security & Account",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White, // Title is now white
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // EMAIL CHANGE
+                        Button(
+                            onClick = { showEmailDialog = true },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.White.copy(alpha = 0.15f), // This is called "Glassmorphism". Okay...
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Update Email",
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        // PASSWORD CHANGE
+                        Button(
+                            onClick = { showPasswordDialog = true },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.White.copy(alpha = 0.15f),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Change Password",
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
             }
         }
     }
