@@ -51,7 +51,7 @@ fun SecuritySettingsCard(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
@@ -59,7 +59,7 @@ fun SecuritySettingsCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Security Settings", style = MaterialTheme.typography.titleMedium)
+            Text("Security Settings", style = MaterialTheme.typography.titleLarge)
 
             Text("Change VIU Contact Email", style = MaterialTheme.typography.titleSmall)
             Text(

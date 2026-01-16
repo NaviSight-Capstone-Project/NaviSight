@@ -238,7 +238,7 @@ fun EditViuProfileScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Profile Details", style = MaterialTheme.typography.titleLarge, color = Color(0xFF8E41E8), fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp).align(Alignment.CenterHorizontally))
+        Text("VIU Profile Details", style = MaterialTheme.typography.titleLarge, color = Color(0xFF8E41E8), fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp).align(Alignment.CenterHorizontally))
 
         // Name Fields
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -425,7 +425,6 @@ fun EditViuProfileScreen(
                 Text("DELETE VIU", color = Color.White, fontWeight = FontWeight.Bold)
             }
         }
-
-        Spacer(modifier = Modifier.height(80.dp))
+        Spacer(modifier = Modifier.height(20.dp))
     }
 }

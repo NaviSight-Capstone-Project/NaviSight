@@ -111,7 +111,7 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
             "Activity" -> {
                 if (combinedFeed.isEmpty()) { // Use combinedFeed here
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No recent activity or alerts", color = Color.Gray)
+                        Text("No recent activity or alerts.", color = Color.Gray)
                     }
                 } else {
                     LazyColumn(
@@ -140,7 +140,7 @@ fun NotificationScreen(viewModel: NotificationViewModel = viewModel()) {
                 when {
                     loading && secondaryRequests.isEmpty() && transferRequests.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     error != null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(text = error ?: "", color = Color.Red) }
-                    secondaryRequests.isEmpty() && transferRequests.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No pending requests", color = Color.Gray) }
+                    secondaryRequests.isEmpty() && transferRequests.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No pending requests.", color = Color.Gray) }
                     else -> {
                         LazyColumn(
                             modifier = Modifier.fillMaxWidth(),
