@@ -154,6 +154,10 @@ class EditViuProfileViewModel(
     private val _emailResendTimer = MutableStateFlow(0)
     val emailResendTimer: StateFlow<Int> = _emailResendTimer.asStateFlow()
 
+    // Anti-brute force
+    private val _savePasswordRetryCount = MutableStateFlow(0)
+    val savePasswordRetryCount: StateFlow<Int> = _savePasswordRetryCount.asStateFlow()
+
     init {
         loadViuDetails()
         checkPermissions()
@@ -315,12 +319,18 @@ class EditViuProfileViewModel(
     }
 
     fun reauthenticateAndSendOtp(password: String, context: Context) {
+        if (_savePasswordRetryCount.value >= 5) {
+            _saveError.value = "Too many failed attempts. Please try again later."
+            return
+        }
+
         viewModelScope.launch {
             _saveFlowState.value = SaveFlowState.SAVING
             _saveError.value = null
 
             reauthenticateCaregiverUseCase(password).fold(
                 onSuccess = {
+                    _savePasswordRetryCount.value = 0 // Reset on success
                     sendVerificationOtpToCaregiverUseCase(context).fold(
                         onSuccess = { resendResult ->
                             when (resendResult) {
@@ -349,8 +359,15 @@ class EditViuProfileViewModel(
                     )
                 },
                 onFailure = {
+                    _savePasswordRetryCount.value += 1
+                    val remaining = 5 - _savePasswordRetryCount.value
                     _saveFlowState.value = SaveFlowState.PENDING_PASSWORD
-                    _saveError.value = it.message ?: "Invalid password"
+
+                    if (remaining <= 0) {
+                        _saveError.value = "Too many failed attempts. Try again later."
+                    } else {
+                        _saveError.value = "Incorrect password. $remaining attempts left."
+                    }
                 }
             )
         }
@@ -426,6 +443,7 @@ class EditViuProfileViewModel(
     fun resetSaveFlow() {
         _saveFlowState.value = SaveFlowState.IDLE
         _saveError.value = null
+        _savePasswordRetryCount.value = 0
         pendingViuUpdate = null
         stopSaveResendTimer()
         viewModelScope.launch { cancelViuProfileUpdateUseCase() }

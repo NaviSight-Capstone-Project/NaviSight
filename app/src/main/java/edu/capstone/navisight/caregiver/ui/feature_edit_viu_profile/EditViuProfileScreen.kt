@@ -175,6 +175,7 @@ fun EditViuProfileScreen(
         PasswordEntryDialog(
             title = "Enter Your Password",
             description = "Please enter your companion password to confirm changes.",
+            errorMessage = saveError,
             isLoading = (saveFlowState == SaveFlowState.SAVING),
             onDismiss = { viewModel.resetSaveFlow() },
             onConfirm = { password -> viewModel.reauthenticateAndSendOtp(password, context) }

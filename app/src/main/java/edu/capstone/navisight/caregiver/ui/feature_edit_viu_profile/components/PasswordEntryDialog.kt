@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 fun PasswordEntryDialog(
     title: String,
     description: String,
+    errorMessage: String? = null, // Add this parameter
     isLoading: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
@@ -34,8 +35,18 @@ fun PasswordEntryDialog(
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.padding(top = 16.dp),
-                    readOnly = isLoading
+                    readOnly = isLoading,
+                    isError = errorMessage != null
                 )
+                // Display brute-force warning/error
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
             }
         },
         confirmButton = {
