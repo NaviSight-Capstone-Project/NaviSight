@@ -268,6 +268,7 @@ fun EditViuProfileScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
+                        label = { Text("Sex") },
                         value = sex, onValueChange = {}, readOnly = true, enabled = canEdit,
                         colors = customTextFieldColors, shape = RoundedCornerShape(12.dp),
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isSexDropdownExpanded) },
