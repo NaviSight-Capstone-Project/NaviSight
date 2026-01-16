@@ -39,6 +39,11 @@ class CaregiverProfileUseCase(
         return repository.verifyEmailOtp(uid, enteredOtp)
     }
 
+    // Add these to CaregiverProfileUseCase.kt
+    suspend fun checkLockout(uid: String) = repository.checkLockout(uid)
+    suspend fun handleFailedAttempt(uid: String) = repository.handleFailedAttempt(uid)
+    suspend fun clearLockout(uid: String) = repository.clearLockout(uid)
+
     suspend fun requestPasswordChange(
         context: Context,
         currentPassword: String

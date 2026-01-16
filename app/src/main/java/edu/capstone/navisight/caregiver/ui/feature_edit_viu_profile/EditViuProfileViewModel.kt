@@ -8,6 +8,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import edu.capstone.navisight.auth.model.OtpResult
+import edu.capstone.navisight.caregiver.domain.CaregiverProfileUseCase
 import edu.capstone.navisight.caregiver.domain.connectionUseCase.TransferPrimaryUseCase
 import edu.capstone.navisight.caregiver.domain.connectionUseCase.UnpairViuUseCase
 import edu.capstone.navisight.caregiver.model.Viu
@@ -71,6 +72,7 @@ class EditViuProfileViewModel(
     private val transferPrimaryUseCase = TransferPrimaryUseCase()
     private val getCurrentUserUidUseCase = GetCurrentUserUidUseCase()
     private val unpairViuUseCase = UnpairViuUseCase()
+    private val caregiverProfileUseCase = CaregiverProfileUseCase()
 
     // State Flows
     private val _viu = MutableStateFlow<Viu?>(null)
@@ -335,13 +337,23 @@ class EditViuProfileViewModel(
         )
 
         _saveFlowState.value = SaveFlowState.PENDING_PASSWORD
+
+        viewModelScope.launch {
+            val uid = getCurrentUserUidUseCase() ?: return@launch
+            // Check DB for lockout before showing dialog
+            caregiverProfileUseCase.checkLockout(uid).fold(
+                onSuccess = {
+                    _saveFlowState.value = SaveFlowState.PENDING_PASSWORD
+                },
+                onFailure = {
+                    _saveError.value = it.message
+                }
+            )
+        }
     }
 
     fun reauthenticateAndSendOtp(password: String, context: Context) {
-        if (_savePasswordRetryCount.value >= 5) {
-            _saveError.value = "Too many failed attempts. Please try again later."
-            return
-        }
+        val uid = getCurrentUserUidUseCase() ?: return
 
         viewModelScope.launch {
             _saveFlowState.value = SaveFlowState.SAVING
@@ -349,7 +361,7 @@ class EditViuProfileViewModel(
 
             reauthenticateCaregiverUseCase(password).fold(
                 onSuccess = {
-                    _savePasswordRetryCount.value = 0 // Reset on success
+                    caregiverProfileUseCase.clearLockout(uid) // Reset on success
                     sendVerificationOtpToCaregiverUseCase(context).fold(
                         onSuccess = { resendResult ->
                             when (resendResult) {
@@ -378,15 +390,9 @@ class EditViuProfileViewModel(
                     )
                 },
                 onFailure = {
-                    _savePasswordRetryCount.value += 1
-                    val remaining = 5 - _savePasswordRetryCount.value
+                    val errorMessage = caregiverProfileUseCase.handleFailedAttempt(uid)
                     _saveFlowState.value = SaveFlowState.PENDING_PASSWORD
-
-                    if (remaining <= 0) {
-                        _saveError.value = "Too many failed attempts. Try again later."
-                    } else {
-                        _saveError.value = "Incorrect password. $remaining attempts left."
-                    }
+                    _saveError.value = errorMessage
                 }
             )
         }

@@ -22,6 +22,9 @@ fun PasswordEntryDialog(
 ) {
     var password by remember { mutableStateOf("") }
 
+    // Check if the user is actually locked out based on the message content
+    val isLockedOut = errorMessage?.contains("Locked", ignoreCase = true) == true
+
     AlertDialog(
         onDismissRequest = { if (!isLoading) onDismiss() },
         title = { Text(title) },
@@ -36,10 +39,10 @@ fun PasswordEntryDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.padding(top = 16.dp),
                     readOnly = isLoading,
-                    isError = errorMessage != null
+                    isError = !errorMessage.isNullOrBlank()
                 )
                 // Display brute-force warning/error
-                if (errorMessage != null) {
+                if (!errorMessage.isNullOrBlank()) {
                     Text(
                         text = errorMessage,
                         color = MaterialTheme.colorScheme.error,
@@ -52,7 +55,7 @@ fun PasswordEntryDialog(
         confirmButton = {
             Button(
                 onClick = { onConfirm(password) },
-                enabled = !isLoading && password.isNotBlank()
+                enabled = !isLoading && password.isNotBlank() && !isLockedOut
             ) {
                 if (isLoading) CircularProgressIndicator(Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                 else Text("Confirm")

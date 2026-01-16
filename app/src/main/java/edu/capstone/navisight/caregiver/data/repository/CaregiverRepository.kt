@@ -54,6 +54,10 @@ class CaregiverRepository(
         return caregiverDataSource.resendSignupOtp(context, uid)
     }
 
+    suspend fun checkLockout(uid: String) = caregiverDataSource.checkLockoutStatus(uid)
+    suspend fun handleFailedAttempt(uid: String) = caregiverDataSource.recordFailedAttempt(uid)
+    suspend fun clearLockout(uid: String) = caregiverDataSource.resetLockout(uid)
+
     suspend fun uploadAndSaveProfileImage(uid: String, imageUri: Uri): Boolean =
         caregiverDataSource.uploadAndSaveProfileImage(uid, imageUri)
 

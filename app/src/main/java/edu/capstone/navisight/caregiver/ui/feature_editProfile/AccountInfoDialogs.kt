@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Visibility
@@ -14,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -284,44 +286,58 @@ internal fun OtpVerificationDialog(
 @Composable
 internal fun ReauthenticationDialog(
     isSaving: Boolean,
+    errorMessage: String? = null, // Ensure this is being passed from the screen
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var password by remember { mutableStateOf("") }
+
+    // Check for hard blocks (Lockout or Firebase device block)
+    val isHardBlocked = errorMessage?.contains("Locked", ignoreCase = true) == true ||
+            errorMessage?.contains("activity", ignoreCase = true) == true
     var passwordVisible by remember { mutableStateOf(false) }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isSaving) onDismiss() },
         title = { Text("Verify Identity") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Please enter your current password to save changes.")
+            Column {
+                Text("Please enter your current password to save these changes.")
+                Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Current Password") },
+                    label = { Text("Password") },
+                    isError = errorMessage != null,
+                    supportingText = {
+                        if (errorMessage != null) {
+                            Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     trailingIcon = {
+                        val image = if (passwordVisible)
+                            Icons.Filled.Visibility
+                        else Icons.Filled.VisibilityOff
+
+                        val description = if (passwordVisible) "Hide password" else "Show password"
+
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(
-                                if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = "Toggle password visibility"
-                            )
+                            Icon(imageVector = image, contentDescription = description)
                         }
                     },
                     singleLine = true,
-                    enabled = !isSaving
+                    enabled = !isSaving && !isHardBlocked
                 )
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = {
-                    if (password.isNotBlank()) {
-                        onConfirm(password)
-                    }
-                },
-                enabled = !isSaving
+            Button(
+                onClick = { onConfirm(password) },
+                // Disable if saving, password empty, or device/account is blocked
+                enabled = !isSaving && password.isNotBlank() && !isHardBlocked
             ) {
                 Text(if (isSaving) "Verifying..." else "Confirm")
             }

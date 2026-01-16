@@ -32,6 +32,31 @@ class AccountInfoViewModel(
     val uiEvent = _uiEvent.receiveAsFlow()
     private val _pendingNewPassword = MutableStateFlow<String?>(null)
 
+    private val _reauthError = MutableStateFlow<String?>(null)
+    val reauthError: StateFlow<String?> = _reauthError.asStateFlow()
+
+    // Add this to handle the shared lockout verification
+    fun checkLockoutAndPerform(uid: String, onAvailable: () -> Unit) {
+        viewModelScope.launch {
+            profileUseCase.checkLockout(uid).fold(
+                onSuccess = { onAvailable() },
+                onFailure = { _reauthError.value = it.message }
+            )
+        }
+    }
+
+    // Update the existing reauth check
+    fun handleReauthenticationFailure(uid: String) {
+        viewModelScope.launch {
+            val message = profileUseCase.handleFailedAttempt(uid)
+            _reauthError.value = message
+        }
+    }
+
+    fun clearReauthError() {
+        _reauthError.value = null
+    }
+
 
     fun loadProfile(uid: String) {
         viewModelScope.launch {
@@ -70,43 +95,50 @@ class AccountInfoViewModel(
     ) {
         viewModelScope.launch {
             _isSaving.value = true
+            _reauthError.value = null
+
             try {
-                val reauthOk = profileUseCase.reauthenticateUser(password)
-                if (!reauthOk) {
-                    _uiEvent.send("Re-authentication failed. Please check your password.")
-                    _isSaving.value = false
-                    return@launch
-                }
-
-                val current = _profile.value
-                val updatedData = mutableMapOf<String, Any?>()
-
-                if (firstName != (current?.firstName ?: "")) updatedData["firstName"] = firstName
-                if (middleName != (current?.middleName ?: "")) updatedData["middleName"] = middleName
-                if (lastName != (current?.lastName ?: "")) updatedData["lastName"] = lastName
-                if (phoneNumber != (current?.phoneNumber ?: "")) updatedData["phoneNumber"] = phoneNumber
-                if (birthday != current?.birthday) updatedData["birthday"] = birthday
-                if (address != (current?.address ?: "")) updatedData["address"] = address
-
-                if (updatedData.isNotEmpty()) {
-
-                    val nonNullUpdatedData = updatedData.filterValues { it != null } as Map<String, Any>
-
-                    if (nonNullUpdatedData.isNotEmpty()) {
-                        val success = profileUseCase.updateProfile(uid, nonNullUpdatedData)
-                        if (success) {
-                            _uiEvent.send("Profile updated successfully.")
-                            loadProfile(uid)
-                        } else {
-                            _uiEvent.send("Update failed.")
+                // Check lockout state from Firestore before attempting
+                profileUseCase.checkLockout(uid).fold(
+                    onSuccess = {
+                        val reauthOk = profileUseCase.reauthenticateUser(password)
+                        if (!reauthOk) {
+                            val lockoutMsg = profileUseCase.handleFailedAttempt(uid)
+                            _reauthError.value = lockoutMsg
+                            _isSaving.value = false
+                            return@launch
                         }
-                    } else {
-                        _uiEvent.send("No effective changes to update.")
-                    }
-                } else {
-                    _uiEvent.send("No changes to update.")
-                }
 
+                        // Success: Clear the lockout counter
+                        profileUseCase.clearLockout(uid)
+
+                        val current = _profile.value
+                        val updatedData = mutableMapOf<String, Any?>()
+                        if (firstName != (current?.firstName ?: "")) updatedData["firstName"] = firstName
+                        if (middleName != (current?.middleName ?: "")) updatedData["middleName"] = middleName
+                        if (lastName != (current?.lastName ?: "")) updatedData["lastName"] = lastName
+                        if (phoneNumber != (current?.phoneNumber ?: "")) updatedData["phoneNumber"] = phoneNumber
+                        if (birthday != current?.birthday) updatedData["birthday"] = birthday
+                        if (address != (current?.address ?: "")) updatedData["address"] = address
+
+                        val nonNullUpdatedData = updatedData.filterValues { it != null } as Map<String, Any>
+
+                        if (nonNullUpdatedData.isNotEmpty()) {
+                            val success = profileUseCase.updateProfile(uid, nonNullUpdatedData)
+                            if (success) {
+                                _uiEvent.send("Profile updated successfully.")
+                                loadProfile(uid)
+                            } else {
+                                _uiEvent.send("Update failed.")
+                            }
+                        } else {
+                            _uiEvent.send("No changes to update.")
+                        }
+                    },
+                    onFailure = {
+                        _reauthError.value = it.message
+                    }
+                )
             } catch (e: Exception) {
                 _uiEvent.send("Error: ${e.message}")
             } finally {

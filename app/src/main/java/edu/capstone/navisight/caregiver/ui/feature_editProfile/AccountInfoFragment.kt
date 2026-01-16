@@ -99,6 +99,7 @@ class AccountInfoFragment : Fragment() {
                     val profile by viewModel.profile.collectAsState()
                     val isSaving by viewModel.isSaving.collectAsState()
                     var uiMessage by remember { mutableStateOf<String?>(null) }
+                    val reauthError by viewModel.reauthError.collectAsState()
 
                     LaunchedEffect(Unit) {
                         viewModel.uiEvent.collect { message ->
@@ -140,9 +141,13 @@ class AccountInfoFragment : Fragment() {
                         onCancelPasswordChange = {
                             viewModel.cancelPasswordChange(it)
                         },
+                        onCheckLockout = {
+                            viewModel.checkLockoutAndPerform(it) { }
+                        },
                         isSaving = isSaving,
                         uiMessage = uiMessage,
                         onMessageShown = { uiMessage = null },
+                        reauthError = reauthError,
                         onBackClick = {
                             parentFragmentManager.popBackStack()
                         }

@@ -54,6 +54,7 @@ fun AccountInfoScreen(
     profile: Caregiver?,
     selectedImageUri: Uri?,
     onPickImage: () -> Unit,
+    onCheckLockout: () -> Unit,
     onSave: (String, String, String, String, Timestamp?, String, String) -> Unit,
     onRequestPasswordChange: (String, String) -> Unit,
     onChangeEmail: (String, String) -> Unit,
@@ -63,6 +64,7 @@ fun AccountInfoScreen(
     onCancelEmailChange: () -> Unit,
     onCancelPasswordChange: () -> Unit,
     isSaving: Boolean,
+    reauthError : String?,
     uiMessage: String?,
     onMessageShown: () -> Unit,
     onBackClick: () -> Unit = {}
@@ -94,6 +96,12 @@ fun AccountInfoScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(showReauthDialog) {
+        if (showReauthDialog) {
+            onCheckLockout()
+        }
+    }
 
     // --- DIRTY CHECK ---
     val hasChanges = remember(
@@ -689,10 +697,14 @@ fun AccountInfoScreen(
     if (showReauthDialog) {
         ReauthenticationDialog(
             isSaving = isSaving,
+            errorMessage = reauthError,
             onConfirm = { password ->
+                // Your existing save logic
                 onSave(firstName, middleName, lastName, phone, selectedBirthdayTimestamp, address, password)
             },
-            onDismiss = { showReauthDialog = false }
+            onDismiss = {
+                showReauthDialog = false
+            }
         )
     }
 }

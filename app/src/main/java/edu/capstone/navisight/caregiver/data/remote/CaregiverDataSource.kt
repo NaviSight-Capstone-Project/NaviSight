@@ -86,6 +86,54 @@ class CaregiverDataSource(
         }
     }
 
+
+    suspend fun checkLockoutStatus(uid: String): Result<Unit> {
+        return try {
+            val doc = usersCollection.document(uid).get().await()
+            val lockoutUntil = doc.getTimestamp("passwordLockoutUntil")?.toDate()?.time ?: 0L
+            val currentTime = System.currentTimeMillis()
+
+            if (currentTime < lockoutUntil) {
+                val remainingMinutes = (lockoutUntil - currentTime) / 60000
+                Result.failure(Exception("Too many failed attempts. Locked for $remainingMinutes more minutes."))
+            } else {
+                Result.success(Unit)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Log.e("WARNING", e.toString())
+            Result.failure(e)
+        }
+    }
+
+    suspend fun recordFailedAttempt(uid: String): String {
+        val docRef = usersCollection.document(uid)
+        val doc = docRef.get().await()
+        val currentAttempts = doc.getLong("passwordRetryCount")?.toInt() ?: 0
+        val newAttempts = currentAttempts + 1
+
+        val updates = mutableMapOf<String, Any>("passwordRetryCount" to newAttempts)
+
+        return if (newAttempts >= 5) {
+            val lockoutTime = System.currentTimeMillis() + (15 * 60 * 1000) // 15 mins
+            updates["passwordLockoutUntil"] = Timestamp(java.util.Date(lockoutTime))
+            docRef.update(updates).await()
+            "Too many failed attempts. You are locked out for 15 minutes."
+        } else {
+            docRef.update(updates).await()
+            "Incorrect password. ${5 - newAttempts} attempts left."
+        }
+    }
+
+    suspend fun resetLockout(uid: String) {
+        usersCollection.document(uid).update(
+            mapOf(
+                "passwordRetryCount" to 0,
+                "passwordLockoutUntil" to FieldValue.delete()
+            )
+        ).await()
+    }
+
     suspend fun cancelEmailChange(uid: String) {
         otpDataSource.cleanupOtp(uid, OtpDataSource.OtpType.EMAIL_CHANGE)
     }
