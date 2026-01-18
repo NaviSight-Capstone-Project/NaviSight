@@ -409,7 +409,7 @@ fun DeleteAccountConfirmDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("This action is permanent and cannot be undone. All your data and pairings will be wiped.")
+                Text("This action is permanent and cannot be undone. All your data and pairings will be deleted.")
 
                 OutlinedTextField(
                     value = password,
@@ -449,7 +449,7 @@ fun DeleteAccountConfirmDialog(
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text("Delete Forever")
+                    Text("Delete Permanently")
                 }
             }
         },
