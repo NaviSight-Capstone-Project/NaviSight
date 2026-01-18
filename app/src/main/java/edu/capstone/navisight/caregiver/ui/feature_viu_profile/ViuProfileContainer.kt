@@ -48,6 +48,11 @@ fun ViuProfileContainer(
     onNavigateBack: () -> Unit,
     onLaunchImagePicker: () -> Unit
 ) {
+
+    val isLockedOutFlow by editViewModel.isLockedOut.collectAsState()
+    val unpairErrorFlow by editViewModel.unpairError.collectAsState()
+    val isLockedOut = remember(isLockedOutFlow) { isLockedOutFlow }
+
     val viu by editViewModel.viu.collectAsState()
     val isUploadingImage by editViewModel.isUploadingImage.collectAsState()
     val canEdit by editViewModel.canEdit.collectAsState()
@@ -68,7 +73,7 @@ fun ViuProfileContainer(
     }
 
     val unpairState by editViewModel.unpairFlowState.collectAsState()
-    val unpairError by editViewModel.unpairError.collectAsState()
+    val unpairError = remember(unpairErrorFlow) { unpairErrorFlow }
     val unpairSuccess by editViewModel.unpairSuccess.collectAsState()
 
     LaunchedEffect(unpairSuccess) {
@@ -107,8 +112,8 @@ fun ViuProfileContainer(
                     },
                     showMenu = true,
                     isPrimaryCaregiver = canEdit,
-                    onTransferRightsClick = { editViewModel.startTransferFlow() },
-                    onUnpairClick = { editViewModel.startUnpairFlow() }
+                    onTransferRightsClick = { if (!isLockedOut) editViewModel.startTransferFlow() },
+                    onUnpairClick = { if (!isLockedOut) editViewModel.startUnpairFlow() }
                 )
 
                 if (!canEdit) {
@@ -204,16 +209,18 @@ fun ViuProfileContainer(
         PasswordConfirmationDialog(
             isLoading = (transferState == TransferFlowState.SENDING),
             error = transferError,
+            isLockedOut = isLockedOut,
             onConfirm = { password -> editViewModel.confirmTransferPassword(password) },
             onCancel = { editViewModel.cancelTransferFlow() }
         )
     }
-    if (unpairState == UnpairFlowState.CONFIRMING_PASSWORD || unpairState == UnpairFlowState.UNPAIRING) {
+    if (unpairState == UnpairFlowState.CONFIRMING_PASSWORD) {
         PasswordConfirmationDialog(
-            isLoading = (unpairState == UnpairFlowState.UNPAIRING),
             error = unpairError,
-            onConfirm = { password -> editViewModel.confirmUnpairPassword(password) },
-            onCancel = { editViewModel.cancelUnpairFlow() }
+            isLoading = unpairState == UnpairFlowState.UNPAIRING,
+            isLockedOut = isLockedOut,
+            onCancel = { editViewModel.cancelUnpairFlow() },
+            onConfirm = { password -> editViewModel.confirmUnpair(password) }
         )
     }
 }
@@ -248,10 +255,12 @@ fun CandidateItem(candidate: TransferPrimaryRequest, onClick: () -> Unit) {
 @Composable
 fun PasswordConfirmationDialog(
     isLoading: Boolean,
+    isLockedOut: Boolean,
     error: String?,
     onConfirm: (String) -> Unit,
     onCancel: () -> Unit
 ) {
+
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
@@ -296,7 +305,8 @@ fun PasswordConfirmationDialog(
                     onValueChange = { password = it },
                     label = { Text("Password") },
                     singleLine = true,
-                    enabled = !isLoading,
+                    isError = !error.isNullOrEmpty(),
+                    enabled = !isLoading && !isLockedOut,
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
@@ -313,7 +323,7 @@ fun PasswordConfirmationDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                 )
 
-                if (error != null) {
+                if (!error.isNullOrEmpty()) {
                     Text(
                         text = error,
                         color = Color.Red,
@@ -337,7 +347,7 @@ fun PasswordConfirmationDialog(
 
                     Button(
                         onClick = { onConfirm(password) },
-                        enabled = !isLoading && password.isNotEmpty(),
+                        enabled = !isLoading && password.isNotEmpty() && !isLockedOut,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6041EC)),
                         shape = RoundedCornerShape(12.dp)
