@@ -106,4 +106,5 @@ class CaregiverRepository(
     suspend fun deleteUnverifiedUser(uid: String): Boolean {
         return caregiverDataSource.deleteUnverifiedUser(uid)
     }
+    suspend fun deleteAccount(uid: String) = caregiverDataSource.deleteAccount(uid)
 }

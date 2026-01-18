@@ -155,6 +155,16 @@ class AccountInfoFragment : Fragment() {
                         onCheckLockout = {
                             viewModel.checkLockoutAndPerform(it) { }
                         },
+                        onDeleteAccount = { password ->
+                            viewModel.deleteAccount(it, password) {
+                                // On Success: Navigate to Login/Welcome
+                                Toast.makeText(context, "Account deleted successfully.", Toast.LENGTH_LONG).show()
+
+                                // Restart activity to trigger AuthStateListener or reset app state
+                                requireActivity().finish()
+                                startActivity(requireActivity().intent)
+                            }
+                        },
                         isSaving = isSaving,
                         uiMessage = uiMessage,
                         onMessageShown = { uiMessage = null },

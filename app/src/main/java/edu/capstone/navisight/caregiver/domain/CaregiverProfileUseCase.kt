@@ -5,9 +5,11 @@ import edu.capstone.navisight.caregiver.model.Caregiver
 import edu.capstone.navisight.caregiver.data.repository.CaregiverRepository
 import android.content.Context
 import edu.capstone.navisight.auth.model.OtpResult
+import edu.capstone.navisight.caregiver.data.repository.ConnectionRepository
 
 class CaregiverProfileUseCase(
-    private val repository: CaregiverRepository = CaregiverRepository()
+    private val repository: CaregiverRepository = CaregiverRepository(),
+    private val connectionRepository: ConnectionRepository = ConnectionRepository()
 ) {
 
     suspend fun getProfile(uid: String): Caregiver? {
@@ -67,5 +69,29 @@ class CaregiverProfileUseCase(
 
     suspend fun cancelPasswordChange(uid: String) {
         repository.cancelPasswordChange(uid)
+    }
+
+    suspend fun deleteAccountSequence(uid: String, password: String): Result<Unit> {
+        return try {
+            val reauth = repository.reauthenticateUser(password)
+            if (!reauth) return Result.failure(Exception("Incorrect password."))
+
+            if (connectionRepository.isPrimaryForAny(uid)) {
+                return Result.failure(Exception("Cannot delete account. You are currently a Primary Caregiver. Please transfer primary rights to another caregiver first."))
+            }
+
+            val relationshipsRemoved = connectionRepository.removeAllRelationships(uid)
+            if (!relationshipsRemoved) {
+            }
+
+            val deleted = repository.deleteAccount(uid)
+            if (deleted) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to delete account. Please try again."))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

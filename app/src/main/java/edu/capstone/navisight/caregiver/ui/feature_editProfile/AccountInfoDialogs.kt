@@ -11,6 +11,8 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -385,4 +387,79 @@ internal fun ValidatedField(
                 fontSize = MaterialTheme.typography.labelSmall.fontSize
             )
     }
+}
+@Composable
+fun DeleteAccountConfirmDialog(
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+    isDeleting: Boolean,
+    errorMessage: String?
+) {
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = { if (!isDeleting) onDismiss() },
+        title = {
+            Text(
+                "Delete Account",
+                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("This action is permanent and cannot be undone. All your data and pairings will be wiped.")
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Enter Password") },
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = errorMessage != null,
+                    supportingText = {
+                        if (errorMessage != null) {
+                            Text(errorMessage, color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    singleLine = true,
+                    enabled = !isDeleting
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(password) },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                enabled = password.isNotBlank() && !isDeleting
+            ) {
+                if (isDeleting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Delete Forever")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isDeleting
+            ) {
+                Text("Cancel", color = Color.Gray)
+            }
+        }
+    )
 }

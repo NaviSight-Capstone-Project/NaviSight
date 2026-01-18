@@ -362,4 +362,26 @@ class AccountInfoViewModel(
             }
         }
     }
+    fun deleteAccount(uid: String, password: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _isSaving.value = true
+            _reauthError.value = null // Clear previous errors
+
+            // Call the Use Case logic
+            val result = profileUseCase.deleteAccountSequence(uid, password)
+
+            result.fold(
+                onSuccess = {
+                    _uiEvent.send("Account deleted successfully.")
+                    // Trigger navigation to login
+                    onSuccess()
+                },
+                onFailure = { error ->
+                    // Show specific error (e.g., "Incorrect password" or "Transfer rights first")
+                    _reauthError.value = error.message
+                }
+            )
+            _isSaving.value = false
+        }
+    }
 }

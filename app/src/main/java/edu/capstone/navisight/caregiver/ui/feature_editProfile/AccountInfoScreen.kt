@@ -15,8 +15,11 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -67,6 +70,7 @@ fun AccountInfoScreen(
     onVerifyPasswordOtp: (String) -> Unit,
     onResendPasswordOtp: () -> Unit,
     onCancelEmailChange: () -> Unit,
+    onDeleteAccount: (String) -> Unit,
     onCancelPasswordChange: () -> Unit,
     isSaving: Boolean,
     reauthError : String?,
@@ -98,6 +102,7 @@ fun AccountInfoScreen(
     var showEmailOtpDialog by remember { mutableStateOf(false) }
     var showReauthDialog by remember { mutableStateOf(false) }
     var showPasswordOtpDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     // --- SUCCESS POPUP STATE ---
     var showSuccessPopup by remember { mutableStateOf(false) }
@@ -710,6 +715,43 @@ fun AccountInfoScreen(
                         }
                     }
                 }
+                Spacer(Modifier.height(16.dp))
+
+                // --- NEW DANGER ZONE (Delete Account Separate Square) ---
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .background(color = Color(0xFFFFEBEE), shape = RoundedCornerShape(16.dp)) // Light Red Background
+                        .padding(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = Color.Red)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Danger Zone",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Red
+                        )
+                    }
+
+                    Text(
+                        "Once you delete your account, there is no going back. Please be certain.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Black.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+
+                    Button(
+                        onClick = { showDeleteDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Delete Account", fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                }
             }
         }
     }
@@ -793,6 +835,16 @@ fun AccountInfoScreen(
             onDismiss = {
                 showReauthDialog = false
             }
+        )
+    }
+    if (showDeleteDialog) {
+        DeleteAccountConfirmDialog(
+            onConfirm = { password ->
+                onDeleteAccount(password)
+            },
+            onDismiss = { showDeleteDialog = false },
+            isDeleting = isSaving,
+            errorMessage = reauthError
         )
     }
 }
