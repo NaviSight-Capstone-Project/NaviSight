@@ -67,6 +67,12 @@ class MainRepository private constructor(
         firebaseClient.clearLatestEvent()
         firebaseClient.observeLatestEvents(object : FirebaseClient.Listener {
             override fun onLatestEventReceived(event: DataModel) {
+
+                val myUid = firebaseClient.getUserUID()
+                if (event.target != myUid) {
+                    return // Do nothing if that isn't your UID.
+                }
+
                 Log.d("MainRepository", "Detected a change on latestevent triggered. Type: ${event.type}")
                 listener?.onLatestEventReceived(event)
                 currentLatestEvent = event
