@@ -10,10 +10,12 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import edu.capstone.navisight.R
 import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
 import com.yalantis.ucrop.UCrop
@@ -55,15 +57,20 @@ class AccountInfoFragment : Fragment() {
         }
     }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        viewModel.loadLocationData(requireContext()) // Init. location data for dropdown.
+    }
+
 
     override fun onResume() {
         super.onResume()
-        requireActivity().findViewById<View>(R.id.bottom_nav_compose_view)?.visibility = View.GONE //hide bottom nav
+        requireActivity().findViewById<View>(R.id.bottom_nav_compose_view)?.visibility = View.GONE // Hide bottom nav
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        requireActivity().findViewById<View>(R.id.bottom_nav_compose_view)?.visibility = View.VISIBLE //bulaga bottom nav
+        requireActivity().findViewById<View>(R.id.bottom_nav_compose_view)?.visibility = View.VISIBLE // Show bottom nav
     }
 
     private fun launchUCrop(sourceUri: Uri) {
@@ -94,6 +101,7 @@ class AccountInfoFragment : Fragment() {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
 
             setContent {
+                val formState by viewModel.formState.collectAsStateWithLifecycle()
                 val uid = getCurrentUserUidUseCase.invoke()
                 uid?.let {
                     val profile by viewModel.profile.collectAsState()
@@ -150,6 +158,13 @@ class AccountInfoFragment : Fragment() {
                         reauthError = reauthError,
                         onBackClick = {
                             parentFragmentManager.popBackStack()
+                        },
+                        state=formState,
+                        onProvinceSelected = { province ->
+                                    viewModel.onEvent(SignupEvent.ProvinceChanged(province))
+                                },
+                        onCitySelected = { city ->
+                            viewModel.onEvent(SignupEvent.CityChanged(city))
                         }
                     )
                 }

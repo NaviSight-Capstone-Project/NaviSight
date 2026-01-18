@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import edu.capstone.navisight.caregiver.model.Caregiver
 import com.google.firebase.Timestamp
+import edu.capstone.navisight.auth.ui.signup.viu.LocationDropdown
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -53,7 +54,10 @@ private fun isAgeValid(timestamp: Timestamp?): Boolean {
 @Composable
 fun AccountInfoScreen(
     profile: Caregiver?,
+    state: SignupFormState,
     selectedImageUri: Uri?,
+    onProvinceSelected: (String) -> Unit,
+    onCitySelected: (String) -> Unit,
     onPickImage: () -> Unit,
     onCheckLockout: () -> Unit,
     onSave: (String, String, String, String, Timestamp?, String, String) -> Unit,
@@ -511,6 +515,23 @@ fun AccountInfoScreen(
                     }
 
                     Text("Location Information", color = fieldLabelColor)
+
+                    // Province Dropdown
+                    LocationDropdown(
+                        label = "Province *",
+                        options = state.availableProvinces,
+                        selectedOption = state.province,
+                        onOptionSelected = onProvinceSelected
+                    )
+
+                    // City Dropdown
+                    LocationDropdown(
+                        label = if (state.province.isEmpty()) "Please pick a province *" else "City/Municipality *",
+                        options = state.availableCities,
+                        selectedOption = state.city,
+                        onOptionSelected = onCitySelected
+                    )
+
                     OutlinedTextField(
                         value = address,
                         onValueChange = { address = it },

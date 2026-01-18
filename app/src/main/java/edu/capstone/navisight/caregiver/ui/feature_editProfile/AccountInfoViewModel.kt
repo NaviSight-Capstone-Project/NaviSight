@@ -5,18 +5,36 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.common.reflect.TypeToken
 import edu.capstone.navisight.caregiver.model.Caregiver
 import edu.capstone.navisight.auth.model.OtpResult
 import edu.capstone.navisight.caregiver.domain.CaregiverProfileUseCase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.Timestamp
+import com.google.gson.Gson
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+
+
+data class SignupFormState(
+    val province: String = "",
+    val city: String = "",
+    val availableProvinces: List<String> = emptyList(),
+    val availableCities: List<String> = emptyList()
+)
+
+sealed class SignupEvent {
+    data class ProvinceChanged(val value: String) : SignupEvent()
+    data class CityChanged(val value: String) : SignupEvent()
+}
+
+private var allLocationData: Map<String, List<String>> = emptyMap()
 
 class AccountInfoViewModel(
     private val profileUseCase: CaregiverProfileUseCase = CaregiverProfileUseCase()
@@ -42,6 +60,43 @@ class AccountInfoViewModel(
                 onSuccess = { onAvailable() },
                 onFailure = { _reauthError.value = it.message }
             )
+        }
+    }
+    private val _formState = MutableStateFlow(SignupFormState())
+    val formState = _formState.asStateFlow()
+
+    fun loadLocationData(context: Context) {
+        viewModelScope.launch {
+            try {
+                val jsonString = context.assets.open("philippine_locations.json")
+                    .bufferedReader()
+                    .use { it.readText() }
+
+                val type = object : TypeToken<Map<String, List<String>>>() {}.type
+                allLocationData = Gson().fromJson(jsonString, type)
+
+                _formState.update { it.copy(
+                    availableProvinces = allLocationData.keys.sorted()
+                )}
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun onEvent(event: SignupEvent) {
+        when(event) {
+            is SignupEvent.ProvinceChanged -> {
+                val cities = allLocationData[event.value] ?: emptyList()
+                _formState.update { it.copy(
+                    province = event.value,
+                    city = "", // Reset city when province changes
+                    availableCities = cities.sorted()
+                )}
+            }
+            is SignupEvent.CityChanged -> {
+                _formState.update { it.copy(city = event.value) }
+            }
         }
     }
 
