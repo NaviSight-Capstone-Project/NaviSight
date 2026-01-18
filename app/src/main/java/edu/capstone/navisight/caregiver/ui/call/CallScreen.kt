@@ -325,7 +325,7 @@ fun CallScreen(
             }) {
                 Icon(
                     painter = rememberAsyncImagePainter(
-                        if (isMicrophoneMuted) R.drawable.ic_mic_on else R.drawable.ic_mic_off
+                        if (isMicrophoneMuted) R.drawable.ic_mic_off else R.drawable.ic_mic_on
                     ),
                     contentDescription = "Mic Toggle",
                     modifier=if(!isVideoCall) Modifier.size(32.dp) else Modifier,
@@ -345,7 +345,7 @@ fun CallScreen(
                 }) {
                     Icon(
                         painter = rememberAsyncImagePainter(
-                            if (isCameraMuted) R.drawable.ic_camera_on else R.drawable.ic_camera_off
+                            if (isCameraMuted) R.drawable.ic_camera_off else R.drawable.ic_camera_on
                         ),
                         contentDescription = "Camera Toggle",
                         tint = Color.White
