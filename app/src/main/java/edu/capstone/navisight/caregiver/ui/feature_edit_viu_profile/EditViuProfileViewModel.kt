@@ -773,35 +773,6 @@ class EditViuProfileViewModel(
         }
     }
 
-    fun sendTransferRequest(candidate: TransferPrimaryRequest) {
-        val currentUid = getCurrentUserUidUseCase() ?: return
-        val currentViu = _viu.value ?: return
-
-        viewModelScope.launch {
-            _isLoading.value = true
-
-            val caregiverName = transferPrimaryUseCase.getCurrentCaregiverName(currentUid)
-
-            val request = candidate.copy(
-                createdAt = com.google.firebase.Timestamp.now(),
-                currentPrimaryCaregiverUid = currentUid,
-                currentPrimaryCaregiverName = caregiverName,
-                viuUid = currentViu.uid,
-                viuName = "${currentViu.firstName} ${currentViu.lastName}",
-                status = "pending"
-            )
-
-            val result = transferPrimaryUseCase.sendRequest(request)
-
-            if (result is RequestStatus.Error) {
-                _error.value = result.message
-            } else {
-                _saveSuccess.value = true
-            }
-            _isLoading.value = false
-        }
-    }
-
     fun startUnpairFlow() {
         if (_canEdit.value) { // Safety check: Primary cannot do this
             _unpairError.value = "Primary companions cannot unpair. Use Transfer instead."
@@ -810,39 +781,6 @@ class EditViuProfileViewModel(
         _passwordRetryCount.value = 0
         _unpairError.value = null
         _unpairFlowState.value = UnpairFlowState.CONFIRMING_PASSWORD
-    }
-
-    fun confirmUnpairPassword(password: String) {
-        if (password.isBlank()) {
-            _unpairError.value = "Password cannot be empty"
-            return
-        }
-        if (_passwordRetryCount.value >= 5) {
-            _unpairError.value = "Too many attempts. Action cancelled."
-            return
-        }
-
-        viewModelScope.launch {
-            _unpairFlowState.value = UnpairFlowState.UNPAIRING // Loading state
-
-            reauthenticateCaregiverUseCase(password).fold(
-                onSuccess = {
-                    performUnpair()
-                },
-                onFailure = {
-                    _passwordRetryCount.value += 1
-                    val remaining = 5 - _passwordRetryCount.value
-
-                    if (remaining <= 0) {
-                        _unpairError.value = "Too many failed attempts. Action cancelled."
-                        cancelUnpairFlow()
-                    } else {
-                        _unpairFlowState.value = UnpairFlowState.CONFIRMING_PASSWORD // Go back to dialog
-                        _unpairError.value = "Incorrect password. $remaining attempts left."
-                    }
-                }
-            )
-        }
     }
 
     private suspend fun performUnpair() {
