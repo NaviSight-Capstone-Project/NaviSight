@@ -54,8 +54,8 @@ private fun isAgeValid(timestamp: Timestamp?): Boolean {
 @Composable
 fun AccountInfoScreen(
     profile: Caregiver?,
-    state: SignupFormState,
     selectedImageUri: Uri?,
+    state: SignupFormState,
     onProvinceSelected: (String) -> Unit,
     onCitySelected: (String) -> Unit,
     onPickImage: () -> Unit,

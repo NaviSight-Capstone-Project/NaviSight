@@ -7,6 +7,8 @@ import androidx.core.text.isDigitsOnly
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.common.reflect.TypeToken
+import com.google.gson.Gson
 import edu.capstone.navisight.auth.model.OtpResult
 import edu.capstone.navisight.caregiver.domain.CaregiverProfileUseCase
 import edu.capstone.navisight.caregiver.domain.connectionUseCase.TransferPrimaryUseCase
@@ -23,6 +25,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -44,6 +47,21 @@ enum class TransferFlowState {
     CONFIRMING_PASSWORD, // Showing the password dialog
     SENDING              // Network call
 }
+
+data class SignupFormState(
+    val province: String = "",
+    val city: String = "",
+    val availableProvinces: List<String> = emptyList(),
+    val availableCities: List<String> = emptyList()
+)
+
+sealed class SignupEvent {
+    data class ProvinceChanged(val value: String) : SignupEvent()
+    data class CityChanged(val value: String) : SignupEvent()
+}
+
+private var allLocationData: Map<String, List<String>> = emptyMap()
+
 enum class DeleteFlowState { IDLE, PENDING_PASSWORD, DELETING }
 
 enum class UnpairFlowState { IDLE, CONFIRMING_PASSWORD, UNPAIRING }
@@ -167,6 +185,44 @@ class EditViuProfileViewModel(
         loadViuDetails()
         checkPermissions()
         checkGlobalLockout()
+    }
+
+    private val _formState = MutableStateFlow(SignupFormState())
+    val formState = _formState.asStateFlow()
+
+    fun loadLocationData(context: Context) {
+        viewModelScope.launch {
+            try {
+                val jsonString = context.assets.open("philippine_locations.json")
+                    .bufferedReader()
+                    .use { it.readText() }
+
+                val type = object : TypeToken<Map<String, List<String>>>() {}.type
+                allLocationData = Gson().fromJson(jsonString, type)
+
+                _formState.update { it.copy(
+                    availableProvinces = allLocationData.keys.sorted()
+                )}
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun onEvent(event: SignupEvent) {
+        when(event) {
+            is SignupEvent.ProvinceChanged -> {
+                val cities = allLocationData[event.value] ?: emptyList()
+                _formState.update { it.copy(
+                    province = event.value,
+                    city = "", // Reset city when province changes
+                    availableCities = cities.sorted()
+                )}
+            }
+            is SignupEvent.CityChanged -> {
+                _formState.update { it.copy(city = event.value) }
+            }
+        }
     }
 
     private fun checkGlobalLockout() {

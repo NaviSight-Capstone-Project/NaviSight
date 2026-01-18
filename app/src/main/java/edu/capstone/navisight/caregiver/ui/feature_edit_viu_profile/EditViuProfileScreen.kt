@@ -45,6 +45,9 @@ private fun ageValid(selectedMillis: Long?): Boolean {
 @Composable
 fun EditViuProfileScreen(
     viewModel: EditViuProfileViewModel,
+    state: SignupFormState,
+    onProvinceSelected: (String) -> Unit,
+    onCitySelected: (String) -> Unit,
     onDeleteSuccess: () -> Unit
 ) {
     val viu by viewModel.viu.collectAsState()
@@ -323,7 +326,6 @@ fun EditViuProfileScreen(
             value = phone,
             enabled = canEdit,
             onValueChange = { input ->
-                // Only allow digits and limit to 11 characters
                 if (input.all { it.isDigit() } && input.length <= 11) {
                     phone = input
                     viewModel.clearSaveError()
@@ -331,14 +333,14 @@ fun EditViuProfileScreen(
             },
             label = { Text("Phone Number") },
             isError = isPhoneInvalid,
-            supportingText = {
-                if (isPhoneInvalid) {
+            supportingText = if (isPhoneInvalid) {
+                {
                     Text(
                         text = "Enter a valid 11-digit PH number (e.g., 09123456789)",
                         color = Color.Red
                     )
                 }
-            },
+            } else null,
             readOnly = !canEdit,
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(
@@ -347,6 +349,24 @@ fun EditViuProfileScreen(
             ),
             colors = customTextFieldColors,
             shape = RoundedCornerShape(12.dp)
+        )
+
+        // Province Dropdown
+        LocationDropdown(
+            enabled = canEdit,
+            label = "Province *",
+            options = state.availableProvinces,
+            selectedOption = state.province,
+            onOptionSelected = onProvinceSelected
+        )
+
+        // City Dropdown
+        LocationDropdown(
+            enabled = canEdit,
+            label = if (state.province.isEmpty()) "Please pick a province *" else "City/Municipality *",
+            options = state.availableCities,
+            selectedOption = state.city,
+            onOptionSelected = onCitySelected
         )
 
         OutlinedTextField(
@@ -499,5 +519,50 @@ fun EditViuProfileScreen(
             }
         }
         Spacer(modifier = Modifier.height(20.dp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LocationDropdown(
+    label: String,
+    enabled: Boolean,
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+
+    ) {
+        OutlinedTextField(
+            value = selectedOption,
+            onValueChange = {},
+            readOnly = true,
+            enabled = enabled,
+            shape = RoundedCornerShape(12.dp),
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            options.forEach { selectionOption ->
+                DropdownMenuItem(
+                    enabled = enabled,
+                    text = { Text(selectionOption) },
+                    onClick = {
+                        onOptionSelected(selectionOption)
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
 }
