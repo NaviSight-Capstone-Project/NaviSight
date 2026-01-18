@@ -91,7 +91,7 @@ fun CaregiverSignupScreen(
             modifier = Modifier.align(Alignment.TopStart).padding(top = 48.dp, start = 24.dp)
         ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color(0xFF4A4A4A)) }
 
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(24.dp)), horizontalAlignment = Alignment.CenterHorizontally) {
             Image(painter = painterResource(R.drawable.ic_logo), contentDescription = "Logo", modifier = Modifier.size(160.dp, 80.dp))
             Spacer(Modifier.height(8.dp))
             Text("Companion Signup", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4A4A4A))
@@ -104,21 +104,23 @@ fun CaregiverSignupScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 modifier = Modifier.fillMaxWidth().animateContentSize()
             ) {
-                AnimatedContent(
-                    targetState = currentStep,
-                    transitionSpec = {
-                        if (targetState > initialState) (slideInHorizontally { width -> width } + fadeIn()).togetherWith(slideOutHorizontally { width -> -width } + fadeOut())
-                        else (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(slideOutHorizontally { width -> width } + fadeOut())
-                    },
-                    label = "WizardTransition"
-                ) { step ->
-                    when (step) {
-                        SignupStep.PERSONAL -> StepPersonalDetails(state = formState, onEvent = viewModel::onEvent, onNext = { currentStep = SignupStep.AVATAR })
-                        SignupStep.AVATAR -> StepAvatarSelection(state = formState, onAddPhoto = onSelectImageClick, onNext = { currentStep = SignupStep.LEGAL })
-                        SignupStep.LEGAL -> StepLegalAgreements(state = formState, onEvent = viewModel::onEvent, onNext = { currentStep = SignupStep.ACCOUNT })
-                        SignupStep.ACCOUNT -> StepAccountCredentials(state = formState, onEvent = viewModel::onEvent, isLoading = uiState.isLoading, onSignup = { viewModel.submitSignup(context) })
+                Box(modifier = Modifier.clip(RoundedCornerShape(24.dp))) {
+                    AnimatedContent(
+                        targetState = currentStep,
+                        transitionSpec = {
+                            if (targetState > initialState) (slideInHorizontally { width -> width } + fadeIn()).togetherWith(slideOutHorizontally { width -> -width } + fadeOut())
+                            else (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(slideOutHorizontally { width -> width } + fadeOut())
+                        },
+                        label = "WizardTransition"
+                    ) { step ->
+                        when (step) {
+                            SignupStep.PERSONAL -> StepPersonalDetails(state = formState, onEvent = viewModel::onEvent, onNext = { currentStep = SignupStep.AVATAR })
+                            SignupStep.AVATAR -> StepAvatarSelection(state = formState, onAddPhoto = onSelectImageClick, onNext = { currentStep = SignupStep.LEGAL })
+                            SignupStep.LEGAL -> StepLegalAgreements(state = formState, onEvent = viewModel::onEvent, onNext = { currentStep = SignupStep.ACCOUNT })
+                            SignupStep.ACCOUNT -> StepAccountCredentials(state = formState, onEvent = viewModel::onEvent, isLoading = uiState.isLoading, onSignup = { viewModel.submitSignup(context) })
+                        }
                     }
-                }
+                    }
             }
         }
     }
@@ -277,31 +279,69 @@ fun StepPersonalDetails(
 
         Spacer(Modifier.height(8.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.weight(1f)) {
-                OutlinedTextField(
-                    value = if(state.birthday != null) SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(state.birthday.toDate()) else "",
-                    onValueChange = {}, readOnly = true,
-                    label = { Text("Birthday *") },
-                    modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true },
-                    shape = RoundedCornerShape(12.dp),
-                    isError = isAgeError,
-                    trailingIcon = { Icon(Icons.Default.DateRange, null, Modifier.clickable { showDatePicker = true }) }
-                )
-                // Kept Specific Error
-                if (isAgeError) Text("Must be 18-60 years old", color = Color.Red, fontSize = 10.sp, modifier = Modifier.padding(top = 60.dp))
-            }
-            Box(Modifier.weight(1f)) {
-                ExposedDropdownMenuBox(isSexExpanded, { isSexExpanded = !isSexExpanded }) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min), // Force children to match heights
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Birthday Box
+            Box(Modifier.weight(1f).fillMaxHeight()) {
+                Column { // Wrap in Column so error text doesn't deform the Row
                     OutlinedTextField(
-                        value = state.sex, onValueChange = {}, readOnly = true,
+                        value = if (state.birthday != null) SimpleDateFormat(
+                            "MMM dd, yyyy",
+                            Locale.getDefault()
+                        ).format(state.birthday.toDate()) else "",
+                        onValueChange = {}, readOnly = true,
+                        label = { Text("Birthday *") },
+                        modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true },
+                        shape = RoundedCornerShape(12.dp),
+                        isError = isAgeError,
+                        trailingIcon = {
+                            Icon(
+                                Icons.Default.DateRange,
+                                null,
+                                Modifier.clickable { showDatePicker = true })
+                        }
+                    )
+                    if (isAgeError) {
+                        Text(
+                            "Must be 18-60 years old",
+                            color = Color.Red,
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            // Sex Box
+            Box(Modifier.weight(1f).fillMaxHeight()) {
+                ExposedDropdownMenuBox(
+                    expanded = isSexExpanded,
+                    onExpandedChange = { isSexExpanded = !isSexExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = state.sex,
+                        onValueChange = {},
+                        readOnly = true,
                         label = { Text("Sex *") },
-                        modifier = Modifier.menuAnchor(),
+                        modifier = Modifier.menuAnchor().fillMaxWidth(), // Add fillMaxWidth here
                         shape = RoundedCornerShape(12.dp),
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(isSexExpanded) }
                     )
-                    ExposedDropdownMenu(isSexExpanded, { isSexExpanded = false }) {
-                        sexOptions.forEach { op -> DropdownMenuItem(text = { Text(op) }, onClick = { onEvent(SignupEvent.SexChanged(op)); isSexExpanded = false }) }
+                    ExposedDropdownMenu(
+                        expanded = isSexExpanded,
+                        onDismissRequest = { isSexExpanded = false }) {
+                        sexOptions.forEach { op ->
+                            DropdownMenuItem(
+                                text = { Text(op) },
+                                onClick = {
+                                    onEvent(SignupEvent.SexChanged(op)); isSexExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
             }
