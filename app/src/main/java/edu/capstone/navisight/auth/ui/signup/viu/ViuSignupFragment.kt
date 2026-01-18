@@ -41,6 +41,7 @@ class ViuSignupFragment : Fragment() {
         val destinationUri = Uri.fromFile(File(requireContext().cacheDir, "cropped_${System.currentTimeMillis()}.jpg"))
 
         val options = UCrop.Options().apply {
+            
             setToolbarColor(android.graphics.Color.parseColor("#6342ED"))
             setStatusBarColor(android.graphics.Color.parseColor("#6342ED"))
             setActiveControlsWidgetColor(android.graphics.Color.parseColor("#78E4EF"))
