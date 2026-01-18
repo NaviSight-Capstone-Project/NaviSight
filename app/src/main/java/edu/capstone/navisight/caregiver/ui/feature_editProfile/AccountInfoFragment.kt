@@ -125,8 +125,11 @@ class AccountInfoFragment : Fragment() {
                         onPickImage = {
                             imagePickerLauncher.launch("image/*")
                         },
-                        onSave = { first, middle, last, phone, birthday, address, password ->
-                            viewModel.saveProfileChanges(it, first, middle, last, phone, birthday, address, password)
+                        onSave = { first, middle, last, phone, birthday, address, password,
+                                   province, city ->
+                            viewModel.saveProfileChanges(it, first,
+                                middle, last, phone, birthday,
+                                address, password, province, city)
                         },
                         onResendPasswordOtp = {
                             viewModel.resendPasswordChangeOtp(requireContext())

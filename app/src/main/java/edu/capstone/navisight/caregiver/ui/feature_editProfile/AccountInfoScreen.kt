@@ -60,7 +60,7 @@ fun AccountInfoScreen(
     onCitySelected: (String) -> Unit,
     onPickImage: () -> Unit,
     onCheckLockout: () -> Unit,
-    onSave: (String, String, String, String, Timestamp?, String, String) -> Unit,
+    onSave: (String, String, String, String, Timestamp?, String, String, String, String) -> Unit,
     onRequestPasswordChange: (String, String) -> Unit,
     onChangeEmail: (String, String) -> Unit,
     onVerifyEmailOtp: (String) -> Unit,
@@ -79,6 +79,10 @@ fun AccountInfoScreen(
     var lastName by remember(profile?.lastName) { mutableStateOf(profile?.lastName ?: "") }
     var phone by remember(profile?.phoneNumber) { mutableStateOf(profile?.phoneNumber ?: "") }
     var address by remember(profile?.address) { mutableStateOf(profile?.address ?: "") }
+
+
+    var province by remember(state?.province) { mutableStateOf(state?.province ?: "") }
+    var city by remember(state?.city) { mutableStateOf(state?.city ?: "") }
 
     var birthdayText by remember(profile?.birthday) { mutableStateOf("") }
     var selectedBirthdayTimestamp by remember(profile?.birthday) { mutableStateOf<Timestamp?>(null) }
@@ -110,9 +114,10 @@ fun AccountInfoScreen(
         }
     }
 
-    // --- DIRTY CHECK ---
+    // Dirty check
     val hasChanges = remember(
-        firstName, middleName, lastName, phone, selectedBirthdayTimestamp, address, profile
+        firstName, middleName, lastName, phone, selectedBirthdayTimestamp, address, profile,
+        state.province, state.city
     ) {
         profile?.let {
             firstName != (it.firstName ?: "") ||
@@ -120,17 +125,23 @@ fun AccountInfoScreen(
                     lastName != (it.lastName ?: "") ||
                     phone != (it.phoneNumber ?: "") ||
                     selectedBirthdayTimestamp != it.birthday ||
-                    address != (it.address ?: "")
+                    address != (it.address ?: "") ||
+                    state.province != (it.province ?: "") ||
+                    state.city != (it.city ?: "")
         } ?: false
     }
 
     // Check for input validation
-    val isFormValid = remember(firstName, lastName, phone, selectedBirthdayTimestamp, address) {
+    val isFormValid = remember(firstName, lastName, phone, selectedBirthdayTimestamp,
+        address, state.province, state.city) {
         firstName.isNotBlank() &&
                 lastName.isNotBlank() &&
                 phone.isNotBlank() &&
                 selectedBirthdayTimestamp != null &&
-                address.isNotBlank()
+                address.isNotBlank() &&
+                phone.length == 11 &&
+                state.province.isNotBlank() &&
+                state.city.isNotBlank()
     }
 
     // Colors
@@ -210,6 +221,12 @@ fun AccountInfoScreen(
             selectedBirthdayTimestamp = profile.birthday
             birthdayText = profile.birthday?.toDate()?.let { dateFormatter.format(it) } ?: ""
             birthdayError = if (birthdayText.isNotBlank() && !isAgeValid(selectedBirthdayTimestamp)) "Must be 18-60 years old" else null
+            profile.province?.let { savedProvince ->
+                onProvinceSelected(savedProvince)
+            }
+            profile.city?.let { savedCity ->
+                onCitySelected(savedCity)
+            }
         }
     }
 
@@ -770,7 +787,8 @@ fun AccountInfoScreen(
             errorMessage = reauthError,
             onConfirm = { password ->
                 // Your existing save logic
-                onSave(firstName, middleName, lastName, phone, selectedBirthdayTimestamp, address, password)
+                onSave(firstName, middleName, lastName, phone, selectedBirthdayTimestamp,
+                    address, password, state.province, state.city)
             },
             onDismiss = {
                 showReauthDialog = false

@@ -146,7 +146,9 @@ class AccountInfoViewModel(
         phoneNumber: String,
         birthday: Timestamp?,
         address: String,
-        password: String
+        password: String,
+        province: String,
+        city: String
     ) {
         viewModelScope.launch {
             _isSaving.value = true
@@ -175,6 +177,8 @@ class AccountInfoViewModel(
                         if (phoneNumber != (current?.phoneNumber ?: "")) updatedData["phoneNumber"] = phoneNumber
                         if (birthday != current?.birthday) updatedData["birthday"] = birthday
                         if (address != (current?.address ?: "")) updatedData["address"] = address
+                        if (province != (current?.province ?: "")) updatedData["province"] = province
+                        if (city != (current?.city ?: "")) updatedData["city"] = city
 
                         val nonNullUpdatedData = updatedData.filterValues { it != null } as Map<String, Any>
 

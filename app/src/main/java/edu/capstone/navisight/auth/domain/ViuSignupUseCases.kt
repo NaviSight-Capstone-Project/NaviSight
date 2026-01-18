@@ -22,11 +22,14 @@ class SignupViuUseCase {
         category: String,
         imageUri: Uri?,
         caregiverEmail: String,
-        sex: String
+        sex: String,
+        country: String,
+        province: String,
+        city: String
     ): Result<Pair<Viu, String>> {
         return repository.signupViu(
             context, email, password, firstName, lastName, middleName, birthday,
-            phone, address, category, imageUri, caregiverEmail, sex
+            phone, address, category, imageUri, caregiverEmail, sex, country, province, city
         )
     }
 }

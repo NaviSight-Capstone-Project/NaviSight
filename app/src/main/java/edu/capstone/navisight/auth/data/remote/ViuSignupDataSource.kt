@@ -44,7 +44,10 @@ class ViuSignupDataSource(
         category: String,
         imageUri: Uri?,
         caregiverEmail: String,
-        sex: String
+        sex: String,
+        country: String,
+        province: String,
+        city: String,
     ): Result<Pair<Viu, String>> {
         var viuUid: String? = null
         try {
@@ -68,7 +71,10 @@ class ViuSignupDataSource(
                 email = email, phone = phone, address = address, category = category,
                 profileImageUrl = imageUrl,
                 isEmailVerified = false,
-                sex = sex
+                sex = sex,
+                country=country,
+                province=province,
+                city=city
             )
             viusCollection.document(viuUid).set(viu).await()
 

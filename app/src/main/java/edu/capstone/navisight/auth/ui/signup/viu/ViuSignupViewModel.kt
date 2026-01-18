@@ -134,7 +134,10 @@ class ViuSignupViewModel : ViewModel() {
         category: String,
         caregiverEmail: String,
         termsAccepted: Boolean,
-        privacyAccepted: Boolean
+        privacyAccepted: Boolean,
+        country: String,
+        province: String,
+        city: String
     ) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
@@ -152,7 +155,10 @@ class ViuSignupViewModel : ViewModel() {
                 category = category,
                 imageUri = _uiState.value.profileImageUri,
                 caregiverEmail = caregiverEmail,
-                sex = sex
+                sex = sex,
+                country=country,
+                province=province,
+                city=city
             )
 
             result.fold(

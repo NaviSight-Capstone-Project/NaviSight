@@ -186,8 +186,6 @@ fun ViuSignupScreen(
                             isLoading = uiState.isLoading,
                             onUpdate = { e, ce, p, rp -> email = e; caregiverEmail = ce; password = p; rePassword = rp },
                             onSignup = {
-                                // Combine Address and Country
-                                val fullAddress = "$detailedAddress, Philippines"
                                 viewModel.signup(
                                     context = context,
                                     email = email,
@@ -197,12 +195,15 @@ fun ViuSignupScreen(
                                     middleName = middleName.trim(),
                                     birthday = birthday,
                                     phone = phone,
-                                    address = fullAddress,
+                                    address = detailedAddress,
                                     sex = sex,
                                     category = category.trim(),
                                     caregiverEmail = caregiverEmail.trim(),
                                     termsAccepted = termsAccepted,
-                                    privacyAccepted = privacyAccepted
+                                    privacyAccepted = privacyAccepted,
+                                    city = formState.city,
+                                    country = "Philippines",
+                                    province = formState.province
                                 )
                             }
                         )
@@ -641,7 +642,7 @@ fun StepViuAccount(
     email: String, caregiverEmail: String, pass: String, rePass: String,
     isLoading: Boolean,
     onUpdate: (String, String, String, String) -> Unit,
-    onSignup: () -> Unit
+    onSignup: () -> Unit,
 ) {
     var passVis by remember { mutableStateOf(false) }
     var rePassVis by remember { mutableStateOf(false) }
@@ -686,9 +687,9 @@ fun StepViuAccount(
         else if (rePass.isEmpty()) Text("Required", color = Color.Red, fontSize = 10.sp)
 
         Spacer(Modifier.height(24.dp))
-
-        val isValid = isEmailValid && isCaregiverEmailValid && isPassValid && isRePassValid && !isLoading
-        GradientButton(text = "Create Account", onClick = {VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
+        val isValid = isEmailValid && isCaregiverEmailValid && isPassValid && isRePassValid
+        GradientButton(text = "Create Account",
+            onClick = {VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
             onSignup()}, isLoading = isLoading, enabled = isValid)
     }
 }

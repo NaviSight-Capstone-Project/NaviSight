@@ -155,7 +155,9 @@ class CaregiverSignupViewModel : ViewModel() {
                     country = form.country,
                     birthday = form.birthday!!,
                     sex = form.sex,
-                    imageUri = form.profileImageUri
+                    imageUri = form.profileImageUri,
+                    province = form.province,
+                    city = form.city
                 )
 
                 result.onSuccess { caregiver ->

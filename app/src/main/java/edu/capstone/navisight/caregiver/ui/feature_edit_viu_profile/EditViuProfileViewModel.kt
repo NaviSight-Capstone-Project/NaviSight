@@ -392,7 +392,9 @@ class EditViuProfileViewModel(
     // Save Flow (Edit Profile)
     fun startSaveFlow(
         firstName: String, middleName: String, lastName: String,
-        birthday: String, sex: String, phone: String, address: String, status: String
+        birthday: String, sex: String, phone: String, address: String, status: String,
+        province: String,
+        city: String
     ) {
         if (!_canEdit.value) {
             _saveError.value = "Only the Primary Companion can edit this profile."
@@ -423,7 +425,9 @@ class EditViuProfileViewModel(
         val hasChanges = firstName != currentViu.firstName || middleName != currentViu.middleName ||
                 lastName != currentViu.lastName || birthday != (currentViu.birthday ?: "") ||
                 sex != (currentViu.sex ?: "") || phone != currentViu.phone ||
-                address != (currentViu.address ?: "") || status != (currentViu.category ?: "")
+                address != (currentViu.address ?: "") || status != (currentViu.category ?: "") ||
+                province != (currentViu.province ?: "") ||
+                city != (currentViu.city ?: "")
 
         if (!hasChanges) {
             _saveError.value = "No changes to save"
@@ -438,7 +442,9 @@ class EditViuProfileViewModel(
             sex = sex.trim(),
             phone = phone.trim(),
             address = address.trim().takeIf { it.isNotEmpty() },
-            category = status.trim().takeIf { it.isNotEmpty() }
+            category = status.trim().takeIf { it.isNotEmpty() },
+            province = province.trim(),
+            city = city.trim()
         )
 
         _saveFlowState.value = SaveFlowState.PENDING_PASSWORD

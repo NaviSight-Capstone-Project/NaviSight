@@ -90,12 +90,14 @@ fun EditViuProfileScreen(
 
     var loadedViuUid by remember { mutableStateOf<String?>(null) }
 
-    val isFormValid = remember(firstName, lastName, birthday, sex, phone) {
+    val isFormValid = remember(firstName, lastName, birthday, sex, phone, state.province, state.city) {
         viewModel.isValidName(firstName) &&
                 viewModel.isValidName(lastName) &&
                 viewModel.isValidBirthday(birthday) &&
                 sex.isNotBlank() &&
-                viewModel.isValidPhone(phone)
+                viewModel.isValidPhone(phone) &&
+                state.province.isNotBlank() &&
+                state.city.isNotBlank()
     }
 
     LaunchedEffect(viu) {
@@ -120,6 +122,12 @@ fun EditViuProfileScreen(
                     selectedBirthdayMillis = null
                     isAgeValid = false
                 }
+            }
+            it.province?.let { savedProvince ->
+                onProvinceSelected(savedProvince)
+            }
+            it.city?.let { savedCity ->
+                onCitySelected(savedCity)
             }
         }
     }
@@ -281,7 +289,7 @@ fun EditViuProfileScreen(
 
         // Birthday & Sex
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1.2f)) {
                 OutlinedTextField(
                     value = birthday, onValueChange = { },
                     label = { Text("Birthday") }, readOnly = true, enabled = canEdit,
@@ -291,7 +299,7 @@ fun EditViuProfileScreen(
                     trailingIcon = { Icon(Icons.Default.DateRange, "Select Date", modifier = Modifier.clickable { if(canEdit) showDatePicker = true }) }
                 )
             }
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(0.8f)) {
                 ExposedDropdownMenuBox(
                     expanded = isSexDropdownExpanded && canEdit,
                     onExpandedChange = { if (canEdit) isSexDropdownExpanded = !isSexDropdownExpanded },
@@ -461,11 +469,15 @@ fun EditViuProfileScreen(
                 firstName != it.firstName || middleName != it.middleName || lastName != it.lastName ||
                         birthday != (it.birthday ?: "") || sex != (it.sex ?: "") || phone != it.phone ||
                         address != (it.address ?: "") || status != (it.category ?: "")
+                        || state.province != (it.province ?: "") ||
+                        state.city != (it.city ?: "")
             } ?: false
 
             Button(
                 onClick = {
-                    viewModel.startSaveFlow(firstName, middleName, lastName, birthday, sex, phone, address, status)
+                    viewModel.startSaveFlow(firstName, middleName, lastName, birthday, sex, phone, address, status,
+                        province = state.province,
+                        city = state.city)
                 },
                 modifier = Modifier
                     .fillMaxWidth()

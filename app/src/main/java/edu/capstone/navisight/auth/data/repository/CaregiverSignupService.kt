@@ -22,10 +22,14 @@ class CaregiverSignupRepository {
         address: String,
         birthday: Timestamp,
         sex: String,
-        imageUri: Uri?
+        imageUri: Uri?,
+        country: String,
+        province: String,
+        city: String
     ): Result<Caregiver> {
         return remoteDataSource.signupCaregiver(
-            context, email, password, firstName, lastName, middleName, phoneNumber, address, birthday, sex, imageUri
+            context, email, password, firstName, lastName, middleName, phoneNumber, address,
+            birthday, sex, imageUri, country, province, city
         )
     }
 

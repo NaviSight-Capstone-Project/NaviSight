@@ -22,10 +22,13 @@ class SignupCaregiverUseCase {
         birthday: Timestamp,
         sex: String,
         imageUri: Uri?,
-        country: String
+        country: String,
+        province: String,
+        city: String
     ): Result<Caregiver> {
         return repository.signupCaregiver(
-            context, email, password, firstName, lastName, middleName, phoneNumber, address, birthday, sex, imageUri
+            context, email, password, firstName, lastName, middleName, phoneNumber, address,
+            birthday, sex, imageUri, country, province, city
         )
     }
 }

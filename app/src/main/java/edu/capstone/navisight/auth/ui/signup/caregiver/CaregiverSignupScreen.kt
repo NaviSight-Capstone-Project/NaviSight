@@ -739,7 +739,22 @@ fun StepAccountCredentials(state: SignupFormState, onEvent: (SignupEvent) -> Uni
         else if (state.rePassword.isEmpty()) Text("Required", color = Color.Red, fontSize = 10.sp)
 
         Spacer(Modifier.height(24.dp))
-        GradientButton(text = "Create Account", onClick = onSignup, isLoading = isLoading, enabled = isEmailValid && isPassValid && isRePassValid)
+
+        val isPersonalDetailsValid = state.firstName.isNotBlank() &&
+                state.lastName.isNotBlank() &&
+                state.phone.length == 11 &&
+                state.addressDetails.isNotBlank()
+
+        val isLocationValid = state.province.isNotBlank() &&
+                state.city.isNotBlank()
+
+        // Create account
+        GradientButton(
+            text = "Create Account",
+            onClick = onSignup,
+            isLoading = isLoading,
+            enabled = isEmailValid && isPassValid && isRePassValid && isPersonalDetailsValid && isLocationValid
+        )
     }
 }
 

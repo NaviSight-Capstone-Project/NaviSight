@@ -28,7 +28,10 @@ class CaregiverSignupDataSource (
         address: String,
         birthday: Timestamp,
         sex: String,
-        imageUri: Uri?
+        imageUri: Uri?,
+        country: String,
+        province: String,
+        city: String
     ): Result<Caregiver> {
         var uid: String? = null
         try {
@@ -44,7 +47,10 @@ class CaregiverSignupDataSource (
                 firstName = firstName, middleName = middleName, lastName = lastName,
                 email = email, phoneNumber = phoneNumber, address = address,
                 birthday = birthday, sex = sex, profileImageUrl = imageUrl,
-                isEmailVerified = false
+                isEmailVerified = false,
+                country=country,
+                province=province,
+                city=city
             )
 
             usersCollection.document(uid).set(caregiver).await()
