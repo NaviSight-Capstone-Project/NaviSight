@@ -160,9 +160,58 @@ class EditViuProfileViewModel(
     private val _savePasswordRetryCount = MutableStateFlow(0)
     val savePasswordRetryCount: StateFlow<Int> = _savePasswordRetryCount.asStateFlow()
 
+    private val _isLockedOut = MutableStateFlow(false)
+    val isLockedOut: StateFlow<Boolean> = _isLockedOut.asStateFlow()
+
     init {
         loadViuDetails()
         checkPermissions()
+        checkGlobalLockout()
+    }
+
+    private fun checkGlobalLockout() {
+        viewModelScope.launch {
+            val uid = getCurrentUserUidUseCase() ?: return@launch
+            // Fetches the 'passwordLockoutUntil' and 'passwordRetryCount' logic from Firestore
+            caregiverProfileUseCase.checkLockout(uid).onFailure { exception ->
+                _isLockedOut.value = true
+                val lockoutMsg = exception.message ?: "Locked out."
+                _unpairError.value = lockoutMsg
+                _saveError.value = lockoutMsg
+            }.onSuccess {
+                _isLockedOut.value = false
+            }
+        }
+    }
+
+    fun confirmUnpair(password: String) {
+        viewModelScope.launch {
+            // Stop if already locked out based on the shared variable
+            if (_isLockedOut.value) return@launch
+
+            _unpairFlowState.value = UnpairFlowState.UNPAIRING
+            val uid = getCurrentUserUidUseCase() ?: return@launch
+
+            // Handle Result<Unit> from the use case
+            reauthenticateCaregiverUseCase(password).fold(
+                onSuccess = {
+                    // Reset Firestore counters and local lockout state
+                    caregiverProfileUseCase.clearLockout(uid)
+                    _isLockedOut.value = false
+                    _unpairError.value = null
+                    performUnpair()
+                },
+                onFailure = {
+                    // Update Firestore 'passwordRetryCount' and retrieve the specific error message
+                    val errorMessage = caregiverProfileUseCase.handleFailedAttempt(uid)
+                    _unpairError.value = errorMessage
+
+                    // Set shared lockout state if the message indicates a lockout
+                    _isLockedOut.value = errorMessage.contains("Locked", ignoreCase = true)
+                    _unpairFlowState.value = UnpairFlowState.CONFIRMING_PASSWORD
+                }
+            )
+        }
     }
 
     private fun checkPermissions() {
@@ -397,6 +446,9 @@ class EditViuProfileViewModel(
             )
         }
     }
+
+
+
 
     fun resendOtpForSave(context: Context) {
         viewModelScope.launch {
@@ -650,36 +702,23 @@ class EditViuProfileViewModel(
 
     // Confirm Password & Send
     fun confirmTransferPassword(password: String) {
-        if (password.isBlank()) {
-            _transferError.value = "Password cannot be empty"
-            return
-        }
-
-        if (_passwordRetryCount.value >= 5) {
-            _transferError.value = "Too many attempts. Please try again later."
-            return
-        }
-
         viewModelScope.launch {
-            _transferFlowState.value = TransferFlowState.SENDING // Show loading in dialog
+            if (_isLockedOut.value) return@launch
 
+            _transferFlowState.value = TransferFlowState.SENDING
+            val uid = getCurrentUserUidUseCase() ?: return@launch
             reauthenticateCaregiverUseCase(password).fold(
                 onSuccess = {
-                    // Send Request
+                    caregiverProfileUseCase.clearLockout(uid)
+                    _isLockedOut.value = false
+                    _transferError.value = null
                     performTransferRequest()
                 },
                 onFailure = {
-                    // Password Wrong
-                    _passwordRetryCount.value += 1
-                    val remaining = 5 - _passwordRetryCount.value
-                    _transferFlowState.value = TransferFlowState.CONFIRMING_PASSWORD // Go back to input
-
-                    if (remaining <= 0) {
-                        _transferError.value = "Too many failed attempts. Action cancelled."
-                        cancelTransferFlow()
-                    } else {
-                        _transferError.value = "Incorrect password. $remaining attempts left."
-                    }
+                    val errorMessage = caregiverProfileUseCase.handleFailedAttempt(uid)
+                    _transferError.value = errorMessage
+                    _isLockedOut.value = errorMessage.contains("Locked", ignoreCase = true)
+                    _transferFlowState.value = TransferFlowState.CONFIRMING_PASSWORD
                 }
             )
         }
@@ -734,35 +773,6 @@ class EditViuProfileViewModel(
         }
     }
 
-    fun sendTransferRequest(candidate: TransferPrimaryRequest) {
-        val currentUid = getCurrentUserUidUseCase() ?: return
-        val currentViu = _viu.value ?: return
-
-        viewModelScope.launch {
-            _isLoading.value = true
-
-            val caregiverName = transferPrimaryUseCase.getCurrentCaregiverName(currentUid)
-
-            val request = candidate.copy(
-                createdAt = com.google.firebase.Timestamp.now(),
-                currentPrimaryCaregiverUid = currentUid,
-                currentPrimaryCaregiverName = caregiverName,
-                viuUid = currentViu.uid,
-                viuName = "${currentViu.firstName} ${currentViu.lastName}",
-                status = "pending"
-            )
-
-            val result = transferPrimaryUseCase.sendRequest(request)
-
-            if (result is RequestStatus.Error) {
-                _error.value = result.message
-            } else {
-                _saveSuccess.value = true
-            }
-            _isLoading.value = false
-        }
-    }
-
     fun startUnpairFlow() {
         if (_canEdit.value) { // Safety check: Primary cannot do this
             _unpairError.value = "Primary companions cannot unpair. Use Transfer instead."
@@ -771,39 +781,6 @@ class EditViuProfileViewModel(
         _passwordRetryCount.value = 0
         _unpairError.value = null
         _unpairFlowState.value = UnpairFlowState.CONFIRMING_PASSWORD
-    }
-
-    fun confirmUnpairPassword(password: String) {
-        if (password.isBlank()) {
-            _unpairError.value = "Password cannot be empty"
-            return
-        }
-        if (_passwordRetryCount.value >= 5) {
-            _unpairError.value = "Too many attempts. Action cancelled."
-            return
-        }
-
-        viewModelScope.launch {
-            _unpairFlowState.value = UnpairFlowState.UNPAIRING // Loading state
-
-            reauthenticateCaregiverUseCase(password).fold(
-                onSuccess = {
-                    performUnpair()
-                },
-                onFailure = {
-                    _passwordRetryCount.value += 1
-                    val remaining = 5 - _passwordRetryCount.value
-
-                    if (remaining <= 0) {
-                        _unpairError.value = "Too many failed attempts. Action cancelled."
-                        cancelUnpairFlow()
-                    } else {
-                        _unpairFlowState.value = UnpairFlowState.CONFIRMING_PASSWORD // Go back to dialog
-                        _unpairError.value = "Incorrect password. $remaining attempts left."
-                    }
-                }
-            )
-        }
     }
 
     private suspend fun performUnpair() {
