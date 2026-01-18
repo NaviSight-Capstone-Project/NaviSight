@@ -120,7 +120,7 @@ fun ViuSignupScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFAFAFA)), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFAFAFA)).clip(RoundedCornerShape(24.dp)), contentAlignment = Alignment.Center) {
         Box(modifier = Modifier.fillMaxSize().blur(0.dp).background(gradientTeal).background(gradientPurple))
 
         IconButton(
@@ -136,7 +136,7 @@ fun ViuSignupScreen(
             modifier = Modifier.align(Alignment.TopStart).padding(top = 48.dp, start = 24.dp)
         ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color(0xFF4A4A4A)) }
 
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).clip(RoundedCornerShape(24.dp)), horizontalAlignment = Alignment.CenterHorizontally) {
             Image(painter = painterResource(R.drawable.ic_logo), contentDescription = "Logo", modifier = Modifier.size(160.dp, 80.dp))
             Spacer(Modifier.height(8.dp))
             Text("VIU Signup", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4A4A4A))
