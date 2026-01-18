@@ -68,7 +68,7 @@ fun CallScreen(
         launch {
             try {
                 // Call the suspend function
-                caregiverRecord = viuDataSource.getRegisteredCaregiver()
+                caregiverRecord = viuDataSource.getCaregiverByUid(target)
             } catch (e: Exception) {
                 Log.e("CallScreen", "Failed to fetch caregiver profile: ${e.message}")
             }

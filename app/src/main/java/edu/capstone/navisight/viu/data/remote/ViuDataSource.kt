@@ -15,6 +15,12 @@ class ViuDataSource(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) {
 
+    suspend fun getCaregiverByUid(uid: String): Caregiver {
+        val doc = firestore.collection(USER_TYPE_CAREGIVER).document(uid).get().await()
+        return doc.toObject(Caregiver::class.java)
+            ?: throw Exception("Caregiver not found")
+    }
+
     suspend fun getCurrentViuProfile(): Viu {
         val currentUser = auth.currentUser ?: throw kotlin.Exception("User not logged in")
         val uid = currentUser.uid
