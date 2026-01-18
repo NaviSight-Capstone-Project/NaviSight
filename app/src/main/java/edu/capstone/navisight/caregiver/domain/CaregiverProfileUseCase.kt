@@ -73,8 +73,21 @@ class CaregiverProfileUseCase(
 
     suspend fun deleteAccountSequence(uid: String, password: String): Result<Unit> {
         return try {
+            // If the user is currently locked out, stop here.
+            val lockoutCheck = repository.checkLockout(uid)
+            if (lockoutCheck.isFailure) {
+                return Result.failure(lockoutCheck.exceptionOrNull() ?: Exception("Account is locked."))
+            }
+
             val reauth = repository.reauthenticateUser(password)
-            if (!reauth) return Result.failure(Exception("Incorrect password."))
+            if (!reauth) {
+                // If password is wrong, we MUST tell the repository to increment the fail count
+                val errorMsg = repository.handleFailedAttempt(uid)
+                return Result.failure(Exception(errorMsg))
+            }
+
+            // If they got the password right, reset the counter to 0
+            repository.clearLockout(uid)
 
             if (connectionRepository.isPrimaryForAny(uid)) {
                 return Result.failure(Exception("Cannot delete account. You are currently a Primary Caregiver. Please transfer primary rights to another caregiver first."))
@@ -82,6 +95,7 @@ class CaregiverProfileUseCase(
 
             val relationshipsRemoved = connectionRepository.removeAllRelationships(uid)
             if (!relationshipsRemoved) {
+                // Log warning but proceed
             }
 
             val deleted = repository.deleteAccount(uid)

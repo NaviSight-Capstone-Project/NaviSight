@@ -12,6 +12,7 @@ import edu.capstone.navisight.caregiver.domain.CaregiverProfileUseCase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.Timestamp
 import com.google.gson.Gson
+import edu.capstone.navisight.common.domain.usecase.GetCurrentUserUidUseCase
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,7 +38,8 @@ sealed class SignupEvent {
 private var allLocationData: Map<String, List<String>> = emptyMap()
 
 class AccountInfoViewModel(
-    private val profileUseCase: CaregiverProfileUseCase = CaregiverProfileUseCase()
+    private val profileUseCase: CaregiverProfileUseCase = CaregiverProfileUseCase(),
+    private val getCurrentUserUidUseCase: GetCurrentUserUidUseCase = GetCurrentUserUidUseCase()
 ) : ViewModel() {
 
     private val _profile = MutableStateFlow<Caregiver?>(null)
@@ -53,6 +55,29 @@ class AccountInfoViewModel(
     private val _reauthError = MutableStateFlow<String?>(null)
     val reauthError: StateFlow<String?> = _reauthError.asStateFlow()
 
+    private val _isLockedOut = MutableStateFlow(false)
+    val isLockedOut: StateFlow<Boolean> = _isLockedOut.asStateFlow()
+
+    init {
+        checkGlobalLockout()
+    }
+
+    private fun checkGlobalLockout() {
+        viewModelScope.launch {
+            val uid = getCurrentUserUidUseCase() ?: return@launch
+            profileUseCase.checkLockout(uid).fold(
+                onSuccess = {
+                    _isLockedOut.value = false
+                },
+                onFailure = { exception ->
+                    _isLockedOut.value = true
+                    val lockoutMsg = exception.message ?: "Account is locked."
+                    _reauthError.value = lockoutMsg
+                    // _uiEvent.send(lockoutMsg) // Optional notification
+                }
+            )
+        }
+    }
     // Add this to handle the shared lockout verification
     fun checkLockoutAndPerform(uid: String, onAvailable: () -> Unit) {
         viewModelScope.launch {
@@ -360,21 +385,30 @@ class AccountInfoViewModel(
     }
     fun deleteAccount(uid: String, password: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
+            if (_isLockedOut.value) {
+                _uiEvent.send("Account is locked due to too many failed attempts. Please wait.")
+                return@launch
+            }
+
             _isSaving.value = true
-            _reauthError.value = null // Clear previous errors
+            _reauthError.value = null
 
-            // Call the Use Case logic
-            val result = profileUseCase.deleteAccountSequence(uid, password)
-
-            result.fold(
+            // Use the Sequence which now properly calls handleFailedAttempt
+            profileUseCase.deleteAccountSequence(uid, password).fold(
                 onSuccess = {
+                    _isLockedOut.value = false
                     _uiEvent.send("Account deleted successfully.")
-                    // Trigger navigation to login
                     onSuccess()
                 },
                 onFailure = { error ->
-                    // Show specific error (e.g., "Incorrect password" or "Transfer rights first")
-                    _reauthError.value = error.message
+                    val errorMsg = error.message ?: "Delete failed"
+                    _reauthError.value = errorMsg
+
+                    // Update Lockout State based on the message returned by the UseCase
+                    if (errorMsg.contains("Locked", ignoreCase = true) ||
+                        errorMsg.contains("15 minutes", ignoreCase = true)) {
+                        _isLockedOut.value = true
+                    }
                 }
             )
             _isSaving.value = false
