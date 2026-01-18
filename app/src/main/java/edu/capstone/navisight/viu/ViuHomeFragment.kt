@@ -42,9 +42,10 @@ class ViuHomeFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         if (hasInitialPermissions()) {
-            initialAppPermissions.all {
-                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-            }
+            locationTracker.forceGpsRecheck(
+                requireActivity(),
+                REQUEST_CHECK_SETTINGS
+            )
         }
     }
 
