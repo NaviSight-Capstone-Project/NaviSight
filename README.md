@@ -8,6 +8,7 @@ The following must be placed in app/src/main/assets directory:
 * cloudinary.properties
 * google-services.json
 * smtp.properties
+* maptiler.properties
 * webrtc-credentials.properties
 
 ## Main Features
@@ -19,11 +20,8 @@ The following must be placed in app/src/main/assets directory:
 - [x] Remote Emergency System
 - [ ] Local note tracking for VIUs
 - [ ] Google OCR Integration
-- [ ] Google Talkback Integration
+- [x] Google Talkback Integration
 
 ## Attributions
 - TODO: Add attribution to code especially for Tensorflow authors, Ultralytics, and other open-source code from respective authors used.
 - <a target="_blank" href="https://icons8.com/icon/mUxLJIerRmL5/low-battery">Low Battery</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
-
-## Paper
-- TODO
