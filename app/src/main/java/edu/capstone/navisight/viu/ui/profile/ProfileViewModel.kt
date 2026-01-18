@@ -44,10 +44,10 @@ class ProfileViewModel(
     private val _caregiverUid = MutableStateFlow<String?>(null)
     val caregiverUid: StateFlow<String?> = _caregiverUid.asStateFlow()
 
-    init {
-        // Start fetching the Caregiver UID as soon as the ViewModel is created
-        fetchCaregiverUid()
-    }
+//    init {
+//        // Start fetching the Caregiver UID as soon as the ViewModel is created
+//        fetchCaregiverUid()
+//    }
 
     companion object {
         fun provideFactory(
@@ -100,22 +100,22 @@ class ProfileViewModel(
         }
     }
 
-    fun fetchCaregiverUid() {
-        // Must be called inside a coroutine scope (viewModelScope)
-        viewModelScope.launch {
-            try {
-                val caregiver = remoteDataSource.getRegisteredCaregiver()
-
-                // Update the state with the fetched UID
-                _caregiverUid.value = caregiver.uid
-
-            } catch (e: Exception) {
-                // Handle exceptions (e.g., "VIU has no relationship with any Caregiver")
-                Log.e("CaregiverFetch", "Failed to fetch caregiver UID: ${e.message}")
-                _caregiverUid.value = null
-            }
-        }
-    }
+//    fun fetchCaregiverUid() {
+//        // Must be called inside a coroutine scope (viewModelScope)
+//        viewModelScope.launch {
+//            try {
+//                val caregiver = remoteDataSource.getRegisteredCaregiver()
+//
+//                // Update the state with the fetched UID
+//                _caregiverUid.value = caregiver.uid
+//
+//            } catch (e: Exception) {
+//                // Handle exceptions (e.g., "VIU has no relationship with any Caregiver")
+//                Log.e("CaregiverFetch", "Failed to fetch caregiver UID: ${e.message}")
+//                _caregiverUid.value = null
+//            }
+//        }
+//    }
 
     fun logout() {
         viewModelScope.launch {
