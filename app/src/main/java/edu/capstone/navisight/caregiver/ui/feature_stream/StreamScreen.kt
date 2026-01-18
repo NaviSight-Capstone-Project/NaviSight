@@ -186,7 +186,7 @@ fun StreamScreen(
                         ) {
                             // Content based on loading, empty, or data state
                             if (associatedViuUids == null) {
-                                // loooooaaaaddddinnngggg
+                                // Mode: Loading
                                 Column(
                                     modifier = Modifier.fillMaxSize(), // Use fillMaxSize() inside the Box
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -205,7 +205,7 @@ fun StreamScreen(
                                 }
 
                                 } else if (filteredUsers.isEmpty() && associatedViuUids?.isNotEmpty() == true) {
-                                    // viu state no changes
+                                    // Mode: No change
                                     Box(
                                         modifier = Modifier.fillMaxSize(),
                                         contentAlignment = Alignment.Center
@@ -244,7 +244,7 @@ fun StreamScreen(
                                     }
 
                                 } else if (associatedViuUids?.isEmpty() == true) {
-                                    //  empty viu
+                                    //  Mode: VIUs are empty
                                     Box(
                                         modifier = Modifier.fillMaxSize(),
                                         contentAlignment = Alignment.Center

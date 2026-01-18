@@ -13,8 +13,10 @@ data class Viu(
     var profileImageUrl: String? = null,
     val category : String? = null,
     var address: String? = null,
-    val status: ViuStatus? = null
+    val status: ViuStatus? = null,
+    var caregiverType : String = ""
     )
+
 
 data class ViuLocation(
     val latitude: Double = 0.0,

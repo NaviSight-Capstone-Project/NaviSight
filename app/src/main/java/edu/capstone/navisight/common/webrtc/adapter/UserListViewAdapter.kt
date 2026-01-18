@@ -53,8 +53,9 @@ fun UserListView (
         items(users) { user ->
             UserListItem(
                 viu = user.first,
-                uid = user.second,
-                status = user.third, // Update if necessary.
+                uid = user.first.uid, // Get UID directly from the Viu object
+                status = user.second, // Status is now the second item
+                role = user.third,    // Role is the third item
                 onVideoCallClicked = onVideoCallClicked,
                 onAudioCallClicked = onAudioCallClicked
             )
@@ -67,6 +68,7 @@ fun UserListItem(
     viu: Viu,
     uid: String,
     status: String,
+    role: String,
     onVideoCallClicked: (String) -> Unit,
     onAudioCallClicked: (String) -> Unit,
 ) {
@@ -148,9 +150,10 @@ fun UserListItem(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "PRIMARY",
+                            text = role,
                             fontSize = 14.sp,
-                            color = Color.Gray
+                            color = if (role == "PRIMARY") colorResource(R.color.royal_purple) else Color.Gray,
+                            fontWeight = if (role == "PRIMARY") FontWeight.Bold else FontWeight.Normal
                         )
                         Text(
                             text = when (status) {
