@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,9 +31,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import edu.capstone.navisight.caregiver.model.TransferPrimaryRequest
 import edu.capstone.navisight.caregiver.ui.feature_edit_viu_profile.EditViuProfileScreen
 import edu.capstone.navisight.caregiver.ui.feature_edit_viu_profile.EditViuProfileViewModel
+import edu.capstone.navisight.caregiver.ui.feature_edit_viu_profile.SignupEvent
 import edu.capstone.navisight.caregiver.ui.feature_edit_viu_profile.TransferFlowState
 import edu.capstone.navisight.caregiver.ui.feature_edit_viu_profile.UnpairFlowState
 import edu.capstone.navisight.caregiver.ui.feature_travel_log.TravelLogScreen
@@ -63,6 +66,8 @@ fun ViuProfileContainer(
 
     var selectedTabIndex by remember { mutableStateOf(0) }
     val context = LocalContext.current
+
+    val formState by editViewModel.formState.collectAsStateWithLifecycle()
 
     val saveSuccess by editViewModel.saveSuccess.collectAsState()
     LaunchedEffect(saveSuccess) {
@@ -101,6 +106,7 @@ fun ViuProfileContainer(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+
             if (viu != null) {
                 ProfileHeader(
                     viuData = viu!!,
@@ -133,7 +139,15 @@ fun ViuProfileContainer(
                     when (selectedTabIndex) {
                         0 -> EditViuProfileScreen(
                             viewModel = editViewModel,
-                            onDeleteSuccess = onNavigateBack
+                            onDeleteSuccess = onNavigateBack,
+                            state=formState,
+                            onProvinceSelected = { province ->
+                                editViewModel.onEvent(SignupEvent.ProvinceChanged(province))
+                                    },
+                            onCitySelected = { city ->
+                                editViewModel.onEvent(SignupEvent.CityChanged(city))
+                            }
+
                         )
                         1 -> TravelLogScreen(
                             viuUid = viu!!.uid,

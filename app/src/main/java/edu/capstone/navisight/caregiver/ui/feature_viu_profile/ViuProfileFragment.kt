@@ -65,6 +65,12 @@ class ViuProfileFragment : Fragment() {
         ucropLauncher.launch(ucropIntent)
     }
 
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        editViewModel.loadLocationData(requireContext()) // Init. location data for dropdown.
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,

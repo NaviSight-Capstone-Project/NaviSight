@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import edu.capstone.navisight.caregiver.model.Caregiver
 import com.google.firebase.Timestamp
+import edu.capstone.navisight.auth.ui.signup.viu.LocationDropdown
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -57,6 +58,9 @@ private fun isAgeValid(timestamp: Timestamp?): Boolean {
 fun AccountInfoScreen(
     profile: Caregiver?,
     selectedImageUri: Uri?,
+    state: SignupFormState,
+    onProvinceSelected: (String) -> Unit,
+    onCitySelected: (String) -> Unit,
     onPickImage: () -> Unit,
     onCheckLockout: () -> Unit,
     onSave: (String, String, String, String, Timestamp?, String, String) -> Unit,
@@ -448,14 +452,9 @@ fun AccountInfoScreen(
                         )
                     }
 
+                    Text("Birthday and Phone Number", color = fieldLabelColor)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Column(modifier = Modifier.weight(1.3f)) {
-                            Text(
-                                text = "Birthday",
-                                color = fieldLabelColor,
-                                modifier = Modifier.padding(bottom = 4.dp),
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                        Column(modifier = Modifier.weight(1.1f)) {
                             OutlinedTextField(
                                 value = birthdayText,
                                 onValueChange = {},
@@ -482,39 +481,66 @@ fun AccountInfoScreen(
                         }
 
                         // PHONE NUMBER
-                        Column(modifier = Modifier.weight(0.7f)) {
-                            Text(
-                                text = "Phone Number",
-                                color = fieldLabelColor,
-                                modifier = Modifier.padding(bottom = 4.dp),
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                        Column(modifier = Modifier.weight(0.9f)) {
                             OutlinedTextField(
                                 value = phone,
+                                label = { Text("Phone Number") },
                                 onValueChange = { input ->
-                                    // Restrict to 11 digits only for PH standards
+                                    // Filter input to digits and max 11 chars
                                     if (input.all { it.isDigit() } && input.length <= 11) {
                                         phone = input
+
+                                        // Immediate Validation Logic
+                                        phoneError = when {
+                                            input.isEmpty() -> "Phone number is required"
+                                            input.length < 11 -> "Number must be 11 digits"
+                                            !input.startsWith("09") -> "Must start with 09"
+                                            else -> null // Clear error if valid
+                                        }
                                     }
                                 },
-                                label = { Text("09XXXXXXXXX") },
+                                placeholder = { Text("09XXXXXXXXX") },
                                 isError = phoneError != null,
+                                modifier = Modifier.fillMaxWidth(),
                                 colors = customTextFieldColors,
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                                supportingText = if (phoneError != null) {
-                                    { Text(phoneError!!, color = MaterialTheme.colorScheme.error) }
-                                } else null
+                                supportingText = {
+                                    if (phoneError != null) {
+                                        Text(
+                                            text = phoneError!!,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
                             )
                         }
                     }
 
+                    Text("Location Information", color = fieldLabelColor)
+
+                    // Province Dropdown
+                    LocationDropdown(
+                        label = "Province *",
+                        options = state.availableProvinces,
+                        selectedOption = state.province,
+                        onOptionSelected = onProvinceSelected
+                    )
+
+                    // City Dropdown
+                    LocationDropdown(
+                        label = if (state.province.isEmpty()) "Please pick a province *" else "City/Municipality *",
+                        options = state.availableCities,
+                        selectedOption = state.city,
+                        onOptionSelected = onCitySelected
+                    )
 
                     OutlinedTextField(
                         value = address,
                         onValueChange = { address = it },
-                        label = { Text("Home Address") },
+                        label = { Text("Home Address (Lot./House #/Brgy.)") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = customTextFieldColors,
                         shape = RoundedCornerShape(12.dp),
@@ -525,7 +551,6 @@ fun AccountInfoScreen(
                             null
                         }
                     )
-
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
