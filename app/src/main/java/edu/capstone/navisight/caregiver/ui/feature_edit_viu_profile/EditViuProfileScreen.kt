@@ -317,14 +317,36 @@ fun EditViuProfileScreen(
         }
 
         // Phone & Address
+        val isPhoneInvalid = phone.isNotEmpty() && (phone.length != 11 || !phone.startsWith("09"))
+
         OutlinedTextField(
             value = phone,
             enabled = canEdit,
-            onValueChange = { if (it.all { c -> c.isDigit() } && it.length <= 11) { phone = it; viewModel.clearSaveError() } },
-            label = { Text("Phone Number (Uneditable)") },
-            readOnly = true, modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
-            colors = customTextFieldColors, shape = RoundedCornerShape(12.dp)
+            onValueChange = { input ->
+                // Only allow digits and limit to 11 characters
+                if (input.all { it.isDigit() } && input.length <= 11) {
+                    phone = input
+                    viewModel.clearSaveError()
+                }
+            },
+            label = { Text("Phone Number") },
+            isError = isPhoneInvalid,
+            supportingText = {
+                if (isPhoneInvalid) {
+                    Text(
+                        text = "Enter a valid 11-digit PH number (e.g., 09123456789)",
+                        color = Color.Red
+                    )
+                }
+            },
+            readOnly = !canEdit,
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Phone,
+                imeAction = ImeAction.Next
+            ),
+            colors = customTextFieldColors,
+            shape = RoundedCornerShape(12.dp)
         )
 
         OutlinedTextField(

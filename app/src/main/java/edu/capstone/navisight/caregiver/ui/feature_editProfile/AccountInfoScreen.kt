@@ -443,14 +443,9 @@ fun AccountInfoScreen(
                         )
                     }
 
+                    Text("Birthday and Phone Number", color = fieldLabelColor)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Column(modifier = Modifier.weight(1.3f)) {
-                            Text(
-                                text = "Birthday",
-                                color = fieldLabelColor,
-                                modifier = Modifier.padding(bottom = 4.dp),
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                        Column(modifier = Modifier.weight(1.1f)) {
                             OutlinedTextField(
                                 value = birthdayText,
                                 onValueChange = {},
@@ -477,35 +472,45 @@ fun AccountInfoScreen(
                         }
 
                         // PHONE NUMBER
-                        Column(modifier = Modifier.weight(0.7f)) {
-                            Text(
-                                text = "Phone Number",
-                                color = fieldLabelColor,
-                                modifier = Modifier.padding(bottom = 4.dp),
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                        Column(modifier = Modifier.weight(0.9f)) {
                             OutlinedTextField(
                                 value = phone,
+                                label = { Text("Phone Number") },
                                 onValueChange = { input ->
-                                    // Restrict to 11 digits only for PH standards
+                                    // Filter input to digits and max 11 chars
                                     if (input.all { it.isDigit() } && input.length <= 11) {
                                         phone = input
+
+                                        // Immediate Validation Logic
+                                        phoneError = when {
+                                            input.isEmpty() -> "Phone number is required"
+                                            input.length < 11 -> "Number must be 11 digits"
+                                            !input.startsWith("09") -> "Must start with 09"
+                                            else -> null // Clear error if valid
+                                        }
                                     }
                                 },
-                                label = { Text("09XXXXXXXXX") },
+                                placeholder = { Text("09XXXXXXXXX") },
                                 isError = phoneError != null,
+                                modifier = Modifier.fillMaxWidth(),
                                 colors = customTextFieldColors,
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                                supportingText = if (phoneError != null) {
-                                    { Text(phoneError!!, color = MaterialTheme.colorScheme.error) }
-                                } else null
+                                supportingText = {
+                                    if (phoneError != null) {
+                                        Text(
+                                            text = phoneError!!,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
                             )
                         }
                     }
 
-
+                    Text("Location Information", color = fieldLabelColor)
                     OutlinedTextField(
                         value = address,
                         onValueChange = { address = it },
@@ -520,7 +525,6 @@ fun AccountInfoScreen(
                             null
                         }
                     )
-
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
