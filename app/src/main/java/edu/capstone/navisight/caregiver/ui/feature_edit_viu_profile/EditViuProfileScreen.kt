@@ -331,7 +331,7 @@ fun EditViuProfileScreen(
             value = address,
             enabled = canEdit,
             onValueChange = { address = it },
-            label = { Text("Address") },
+            label = { Text("Home Address (Lot./House #/Brgy.)") },
             readOnly = !canEdit,
             modifier = Modifier.fillMaxWidth(),
             colors = customTextFieldColors,

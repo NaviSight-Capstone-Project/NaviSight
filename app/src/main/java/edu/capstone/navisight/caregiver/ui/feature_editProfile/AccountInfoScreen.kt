@@ -509,7 +509,7 @@ fun AccountInfoScreen(
                     OutlinedTextField(
                         value = address,
                         onValueChange = { address = it },
-                        label = { Text("Home Address") },
+                        label = { Text("Home Address (Lot./House #/Brgy.)") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = customTextFieldColors,
                         shape = RoundedCornerShape(12.dp),
