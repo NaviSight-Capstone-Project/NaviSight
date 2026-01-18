@@ -5,7 +5,9 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.common.reflect.TypeToken
 import com.google.firebase.Timestamp
+import com.google.gson.Gson
 import edu.capstone.navisight.auth.util.LegalDocuments
 import edu.capstone.navisight.auth.domain.DeleteUnverifiedUserUseCase
 import edu.capstone.navisight.auth.domain.ResendSignupOtpUseCase
@@ -32,8 +34,15 @@ data class SignupFormState(
     val rePassword: String = "",
     val profileImageUri: Uri? = null,
     val termsAccepted: Boolean = false,
-    val privacyAccepted: Boolean = false
+    val privacyAccepted: Boolean = false,
+    val province: String = "",
+    val city: String = "",
+    val availableProvinces: List<String> = emptyList(),
+    val availableCities: List<String> = emptyList()
 )
+
+
+
 
 data class CaregiverSignupUiState(
     val isLoading: Boolean = false,
@@ -59,7 +68,13 @@ sealed class SignupEvent {
     data class ImageSelected(val uri: Uri?) : SignupEvent()
     data class TermsChanged(val value: Boolean) : SignupEvent()
     data class PrivacyChanged(val value: Boolean) : SignupEvent()
+    data class ProvinceChanged(val value: String) : SignupEvent()
+    data class CityChanged(val value: String) : SignupEvent()
 }
+
+private var allLocationData: Map<String, List<String>> = emptyMap()
+
+
 
 class CaregiverSignupViewModel : ViewModel() {
 
@@ -74,6 +89,25 @@ class CaregiverSignupViewModel : ViewModel() {
     private val resendSignupOtpUseCase = ResendSignupOtpUseCase()
     private val deleteUnverifiedUserUseCase = DeleteUnverifiedUserUseCase()
     private val acceptLegalDocumentsUseCase = AcceptLegalDocumentsUseCase()
+
+    fun loadLocationData(context: Context) {
+        viewModelScope.launch {
+            try {
+                val jsonString = context.assets.open("philippine_locations.json")
+                    .bufferedReader()
+                    .use { it.readText() }
+
+                val type = object : TypeToken<Map<String, List<String>>>() {}.type
+                allLocationData = Gson().fromJson(jsonString, type)
+
+                _formState.update { it.copy(
+                    availableProvinces = allLocationData.keys.sorted()
+                )}
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     fun onEvent(event: SignupEvent) {
         when(event) {
@@ -91,6 +125,17 @@ class CaregiverSignupViewModel : ViewModel() {
             is SignupEvent.ImageSelected -> _formState.update { it.copy(profileImageUri = event.uri) }
             is SignupEvent.TermsChanged -> _formState.update { it.copy(termsAccepted = event.value) }
             is SignupEvent.PrivacyChanged -> _formState.update { it.copy(privacyAccepted = event.value) }
+            is SignupEvent.ProvinceChanged -> {
+                val cities = allLocationData[event.value] ?: emptyList()
+                _formState.update { it.copy(
+                    province = event.value,
+                    city = "", // Reset city when province changes
+                    availableCities = cities.sorted()
+                )}
+            }
+            is SignupEvent.CityChanged -> {
+                _formState.update { it.copy(city = event.value) }
+            }
         }
     }
 

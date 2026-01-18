@@ -10,5 +10,7 @@ data class Viu(
     var profileImageUrl: String? = null,
     val status : String? = null,
     val address: String? = null,
-    val country : String = "Philippines"
+    val country : String = "Philippines",
+    var province: String = "",
+    var city: String = "",
 )

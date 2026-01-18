@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.Timestamp
 import edu.capstone.navisight.R
@@ -115,7 +116,17 @@ fun CaregiverSignupScreen(
                         label = "WizardTransition"
                     ) { step ->
                         when (step) {
-                            SignupStep.PERSONAL -> StepPersonalDetails(state = formState, onEvent = viewModel::onEvent, onNext = { currentStep = SignupStep.AVATAR })
+                            SignupStep.PERSONAL -> StepPersonalDetails(
+                                state = formState,
+                                onEvent = viewModel::onEvent,
+                                onProvinceSelected = { province ->
+                                    viewModel.onEvent(SignupEvent.ProvinceChanged(province))
+                                },
+                                onCitySelected = { city ->
+                                    viewModel.onEvent(SignupEvent.CityChanged(city))
+                                },
+                                onNext = { currentStep = SignupStep.AVATAR }
+                            )
                             SignupStep.AVATAR -> StepAvatarSelection(state = formState, onAddPhoto = onSelectImageClick, onNext = { currentStep = SignupStep.LEGAL })
                             SignupStep.LEGAL -> StepLegalAgreements(state = formState, onEvent = viewModel::onEvent, onNext = { currentStep = SignupStep.ACCOUNT })
                             SignupStep.ACCOUNT -> StepAccountCredentials(state = formState, onEvent = viewModel::onEvent, isLoading = uiState.isLoading, onSignup = { viewModel.submitSignup(context) })
@@ -181,6 +192,8 @@ private fun OtpVerificationDialog(viewModel: CaregiverSignupViewModel, uid: Stri
 @Composable
 fun StepPersonalDetails(
     state: SignupFormState,
+    onProvinceSelected: (String) -> Unit,
+    onCitySelected: (String) -> Unit,
     onEvent: (SignupEvent) -> Unit,
     onNext: () -> Unit
 ) {
@@ -348,9 +361,40 @@ fun StepPersonalDetails(
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
 
-        // Set "Philippines" to fixed. For now.
+        // Province Dropdown
+        LocationDropdown(
+            label = "Province *",
+            options = state.availableProvinces,
+            selectedOption = state.province,
+            onOptionSelected = onProvinceSelected
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        // City Dropdown
+        LocationDropdown(
+            label = if (state.province.isEmpty()) "Please pick a province *" else "City/Municipality *",
+            options = state.availableCities,
+            selectedOption = state.city,
+            onOptionSelected = onCitySelected
+        )
+
+        // Home Address field
+        OutlinedTextField(
+            value = state.addressDetails,
+            onValueChange = { onEvent(SignupEvent.AddressChanged(it)) },
+            label = { Text("Home Address (Lot./House #/Brgy.) *") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            isError = isAddressError && state.addressDetails.isNotEmpty(),
+            singleLine = true
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        // Country Dropdown. Set "Philippines" to fixed. For now.
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -380,18 +424,6 @@ fun StepPersonalDetails(
                 }
             )
         }
-        Spacer(Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = state.addressDetails,
-            onValueChange = { onEvent(SignupEvent.AddressChanged(it)) },
-            label = { Text("Detailed Address *") },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            isError = isAddressError && state.addressDetails.isNotEmpty(),
-            singleLine = true
-        )
-        // Removed Required Text
 
         Spacer(Modifier.height(16.dp))
 
@@ -413,6 +445,49 @@ fun StepPersonalDetails(
                 shape = RoundedCornerShape(24.dp),
                 containerColor = Color.White
             )
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LocationDropdown(
+    label: String,
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+
+    ) {
+        OutlinedTextField(
+            value = selectedOption,
+            onValueChange = {},
+            readOnly = true,
+            shape = RoundedCornerShape(12.dp),
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            options.forEach { selectionOption ->
+                DropdownMenuItem(
+                    text = { Text(selectionOption) },
+                    onClick = {
+                        onOptionSelected(selectionOption)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }

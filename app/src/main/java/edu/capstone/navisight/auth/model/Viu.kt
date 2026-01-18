@@ -14,5 +14,7 @@ data class Viu(
     val isEmailVerified: Boolean = false, // Defaults to false
     val caregiverId: String? = null, // To store the ID of their primary caregiver
     var sex: String = "",
+    var province: String = "",
+    var city: String = "",
     val country : String = "Philippines"
 )

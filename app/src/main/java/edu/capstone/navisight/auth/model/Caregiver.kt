@@ -17,6 +17,8 @@ data class Caregiver(
     var sex: String = "",
     val isEmailVerified: Boolean = false, // Defaults to false
     val viuIds: List<String> = emptyList(),
-    val country : String = "Philippines"
+    val country : String = "Philippines",
+    var province: String = "",
+    var city: String = "",
 
 )
