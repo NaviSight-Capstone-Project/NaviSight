@@ -108,7 +108,8 @@ class CaregiverSignupViewModel : ViewModel() {
                     lastName = form.lastName,
                     middleName = form.middleName,
                     phoneNumber = form.phone,
-                    address = "${form.addressDetails}, ${form.country}",
+                    address = form.addressDetails,
+                    country = form.country,
                     birthday = form.birthday!!,
                     sex = form.sex,
                     imageUri = form.profileImageUri

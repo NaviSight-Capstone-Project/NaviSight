@@ -16,7 +16,7 @@ data class Caregiver(
     var birthday: Timestamp = Timestamp.now(),
     var sex: String = "",
     val isEmailVerified: Boolean = false, // Defaults to false
-    val viuIds: List<String> = emptyList()
-
+    val viuIds: List<String> = emptyList(),
+    val country : String = "Philippines"
 
 )

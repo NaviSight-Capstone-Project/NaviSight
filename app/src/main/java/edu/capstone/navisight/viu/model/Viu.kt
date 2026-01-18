@@ -9,5 +9,6 @@ data class Viu(
     val phone: String = "",
     var profileImageUrl: String? = null,
     val status : String? = null,
-    val address: String? = null
+    val address: String? = null,
+    val country : String = "Philippines"
 )

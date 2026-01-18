@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -80,6 +81,7 @@ fun EditViuProfileScreen(
     val dateFormatter = remember { SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()) }
     var isAgeValid by remember { mutableStateOf(true) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showCountryInfo by remember { mutableStateOf(false) }
 
     val gradientBrush = Brush.horizontalGradient(colors = listOf(Color(0xFFB644F1), Color(0xFF6041EC)))
 
@@ -247,12 +249,10 @@ fun EditViuProfileScreen(
                 onValueChange = { firstName = it },
                 label = { Text("First Name") },
                 readOnly = !canEdit, modifier = Modifier.weight(1f),
-                isError = firstName.isBlank(), // Turns the box red if empty
-                supportingText = {
-                    if (firstName.isBlank()) {
-                        Text("Cannot be empty", color = MaterialTheme.colorScheme.error)
-                    }
-                },
+                isError = firstName.isBlank(),
+                supportingText = if (firstName.isBlank()) {
+                    { Text("Cannot be empty", color = MaterialTheme.colorScheme.error) }
+                } else null,
                 colors = customTextFieldColors, shape = RoundedCornerShape(12.dp)
             )
             OutlinedTextField(
@@ -265,12 +265,10 @@ fun EditViuProfileScreen(
                 onValueChange = { lastName = it },
                 label = { Text("Last Name") },
                 readOnly = !canEdit, modifier = Modifier.weight(1f),
-                isError = lastName.isBlank(), // Turns the box red if empty
-                supportingText = {
-                    if (lastName.isBlank()) {
-                        Text("Cannot be empty", color = MaterialTheme.colorScheme.error)
-                    }
-                },
+                isError = lastName.isBlank(),
+                supportingText = if (lastName.isBlank()) {
+                    { Text("Cannot be empty", color = MaterialTheme.colorScheme.error) }
+                } else null,
                 colors = customTextFieldColors, shape = RoundedCornerShape(12.dp)
             )
         }
@@ -328,15 +326,63 @@ fun EditViuProfileScreen(
         OutlinedTextField(
             value = address,
             onValueChange = { address = it },
-            label = { Text("Address") }, readOnly = !canEdit, modifier = Modifier.fillMaxWidth(),
-            colors = customTextFieldColors, shape = RoundedCornerShape(12.dp),
-            isError = address.isBlank(), // Turns the box red if empty
-            supportingText = {
-                if (address.isBlank()) {
-                    Text("This field cannot be empty", color = MaterialTheme.colorScheme.error)
-                }
+            label = { Text("Address") },
+            readOnly = !canEdit,
+            modifier = Modifier.fillMaxWidth(),
+            colors = customTextFieldColors,
+            shape = RoundedCornerShape(12.dp),
+            isError = address.isBlank(),
+            supportingText = if (address.isBlank()) {
+                { Text("This field cannot be empty", color = MaterialTheme.colorScheme.error) }
+            } else {
+                null
             }
         )
+
+        // Set "Philippines" to fixed. For now.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = "Philippines",
+                onValueChange = {},
+                readOnly = true,
+                enabled = false,
+                label = { Text("Country") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledTextColor = Color.Gray,
+                    disabledBorderColor = Color.LightGray,
+                    disabledLabelColor = Color.Gray,
+                    disabledTrailingIconColor = Color(0xFF6641EC)
+                ),
+                trailingIcon = {
+                    IconButton(onClick = { showCountryInfo = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Country Information"
+                        )
+                    }
+                }
+            )
+        }
+        if (showCountryInfo) {
+            AlertDialog(
+                onDismissRequest = { showCountryInfo = false },
+                confirmButton = {
+                    TextButton(onClick = { showCountryInfo = false }) { Text("Got it") }
+                },
+                title = { Text("Country Selection") },
+                text = {
+                    Text("Currently, our services are limited to the Philippines to manage the scope of this capstone project effectively.")
+                },
+                shape = RoundedCornerShape(24.dp),
+                containerColor = Color.White
+            )
+        }
 
         ExposedDropdownMenuBox(
             expanded = isStatusDropdownExpanded && canEdit,

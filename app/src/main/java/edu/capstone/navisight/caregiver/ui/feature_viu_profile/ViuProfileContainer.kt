@@ -67,7 +67,6 @@ fun ViuProfileContainer(
     val saveSuccess by editViewModel.saveSuccess.collectAsState()
     LaunchedEffect(saveSuccess) {
         if(saveSuccess) {
-            Toast.makeText(context, "Transfer Request Sent!", Toast.LENGTH_LONG).show()
             editViewModel.onSaveSuccessShown()
         }
     }

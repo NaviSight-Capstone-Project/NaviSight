@@ -14,7 +14,8 @@ data class Viu(
     val category : String? = null,
     var address: String? = null,
     val status: ViuStatus? = null,
-    var caregiverType : String = ""
+    var caregiverType : String = "",
+    val country : String = "Philippines"
     )
 
 

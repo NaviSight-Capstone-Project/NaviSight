@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -97,6 +98,8 @@ fun AccountInfoScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    var showCountryInfo by remember { mutableStateOf(false) }
+
     LaunchedEffect(showReauthDialog) {
         if (showReauthDialog) {
             onCheckLockout()
@@ -150,6 +153,7 @@ fun AccountInfoScreen(
     var isPasswordResendWaiting by remember { mutableStateOf(false) }
     var passwordCooldownSeconds by remember { mutableStateOf(0) }
     var passwordBackendError by remember { mutableStateOf<String?>(null) }
+
 
     // Timers
     LaunchedEffect(isEmailResendWaiting) {
@@ -399,12 +403,9 @@ fun AccountInfoScreen(
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             isError = firstName.isBlank(),
-                            supportingText = {
-                                if (firstName.isBlank()) Text(
-                                    "Required",
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            },
+                            supportingText = if (firstName.isBlank()) {
+                                { Text("Required", color = MaterialTheme.colorScheme.error) }
+                            } else null,
                             colors = customTextFieldColors,
                             shape = RoundedCornerShape(12.dp)
                         )
@@ -434,12 +435,9 @@ fun AccountInfoScreen(
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             isError = lastName.isBlank(),
-                            supportingText = {
-                                if (lastName.isBlank()) Text(
-                                    "Required",
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            },
+                            supportingText = if (lastName.isBlank()) {
+                                { Text("Required", color = MaterialTheme.colorScheme.error) }
+                            } else null,
                             colors = customTextFieldColors,
                             shape = RoundedCornerShape(12.dp)
                         )
@@ -472,11 +470,9 @@ fun AccountInfoScreen(
                                         modifier = Modifier.clickable { showDatePicker = true }
                                     )
                                 },
-                                supportingText = {
-                                    if (birthdayError != null) {
-                                        Text(birthdayError!!, color = MaterialTheme.colorScheme.error)
-                                    }
-                                }
+                                supportingText = if (birthdayError != null) {
+                                    { Text(birthdayError!!, color = MaterialTheme.colorScheme.error) }
+                                } else null
                             )
                         }
 
@@ -502,28 +498,77 @@ fun AccountInfoScreen(
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                                supportingText = {
-                                    if (phoneError != null) {
-                                        Text(phoneError!!, color = MaterialTheme.colorScheme.error)
-                                    }
-                                }
+                                supportingText = if (phoneError != null) {
+                                    { Text(phoneError!!, color = MaterialTheme.colorScheme.error) }
+                                } else null
                             )
                         }
                     }
 
-                    Text("Location", color = fieldLabelColor)
+
                     OutlinedTextField(
                         value = address,
                         onValueChange = { address = it },
                         label = { Text("Home Address") },
                         modifier = Modifier.fillMaxWidth(),
-                        isError = address.isBlank(),
-                        supportingText = { if (address.isBlank()) Text("Address is required", color = MaterialTheme.colorScheme.error) },
                         colors = customTextFieldColors,
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        isError = address.isBlank(),
+                        supportingText = if (address.isBlank()) {
+                            { Text("This field cannot be empty", color = MaterialTheme.colorScheme.error) }
+                        } else {
+                            null
+                        }
                     )
+
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = "Philippines",
+                            onValueChange = {},
+                            readOnly = true,
+                            enabled = false,
+                            label = { Text("Country") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                disabledTextColor = Color.Gray,
+                                disabledBorderColor = Color.LightGray,
+                                disabledLabelColor = Color.Gray,
+                                disabledTrailingIconColor = Color(0xFF6641EC)
+                            ),
+                            trailingIcon = {
+                                IconButton(onClick = { showCountryInfo = true }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Country Information"
+                                    )
+                                }
+                            }
+                        )
+                    }
+
+                    if (showCountryInfo) {
+                        AlertDialog(
+                            onDismissRequest = { showCountryInfo = false },
+                            confirmButton = {
+                                TextButton(onClick = { showCountryInfo = false }) { Text("Got it") }
+                            },
+                            title = { Text("Country Selection") },
+                            text = {
+                                Text("Currently, our services are limited to the Philippines to manage the scope of this capstone project effectively.")
+                            },
+                            shape = RoundedCornerShape(24.dp),
+                            containerColor = Color.White
+                        )
+                    }
+
                     Text("Authentication & Contact", color = fieldLabelColor)
-                    OutlinedTextField(value = profile?.email ?: "", onValueChange = {}, label = { Text("Email (Cannot Change Here)") }, readOnly = true, modifier = Modifier.fillMaxWidth(), colors = customTextFieldColors, shape = RoundedCornerShape(12.dp))
+                    OutlinedTextField(value = profile?.email ?: "", onValueChange = {}, label = { Text("Email (Uneditable)") }, readOnly = true, modifier = Modifier.fillMaxWidth(), colors = customTextFieldColors, shape = RoundedCornerShape(12.dp))
 
                     Button(
                         onClick = { showReauthDialog = true },

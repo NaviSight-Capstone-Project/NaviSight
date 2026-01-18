@@ -14,5 +14,6 @@ data class Caregiver(
     var locationSharing: Boolean = true,
     var address: String = "",
     var birthday: Timestamp = Timestamp.now(),
-    var sex: String = ""
+    var sex: String = "",
+    val country : String = "Philippines"
 )
