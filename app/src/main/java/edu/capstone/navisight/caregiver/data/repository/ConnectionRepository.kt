@@ -19,6 +19,8 @@ class ConnectionRepository(
     fun isPrimaryCaregiver(caregiverUid: String, viuUid: String): Flow<Boolean> {
         return connectionDataSource.isPrimaryCaregiver(caregiverUid, viuUid)
     }
+    suspend fun isPrimaryForAny(uid: String) = connectionDataSource.isPrimaryForAny(uid)
+    suspend fun removeAllRelationships(uid: String) = connectionDataSource.removeAllRelationships(uid)
 
     suspend fun getQrCode(qrUid: String): QRModel? {
         return connectionDataSource.getQrByUid(qrUid)

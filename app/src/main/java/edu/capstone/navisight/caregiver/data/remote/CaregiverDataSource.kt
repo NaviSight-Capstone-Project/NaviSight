@@ -414,4 +414,20 @@ class CaregiverDataSource(
             false
         }
     }
+
+    suspend fun deleteAccount(uid: String): Boolean {
+        return try {
+            val user = auth.currentUser ?: return false
+
+            // 1. Delete Firestore Document
+            usersCollection.document(uid).delete().await()
+
+            // 2. Delete Auth User
+            user.delete().await()
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting account", e)
+            false
+        }
+    }
 }

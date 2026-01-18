@@ -89,6 +89,38 @@ class ConnectionDataSource(
         awaitClose { listener.remove() }
     }
 
+    suspend fun isPrimaryForAny(caregiverUid: String): Boolean {
+        return try {
+            val snapshot = firestore.collection("relationships")
+                .whereEqualTo("caregiverUid", caregiverUid)
+                .whereEqualTo("primaryCaregiver", true)
+                .limit(1)
+                .get()
+                .await()
+            !snapshot.isEmpty
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun removeAllRelationships(caregiverUid: String): Boolean {
+        return try {
+            val snapshot = firestore.collection("relationships")
+                .whereEqualTo("caregiverUid", caregiverUid)
+                .get()
+                .await()
+
+            val batch = firestore.batch()
+            for (doc in snapshot.documents) {
+                batch.delete(doc.reference)
+            }
+            batch.commit().await()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     suspend fun getQrByUid(qrUid: String): QRModel? {
         return try {
             val snapshot = firestore.collection("qr_code")
