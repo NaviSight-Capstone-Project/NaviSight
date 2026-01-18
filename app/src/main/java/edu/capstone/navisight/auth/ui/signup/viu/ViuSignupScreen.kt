@@ -727,8 +727,11 @@ fun ViuOtpScreen(
 
                 Spacer(Modifier.height(16.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    TextButton(onClick = {VibrationHelper.vibrate(context, Constants.VIBRATE_BUTTON_TAP)
-                            onCancelSignup}) { Text("Cancel", color = Color.Gray) }
+                    TextButton(onClick = {
+                        VibrationHelper.vibrate(context, Constants.VIBRATE_BUTTON_TAP)
+                        onCancelSignup()
+                    }
+                    ) { Text("Cancel", color = Color.Gray) }
                     TextButton(
                         onClick = { VibrationHelper.vibrate(context, Constants.VIBRATE_BUTTON_TAP)
                             uiState.createdCaregiverId?.let { viewModel.resendOtp(context, it) } },
