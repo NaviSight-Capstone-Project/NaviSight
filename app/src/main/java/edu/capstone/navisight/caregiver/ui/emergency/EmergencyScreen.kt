@@ -60,7 +60,7 @@ fun EmergencyScreen(
                 .padding(horizontal = 20.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Big ahh triangle
+            // Big triangle
             Icon(
                 imageVector = Icons.Filled.Warning,
                 contentDescription = "EMERGENCY ALERT",

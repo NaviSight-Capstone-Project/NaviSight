@@ -185,7 +185,6 @@ class CaregiverHomeFragment : Fragment(),
                 val signal by emergencyViewModel.emergencySignal.collectAsState()
 
                 signal?.let { emergencySignal ->
-                    // TODO: REMOVE ME ONCE YOU ARE NO LONGER TRAUMATIZED
                     Log.d("EmergencyDialog", "Emergency signal received. Rendering dialog for ${emergencySignal.viuName}")
                     val message = "${emergencySignal.viuName} has activated an emergency signal! " +
                             "Last known location: ${emergencySignal.lastLocation}"
@@ -481,7 +480,7 @@ class CaregiverHomeFragment : Fragment(),
     }
 
     override fun onEmergencyCallReceived(model: DataModel) {
-        // WALA MANGYAYARI DAPAT DITO KASI CAREGIVER ITO >:D
+
     }
 
     private fun releaseMediaPlayer() {

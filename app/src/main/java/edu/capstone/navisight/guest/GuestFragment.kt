@@ -93,7 +93,6 @@ class GuestFragment :
     var currentCameraFacing: Int = CameraSelector.LENS_FACING_BACK
     lateinit var cameraBindsHandler : GuestCameraBindsHandler
 
-    // FIX 1: Promoted gestureDetector to class level so it can be reused
     private lateinit var gestureDetector: GestureDetector
 
     // --- Crash Prevention: Timer to stop TTS from spamming ---
@@ -156,7 +155,6 @@ class GuestFragment :
         guestQuickMenuFragment = null
         fragmentCameraBinding?.quickMenuContainer?.visibility = View.GONE
 
-        // FIX 2: Restore the touch listener so swipes (and GestureDetector) work again
         attachTouchListener()
     }
 
@@ -230,7 +228,7 @@ class GuestFragment :
             detectionControlsHandler.synchronizeUiWithDetector()
         }
 
-        // FIX 3: Initialize the class-level GestureDetector
+
         gestureDetector = GestureDetector(requireContext(), object : GestureDetector.SimpleOnGestureListener() {
             override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
                 if (e1 != null && e1.x - e2.x > 100 && abs(velocityX) > 100) {
@@ -253,7 +251,6 @@ class GuestFragment :
             context?.let { safeContext -> toggleScreenSaver(safeContext) }
         }
 
-        // FIX 4: Use the helper function to attach the initial listener
         attachTouchListener()
 
         fragmentGuestBinding?.previewModeHitbox.apply {
@@ -264,7 +261,6 @@ class GuestFragment :
         }
     }
 
-    // FIX 5: New helper function to centralize touch listener logic
     private fun attachTouchListener() {
         fragmentCameraBinding?.previewModeHitbox?.setOnTouchListener { _, event ->
             if (isDetectionUiModeActive) {

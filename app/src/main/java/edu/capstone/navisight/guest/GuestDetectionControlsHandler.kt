@@ -125,7 +125,7 @@ class GuestDetectionControlsHandler (
                 }
             }
 
-        // FIX: Consume touches on the bottom sheet root to prevent them from
+
         // propagating to the touch_interceptor_view (which closes the sheet).
         fragmentCameraBinding?.bottomSheetLayout?.bottomSheetLayout?.setOnTouchListener { _, _ ->
             true // Consumes the touch event
