@@ -167,7 +167,7 @@ class QuickMenuHandler (
         // Announce the change
         TextToSpeechHelper.queueSpeak(cameraFragment.requireContext(), message)
 
-        // Optional: Also update the CameraFragment state if it's used elsewhere for UI
+        // Update the CameraFragment state if it's used elsewhere for UI
         cameraFragment.isTTSSilenced = isNowSilenced
     }
 }

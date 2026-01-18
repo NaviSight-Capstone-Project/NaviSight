@@ -29,20 +29,26 @@ class ViuDataSource(
         val relationshipsCollection = firestore.collection("relationships")
         val caregiversCollection = firestore.collection(USER_TYPE_CAREGIVER)
         val viuUid = getCurrentViuProfile().uid
+
+        // Look only for primaryCaregiver
         val querySnapshot = relationshipsCollection
             .whereEqualTo("viuUid", viuUid)
-            .limit(1) // Assuming one VIU has one primary caregiver relationship
-            // TODO: add more relationships
+            .whereEqualTo("primaryCaregiver", true)
+            .limit(1)
             .get()
             .await()
+
         val relationshipDoc = querySnapshot.documents.firstOrNull()
-            ?: throw kotlin.Exception("No relationship found for VIU: $viuUid")
+            ?: throw kotlin.Exception("No primary caregiver relationship found for VIU: $viuUid")
+
         val caregiverUid = relationshipDoc.getString("caregiverUid")
             ?: throw kotlin.Exception("Caregiver UID not found in relationship document")
+
         val caregiverDoc = caregiversCollection.document(caregiverUid).get().await()
         if (!caregiverDoc.exists()) {
             throw kotlin.Exception("Caregiver profile not found for UID: $caregiverUid")
         }
+
         return caregiverDoc.toObject(Caregiver::class.java)
             ?: throw kotlin.Exception("Invalid Caregiver data for UID: $caregiverUid")
     }
