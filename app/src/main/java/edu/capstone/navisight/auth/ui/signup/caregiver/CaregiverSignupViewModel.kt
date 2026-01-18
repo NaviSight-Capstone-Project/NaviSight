@@ -42,8 +42,6 @@ data class SignupFormState(
 )
 
 
-
-
 data class CaregiverSignupUiState(
     val isLoading: Boolean = false,
     val signupSuccess: Boolean = false,

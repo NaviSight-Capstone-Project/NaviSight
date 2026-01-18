@@ -73,6 +73,7 @@ fun ViuSignupScreen(
     onSignupSuccess: (uid: String) -> Unit,
     onBackClick: () -> Unit
 ) {
+    val formState by viewModel.formState.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -158,9 +159,16 @@ fun ViuSignupScreen(
                 ) { step ->
                     when (step) {
                         ViuSignupStep.PERSONAL -> StepViuPersonal(
+                            state = formState,
                             fName = firstName, mName = middleName, lName = lastName, birthday = birthday, phone = phone, address = detailedAddress, sex = sex, category = category,
                             onUpdate = { f, m, l, b, p, a, s, c -> firstName = f; middleName = m; lastName = l; birthday = b; phone = p; detailedAddress = a; sex = s; category = c },
-                            onNext = { currentStep = ViuSignupStep.AVATAR }
+                            onNext = { currentStep = ViuSignupStep.AVATAR },
+                            onProvinceSelected = { province ->
+                                    viewModel.onEvent(SignupEvent.ProvinceChanged(province))
+                                },
+                                onCitySelected = { city ->
+                                    viewModel.onEvent(SignupEvent.CityChanged(city))
+                                }
                         )
                         ViuSignupStep.AVATAR -> StepViuAvatar(
                             imageUri = uiState.profileImageUri,
@@ -208,6 +216,9 @@ fun ViuSignupScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StepViuPersonal(
+    state: SignupFormState,
+    onProvinceSelected: (String) -> Unit,
+    onCitySelected: (String) -> Unit,
     fName: String, mName: String, lName: String, birthday: String, phone: String, address: String, sex: String, category: String,
     onUpdate: (String, String, String, String, String, String, String, String) -> Unit,
     onNext: () -> Unit
@@ -369,7 +380,39 @@ fun StepViuPersonal(
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
+
+        // Province Dropdown
+        LocationDropdown(
+            label = "Province *",
+            options = state.availableProvinces,
+            selectedOption = state.province,
+            onOptionSelected = onProvinceSelected
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        // City Dropdown
+        LocationDropdown(
+            label = if (state.province.isEmpty()) "Please pick a province *" else "City/Municipality *",
+            options = state.availableCities,
+            selectedOption = state.city,
+            onOptionSelected = onCitySelected
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        // Detailed Address
+        OutlinedTextField(
+            value = address,
+            onValueChange = { onUpdate(fName, mName, lName, birthday, phone, it, sex, category) },
+            label = { Text("Home Address (Lot./House #/Brgy.) *") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            isError = isAddressError && address.isNotEmpty(),
+            singleLine = true
+        )
+        Spacer(Modifier.height(8.dp))
 
         // Fixed Country "Philippines"
         Row(
@@ -401,18 +444,6 @@ fun StepViuPersonal(
                 }
             )
         }
-        Spacer(Modifier.height(8.dp))
-
-        // Detailed Address
-        OutlinedTextField(
-            value = address,
-            onValueChange = { onUpdate(fName, mName, lName, birthday, phone, it, sex, category) },
-            label = { Text("Detailed Address *") },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            isError = isAddressError && address.isNotEmpty(),
-            singleLine = true
-        )
         Spacer(Modifier.height(8.dp))
 
         ExposedDropdownMenuBox(isCategoryExpanded, { isCategoryExpanded = !isCategoryExpanded }) {
@@ -455,6 +486,49 @@ fun StepViuPersonal(
                 shape = RoundedCornerShape(24.dp),
                 containerColor = Color.White
             )
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LocationDropdown(
+    label: String,
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+
+    ) {
+        OutlinedTextField(
+            value = selectedOption,
+            onValueChange = {},
+            readOnly = true,
+            shape = RoundedCornerShape(12.dp),
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            options.forEach { selectionOption ->
+                DropdownMenuItem(
+                    text = { Text(selectionOption) },
+                    onClick = {
+                        onOptionSelected(selectionOption)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }

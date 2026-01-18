@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.common.reflect.TypeToken
+import com.google.gson.Gson
 import edu.capstone.navisight.auth.domain.DeleteUnverifiedViuUserUseCase
 import edu.capstone.navisight.auth.domain.ResendViuSignupOtpUseCase
 import edu.capstone.navisight.auth.domain.SignupViuUseCase
@@ -11,13 +13,13 @@ import edu.capstone.navisight.auth.domain.VerifyViuSignupOtpUseCase
 import edu.capstone.navisight.auth.domain.usecase.AcceptLegalDocumentsUseCase
 import edu.capstone.navisight.auth.util.LegalDocuments
 import edu.capstone.navisight.auth.model.OtpResult
-import edu.capstone.navisight.common.TextToSpeechHelper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ViuSignupUiState(
@@ -32,6 +34,20 @@ data class ViuSignupUiState(
     val resendTimer: Int = 0
 )
 
+data class SignupFormState(
+    val province: String = "",
+    val city: String = "",
+    val availableProvinces: List<String> = emptyList(),
+    val availableCities: List<String> = emptyList()
+)
+
+sealed class SignupEvent {
+    data class ProvinceChanged(val value: String) : SignupEvent()
+    data class CityChanged(val value: String) : SignupEvent()
+}
+
+private var allLocationData: Map<String, List<String>> = emptyMap()
+
 class ViuSignupViewModel : ViewModel() {
 
     private val signupViuUseCase: SignupViuUseCase = SignupViuUseCase()
@@ -43,7 +59,45 @@ class ViuSignupViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(ViuSignupUiState())
     val uiState = _uiState.asStateFlow()
 
+    private val _formState = MutableStateFlow(SignupFormState())
+    val formState = _formState.asStateFlow()
+
     private var resendTimerJob: Job? = null
+
+    fun loadLocationData(context: Context) {
+        viewModelScope.launch {
+            try {
+                val jsonString = context.assets.open("philippine_locations.json")
+                    .bufferedReader()
+                    .use { it.readText() }
+
+                val type = object : TypeToken<Map<String, List<String>>>() {}.type
+                allLocationData = Gson().fromJson(jsonString, type)
+
+                _formState.update { it.copy(
+                    availableProvinces = allLocationData.keys.sorted()
+                )}
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun onEvent(event: SignupEvent) {
+        when(event) {
+            is SignupEvent.ProvinceChanged -> {
+                val cities = allLocationData[event.value] ?: emptyList()
+                _formState.update { it.copy(
+                    province = event.value,
+                    city = "", // Reset city when province changes
+                    availableCities = cities.sorted()
+                )}
+            }
+            is SignupEvent.CityChanged -> {
+                _formState.update { it.copy(city = event.value) }
+            }
+        }
+    }
 
     private fun startResendTimer(durationSeconds: Int = 60) {
         resendTimerJob?.cancel()

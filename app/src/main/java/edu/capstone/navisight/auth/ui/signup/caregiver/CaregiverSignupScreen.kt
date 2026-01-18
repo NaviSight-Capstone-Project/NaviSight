@@ -381,6 +381,8 @@ fun StepPersonalDetails(
             onOptionSelected = onCitySelected
         )
 
+        Spacer(Modifier.height(8.dp))
+
         // Home Address field
         OutlinedTextField(
             value = state.addressDetails,
