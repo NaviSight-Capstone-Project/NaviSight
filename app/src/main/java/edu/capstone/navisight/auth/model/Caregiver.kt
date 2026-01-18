@@ -18,5 +18,5 @@ data class Caregiver(
     val isEmailVerified: Boolean = false, // Defaults to false
     val viuIds: List<String> = emptyList()
 
-    //wag na lang pakealaman yung order para di nakakasakit ng ulo idebug
+
 )
