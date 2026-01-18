@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatImageButton
+import androidx.lifecycle.lifecycleScope
 import edu.capstone.navisight.R
 import edu.capstone.navisight.common.webrtc.model.DataModel
 import edu.capstone.navisight.common.webrtc.model.DataModelType
@@ -17,6 +18,9 @@ import edu.capstone.navisight.common.webrtc.service.MainService
 import edu.capstone.navisight.common.webrtc.utils.getCameraAndMicPermission
 import edu.capstone.navisight.viu.ui.call.CallActivity
 import edu.capstone.navisight.viu.ui.camera.CameraFragment
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 private const val TAG = "WebRTCManager - CameraFragment"
 
@@ -36,28 +40,34 @@ class WebRTCManager(
         MainService.listener = this
     }
 
+    // Activate only on quick menu and VIU should only contact primary.
     fun handleStartCall(isVideoCall: Boolean) {
-        val targetUid = cameraFragment.caregiverUid // Get the UID from the observed StateFlow
+        // Wait for async
+        cameraFragment.viewLifecycleOwner.lifecycleScope.launch {
 
-        if (targetUid.isNullOrEmpty()) {
-            Toast.makeText(cameraFragment.requireContext(), "Companion not found. Cannot start call.", Toast.LENGTH_LONG).show()
-            Log.e("CallSignal", "Caregiver UID is null or empty.")
-            return
-        }
+            // Trigger the fetch
+            cameraFragment.profileViewModel.fetchPrimaryCaregiver()
 
-        (cameraFragment.requireActivity() as AppCompatActivity).getCameraAndMicPermission {
-            cameraFragment.mainRepository.sendConnectionRequest(targetUid, isVideoCall) { success ->
-                if (success) {
-                    cameraFragment.service.startCallTimeoutTimer()
-                    val intent = Intent(cameraFragment.requireActivity(), CallActivity::class.java).apply {
-                        putExtra("target", targetUid)
-                        putExtra("isVideoCall", isVideoCall)
-                        putExtra("isCaller", true)
+            // Suspend until the flow emits a non-null AND non-empty string.
+            val targetUid = cameraFragment.profileViewModel.primaryCaregiverUid
+                .filter { !it.isNullOrEmpty() }
+                .first()
+
+            (cameraFragment.requireActivity() as AppCompatActivity).getCameraAndMicPermission {
+                cameraFragment.mainRepository.sendConnectionRequest(targetUid!!, isVideoCall) { success ->
+                    if (success) {
+                        cameraFragment.service.startCallTimeoutTimer()
+                        val intent = Intent(cameraFragment.requireActivity(), CallActivity::class.java).apply {
+                            putExtra("target", targetUid)
+                            putExtra("isVideoCall", isVideoCall)
+                            putExtra("isCaller", true)
+                        }
+                        cameraFragment.callActivityLauncher.launch(intent)
+                    } else {
+                        Log.e("CallSignal", "Failed to send call request.")
+                        Toast.makeText(cameraFragment.requireContext(),
+                            "Failed to send call request.", Toast.LENGTH_LONG).show()
                     }
-                    cameraFragment.callActivityLauncher.launch(intent)
-                } else {
-                    Log.e("CallSignal", "Failed to send call request.")
-                    Toast.makeText(cameraFragment.requireContext(), "Failed to send call request.", Toast.LENGTH_LONG).show()
                 }
             }
         }

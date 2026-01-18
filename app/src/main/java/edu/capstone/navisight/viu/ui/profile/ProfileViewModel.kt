@@ -44,10 +44,8 @@ class ProfileViewModel(
     private val _caregiverUid = MutableStateFlow<String?>(null)
     val caregiverUid: StateFlow<String?> = _caregiverUid.asStateFlow()
 
-//    init {
-//        // Start fetching the Caregiver UID as soon as the ViewModel is created
-//        fetchCaregiverUid()
-//    }
+    private val _primaryCaregiverUid = MutableStateFlow<String?>(null)
+    val primaryCaregiverUid: StateFlow<String?> = _primaryCaregiverUid.asStateFlow()
 
     companion object {
         fun provideFactory(
@@ -100,27 +98,22 @@ class ProfileViewModel(
         }
     }
 
-//    fun fetchCaregiverUid() {
-//        // Must be called inside a coroutine scope (viewModelScope)
-//        viewModelScope.launch {
-//            try {
-//                val caregiver = remoteDataSource.getRegisteredCaregiver()
-//
-//                // Update the state with the fetched UID
-//                _caregiverUid.value = caregiver.uid
-//
-//            } catch (e: Exception) {
-//                // Handle exceptions (e.g., "VIU has no relationship with any Caregiver")
-//                Log.e("CaregiverFetch", "Failed to fetch caregiver UID: ${e.message}")
-//                _caregiverUid.value = null
-//            }
-//        }
-//    }
+    fun fetchPrimaryCaregiver() {
+        viewModelScope.launch {
+            try {
+                val caregiver = remoteDataSource.getRegisteredCaregiver()
+                _primaryCaregiverUid.value = caregiver.uid
+                Log.d("ProfileVM", "fetched successfully. ${_primaryCaregiverUid.value}")
+            } catch (e: Exception) {
+                Log.e("ProfileVM", "No primary companion found")
+            }
+        }
+    }
 
     fun logout() {
         viewModelScope.launch {
             try {
-                // 1. Set Realtime DB status to offline using the UseCase
+                // Set Realtime DB status to offline using the UseCase
                 updateUserRealTimeDataUseCase.setOffline()
             } catch (e: Exception) {
                 Log.e("ProfileViewModel", "Error setting offline status: ${e.message}")
