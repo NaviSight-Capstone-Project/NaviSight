@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -213,6 +214,7 @@ fun StepViuPersonal(
 ) {
     var isCategoryExpanded by remember { mutableStateOf(false) }
     val categoryOptions = listOf("Partially Blind", "Totally Blind")
+    var showCountryInfo by remember { mutableStateOf(false) }
 
     var isSexExpanded by remember { mutableStateOf(false) }
     val sexOptions = listOf("Male", "Female", "Rather not say")
@@ -370,20 +372,35 @@ fun StepViuPersonal(
         Spacer(Modifier.height(12.dp))
 
         // Fixed Country "Philippines"
-        OutlinedTextField(
-            value = "Philippines",
-            onValueChange = {},
-            readOnly = true,
-            enabled = false,
-            label = { Text("Country") },
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                disabledTextColor = Color.Black,
-                disabledBorderColor = Color.LightGray,
-                disabledLabelColor = Color.Gray
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = "Philippines",
+                onValueChange = {},
+                readOnly = true,
+                enabled = false,
+                label = { Text("Country") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledTextColor = Color.Gray,
+                    disabledBorderColor = Color.LightGray,
+                    disabledLabelColor = Color.Gray,
+                    disabledTrailingIconColor = Color(0xFF6641EC)
+                ),
+                trailingIcon = {
+                    IconButton(onClick = { showCountryInfo = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Country Information"
+                        )
+                    }
+                }
             )
-        )
+        }
         Spacer(Modifier.height(8.dp))
 
         // Detailed Address
@@ -424,6 +441,21 @@ fun StepViuPersonal(
         GradientButton(text = "Next", onClick = {
             VibrationHelper.vibrate(context, Constants.VIBRATE_KEY_PRESS)
             onNext()}, enabled = isValid)
+
+        if (showCountryInfo) {
+            AlertDialog(
+                onDismissRequest = { showCountryInfo = false },
+                confirmButton = {
+                    TextButton(onClick = { showCountryInfo = false }) { Text("Got it") }
+                },
+                title = { Text("Country Selection") },
+                text = {
+                    Text("Currently, our services are limited to the Philippines to manage the scope of this capstone project effectively.")
+                },
+                shape = RoundedCornerShape(24.dp),
+                containerColor = Color.White
+            )
+        }
     }
 }
 
