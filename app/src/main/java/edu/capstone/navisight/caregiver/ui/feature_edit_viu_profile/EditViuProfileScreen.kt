@@ -250,6 +250,7 @@ fun EditViuProfileScreen(
                 label = { Text("First Name") },
                 readOnly = !canEdit, modifier = Modifier.weight(1f),
                 isError = firstName.isBlank(),
+                enabled = canEdit,
                 supportingText = if (firstName.isBlank()) {
                     { Text("Cannot be empty", color = MaterialTheme.colorScheme.error) }
                 } else null,
@@ -257,12 +258,14 @@ fun EditViuProfileScreen(
             )
             OutlinedTextField(
                 value = middleName, onValueChange = { middleName = it },
+                enabled = canEdit,
                 label = { Text("Middle") }, readOnly = !canEdit, modifier = Modifier.weight(1f),
                 colors = customTextFieldColors, shape = RoundedCornerShape(12.dp)
             )
             OutlinedTextField(
                 value = lastName,
                 onValueChange = { lastName = it },
+                enabled = canEdit,
                 label = { Text("Last Name") },
                 readOnly = !canEdit, modifier = Modifier.weight(1f),
                 isError = lastName.isBlank(),
@@ -316,6 +319,7 @@ fun EditViuProfileScreen(
         // Phone & Address
         OutlinedTextField(
             value = phone,
+            enabled = canEdit,
             onValueChange = { if (it.all { c -> c.isDigit() } && it.length <= 11) { phone = it; viewModel.clearSaveError() } },
             label = { Text("Phone Number (Uneditable)") },
             readOnly = true, modifier = Modifier.fillMaxWidth(),
@@ -325,6 +329,7 @@ fun EditViuProfileScreen(
 
         OutlinedTextField(
             value = address,
+            enabled = canEdit,
             onValueChange = { address = it },
             label = { Text("Address") },
             readOnly = !canEdit,
@@ -391,7 +396,7 @@ fun EditViuProfileScreen(
         ) {
             OutlinedTextField(
                 value = status, onValueChange = { status = it },
-                label = { Text("Status (e.g., Partially Blind)") }, readOnly = !canEdit, modifier = Modifier.fillMaxWidth().menuAnchor(),
+                label = { Text("Status (e.g., Partially Blind)") }, enabled=canEdit, readOnly = !canEdit, modifier = Modifier.fillMaxWidth().menuAnchor(),
                 trailingIcon = if (canEdit) {
                     { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isStatusDropdownExpanded) }
                 } else null
