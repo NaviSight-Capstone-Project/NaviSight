@@ -26,9 +26,9 @@
         android:id="@+id/caregiverTitle"
         android:layout_width="match_parent"
         android:layout_height="30dp"
-        android:text="You are being called by your caregiver!"
+        android:text="You are being called by your companion!"
         android:textColor="#673AB7"
-        android:textSize="20sp"
+        android:textSize="16sp"
         android:gravity="center" />
 
     </LinearLayout>

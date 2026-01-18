@@ -397,7 +397,7 @@ fun CallScreen(
                 }) {
                     Icon(
                         painter = rememberAsyncImagePainter(
-                            if (isMicrophoneMuted) R.drawable.ic_mic_on else R.drawable.ic_mic_off
+                            if (isMicrophoneMuted) R.drawable.ic_mic_off else R.drawable.ic_mic_on
                         ),
                         contentDescription = "Mic Toggle",
                         modifier = Modifier.size(48.dp),
