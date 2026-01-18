@@ -261,24 +261,26 @@ fun ViuCard(
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
 
-                    if (!viu.category.isNullOrEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .padding(top = 4.dp)
-                                .background(Color(0xFFD2C8FE), RoundedCornerShape(12.dp))
-                                .border(
-                                    width = 1.dp,
-                                    color = Color(0xFF6041EC),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = viu.category,
-                                fontSize = 12.sp,
-                                color = Color(0xFF6041EC)
+                    val hasCategory = !viu.category.isNullOrEmpty()
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 4.dp)
+                            .background(
+                                color = if (hasCategory) Color(0xFFD2C8FE) else Color(0xFFF5F5F5),
+                                shape = RoundedCornerShape(12.dp)
                             )
-                        }
+                            .border(
+                                width = 1.dp,
+                                color = if (hasCategory) Color(0xFF6041EC) else Color.Gray,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = if (hasCategory) viu.category!! else "No Vision Status Set",
+                            fontSize = 12.sp,
+                            color = if (hasCategory) Color(0xFF6041EC) else Color.Gray
+                        )
                     }
                 }
 
